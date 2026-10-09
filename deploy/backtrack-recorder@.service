@@ -1,0 +1,33 @@
+# Backtrack recorder, one instance per source, so one crashing never stops the other.
+#
+#   sudo cp deploy/backtrack-recorder@.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now backtrack-recorder@bus backtrack-recorder@rail
+#   journalctl -u backtrack-recorder@bus -f
+#
+# Assumes the repo at /opt/backtrack, a worker venv at /opt/backtrack/worker/.venv,
+# secrets in /opt/backtrack/.env (root:root 0600 is fine: systemd hands the service a private,
+# readable copy through LoadCredential, and the worker parses it with its own tested .env loader),
+# and a `backtrack` system user that owns /opt/backtrack/data. Needs systemd 248+ (Ubuntu 22.04+).
+
+[Unit]
+Description=Backtrack %i recorder
+After=network-online.target time-sync.target
+Wants=network-online.target time-sync.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=backtrack
+WorkingDirectory=/opt/backtrack/worker
+LoadCredential=env:/opt/backtrack/.env
+Environment=BACKTRACK_ENV_FILE=%d/env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/backtrack/worker/.venv/bin/python -m backtrack_worker record --sources %i
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

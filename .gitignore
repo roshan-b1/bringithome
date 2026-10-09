@@ -1,0 +1,23 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# recorded data (raw feed archive, logs, status)
+/data/
+/worker/data/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# node / next
+node_modules/
+.next/
+out/
+
+# os
+.DS_Store

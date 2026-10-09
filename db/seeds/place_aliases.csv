@@ -1,0 +1,48 @@
+# Place names riders say, mapped to stops. Every rail station's own names are added automatically.
+# targets: station:<GTFS parent id> (all its platforms and child stops) | stop:<stop_id> | near:<lat>;<lon>;<meters>
+# multi=true means the name covers several places: the app always asks a confirming tap.
+# Only stations and stops verified in PREP-REPORT.md; no guessed coordinates. Student Center East
+# coordinates are the organizer's (PREP-REPORT section 7); stop 210555 is 70 m from it.
+alias,label,multi,targets
+gsu,Georgia State University,true,station:510016|stop:210555
+georgia state,Georgia State University,true,station:510016|stop:210555
+georgia state university,Georgia State University,true,station:510016|stop:210555
+student center,GSU Student Center East,false,near:33.75267;-84.3849;120
+student center east,GSU Student Center East,false,near:33.75267;-84.3849;120
+sce,GSU Student Center East,false,near:33.75267;-84.3849;120
+gilmer street,Piedmont Ave @ Gilmer St (GSU),false,stop:210555
+airport,Airport station (ATL),false,station:510037
+the airport,Airport station (ATL),false,station:510037
+atl,Airport station (ATL),false,station:510037
+atl airport,Airport station (ATL),false,station:510037
+hartsfield,Airport station (ATL),false,station:510037
+hartsfield jackson,Airport station (ATL),false,station:510037
+downtown,Downtown (Five Points or Peachtree Center),true,station:510015|station:510040
+underground,Five Points (Underground Atlanta),false,station:510015
+underground atlanta,Five Points (Underground Atlanta),false,station:510015
+georgia tech,Georgia Tech (North Ave or Midtown),true,station:510027|station:510026
+tech,Georgia Tech (North Ave or Midtown),true,station:510027|station:510026
+gt,Georgia Tech (North Ave or Midtown),true,station:510027|station:510026
+fox theatre,North Ave (Fox Theatre),false,station:510027
+the fox,North Ave (Fox Theatre),false,station:510027
+mercedes benz stadium,Mercedes-Benz Stadium (SEC District or Vine City),true,station:510039|station:510032
+the benz,Mercedes-Benz Stadium (SEC District or Vine City),true,station:510039|station:510032
+mbs,Mercedes-Benz Stadium (SEC District or Vine City),true,station:510039|station:510032
+state farm arena,SEC District (State Farm Arena),false,station:510039
+world congress center,SEC District (World Congress Center),false,station:510039
+gwcc,SEC District (World Congress Center),false,station:510039
+the dome,SEC District,false,station:510039
+centennial olympic park,Peachtree Center or SEC District,true,station:510040|station:510039
+lenox mall,Lenox,false,station:510023
+lenox square,Lenox,false,station:510023
+phipps plaza,Lenox or Buckhead,true,station:510023|station:510036
+piedmont park,Midtown or Arts Center,true,station:510026|station:510001
+high museum,Arts Center (Woodruff Arts Center),false,station:510001
+woodruff arts center,Arts Center (Woodruff Arts Center),false,station:510001
+grady,Georgia State (Grady Hospital),false,station:510016
+grady hospital,Georgia State (Grady Hospital),false,station:510016
+state capitol,Georgia State (State Capitol),false,station:510016
+auc,Atlanta University Center (Ashby or West End),true,station:510002|station:510033
+atlanta university center,Atlanta University Center (Ashby or West End),true,station:510002|station:510033
+decatur square,Decatur,false,station:510009
+fort mcpherson,Lakewood-Ft McPherson,false,station:510022

@@ -1,0 +1,391 @@
+{
+  "schema": 1,
+  "about": "MARTA phones, emails, links and hours for the plan cards. Copied only from PREP-REPORT.md section 6 (Verified contacts), fetched Oct 8 2026 by the investigator and re-fetched by a reviewer. Every entry carries its source_urls and verified_at. contacts.py validates this file at import. Times are America/New_York wall clock.",
+  "timezone": "America/New_York",
+  "verified_at": "2026-10-08",
+  "rules": {
+    "never_show": [
+      {"key": "lost_found_address", "why": "The Five Points office closed June 6, 2025, and the current location is unverified. Never show a Lost & Found street address."},
+      {"key": "see_and_say", "why": "Retired Oct 1, 2026. Never link it."},
+      {"key": "detective_numbers", "why": "Three numbers conflict across MARTA's own pages."},
+      {"key": "mobility_numbers", "why": "Two numbers that may be two different offices (unverified)."}
+    ],
+    "never_promise": [
+      "that MARTA will hold a vehicle",
+      "that MARTA will contact a driver"
+    ],
+    "unverified_day_wording": "usually",
+    "call_card_lines": [
+      "lost_found_phone",
+      "customer_service",
+      "route_schedule_info",
+      "police_non_emergency",
+      "police_emergency",
+      "police_text",
+      "emergency_911"
+    ]
+  },
+  "entries": {
+    "lost_found_phone": {
+      "kind": "phone",
+      "value": "404-848-3208",
+      "tel": "tel:+14048483208",
+      "hours": "lost_found_hours",
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/ride/customer-service/lost-and-found",
+        "https://itsmarta.com/helpful-numbers.aspx",
+        "https://itsmarta.com/uploadedFiles/More/Future_and_Current_Projects/Future_Projects/MARTA-FivePoints-FactSheet-English.pdf"
+      ],
+      "note": "Three MARTA sources, plus Rough Draft Atlanta (2025-06-03). Phone hours Mon to Fri, 8:30 AM to 5 PM."
+    },
+    "lost_found_email": {
+      "kind": "email",
+      "value": "lostandfound@itsmarta.com",
+      "mailto": "mailto:lostandfound@itsmarta.com",
+      "hours": "always",
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/ride/customer-service/lost-and-found",
+        "https://itsmarta.com/helpful-numbers.aspx",
+        "https://itsmarta.com/lostfound.aspx"
+      ],
+      "note": "lostfound.aspx has a broken mailto:// link; use the mailto: form given here."
+    },
+    "lost_found_form": {
+      "kind": "url",
+      "value": "https://itsmarta.com/tplecrmcontact-v2.aspx",
+      "url": "https://itsmarta.com/tplecrmcontact-v2.aspx",
+      "hours": "always",
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/ride/customer-service/lost-and-found"
+      ],
+      "prefill": false,
+      "reasons_offered": ["Breeze Concern", "Complaints", "Praise", "Request", "Suggestions"],
+      "vehicle_fields_under": ["Complaints", "Praise"],
+      "field_labels": {
+        "route_number": "Route Number",
+        "bus_number": "Bus Number",
+        "direction": "Direction of Travel/Destination",
+        "rail_station": "MARTA Rail Station",
+        "rail_line": "Rail Line",
+        "rail_car_number": "Rail Car Number"
+      },
+      "note": "The \"Report a lost item\" button on the Lost & Found page. A Salesforce form with reCAPTCHA on submit, so it can't be prefilled or auto-submitted. The structured vehicle fields appear only under the Complaints or Praise reasons."
+    },
+    "lost_found_form_reason": {
+      "kind": "fact",
+      "value": null,
+      "display": "confirm on Friday's call",
+      "status": "confirm_friday",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/tplecrmcontact-v2.aspx"
+      ],
+      "note": "Which Reason MARTA wants for a lost item is unverified. Ask on Friday's Lost & Found call; until then the app says \"confirm on Friday's call\"."
+    },
+    "lost_found_hours": {
+      "kind": "hours",
+      "value": "Mon to Fri, 8:30 AM to 5 PM",
+      "schedule": {
+        "mon": [["08:30", "17:00"]],
+        "tue": [["08:30", "17:00"]],
+        "wed": [["08:30", "17:00"]],
+        "thu": [["08:30", "17:00"]],
+        "fri": [["08:30", "17:00"]],
+        "sat": [],
+        "sun": []
+      },
+      "on_holidays": "closed",
+      "pickup": "by appointment only",
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/ride/customer-service/lost-and-found",
+        "https://itsmarta.com/helpful-numbers.aspx"
+      ],
+      "note": "Pickup is by appointment only. No holidays Oct 9 to 12, 2026."
+    },
+    "lost_found_pickup_days": {
+      "kind": "fact",
+      "value": "Mon, Wed and Fri",
+      "status": "partly",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/helpful-numbers.aspx",
+        "https://itsmarta.com/lostfound.aspx"
+      ],
+      "note": "Older pages only; the new Lost & Found page doesn't say. Phrase it softly or confirm by phone."
+    },
+    "lost_found_transit_time": {
+      "kind": "fact",
+      "value": "up to 5 business days",
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/ride/customer-service/lost-and-found",
+        "https://itsmarta.com/lostfound.aspx"
+      ],
+      "note": "How long an item can take to reach the office."
+    },
+    "lost_found_hold": {
+      "kind": "fact",
+      "value": "30 days",
+      "status": "verified",
+      "single_source": true,
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/ride/customer-service/lost-and-found"
+      ],
+      "note": "Then donated or disposed of. Only one official source."
+    },
+    "lost_found_claim": {
+      "kind": "fact",
+      "value": "in person with a valid photo ID; a proxy needs a notarized letter plus their own photo ID",
+      "status": "verified",
+      "single_source": true,
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/ride/customer-service/lost-and-found"
+      ],
+      "note": "Only one official source."
+    },
+    "police_emergency": {
+      "kind": "phone",
+      "value": "404-848-4911",
+      "tel": "tel:+14048484911",
+      "hours": "always",
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/helpful-numbers.aspx",
+        "https://itsmarta.com/police-FAQs.aspx",
+        "https://www.wsbtv.com/news/local/marta-phases-out-see-say-app-riders-can-report-safety-issues-main-app/MKZBCWRCYBBHZMIHSSA35UCEJI/"
+      ],
+      "note": "MARTA Police emergency line. atlanta.com's \"is MARTA safe\" page wrongly calls it the non-emergency number."
+    },
+    "police_text": {
+      "kind": "text",
+      "value": "1-877-371-8477",
+      "sms": "sms:+18773718477",
+      "hours": "always",
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/police-FAQs.aspx",
+        "https://www.wsbtv.com/news/local/marta-phases-out-see-say-app-riders-can-report-safety-issues-main-app/MKZBCWRCYBBHZMIHSSA35UCEJI/"
+      ],
+      "note": "Text MARTA Police."
+    },
+    "police_non_emergency": {
+      "kind": "phone",
+      "value": "404-848-4900",
+      "tel": "tel:+14048484900",
+      "hours": "always",
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/helpful-numbers.aspx",
+        "https://atlanta.com/articles/ga/crime-in-atlanta-ga"
+      ],
+      "note": "The number on the wb_12_safe and bag_01_staff buttons. Prep counts the police lines as always working; whether this one is staffed 24/7 is unverified."
+    },
+    "emergency_911": {
+      "kind": "phone",
+      "value": "911",
+      "tel": "tel:911",
+      "hours": "always",
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/police-FAQs.aspx"
+      ],
+      "note": "Reaches local dispatch first, then gets transferred to MARTA Police."
+    },
+    "police_property_unit": {
+      "kind": "phone",
+      "value": "404-848-3617",
+      "tel": "tel:+14048483617",
+      "hours": "police_property_claims",
+      "hold": "90 days",
+      "show_in_app": false,
+      "status": "confirm_friday",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/police-FAQs.aspx"
+      ],
+      "note": "For items MARTA Police recovered (\"Retrieving Your Property\"). One official page, found only by the reviewer. Hidden until Friday's phone call confirms it. Its street address is left out on purpose; the card never needs it."
+    },
+    "police_property_claims": {
+      "kind": "hours",
+      "value": "weekdays, 1 to 3 PM",
+      "schedule": {
+        "mon": [["13:00", "15:00"]],
+        "tue": [["13:00", "15:00"]],
+        "wed": [["13:00", "15:00"]],
+        "thu": [["13:00", "15:00"]],
+        "fri": [["13:00", "15:00"]],
+        "sat": [],
+        "sun": []
+      },
+      "on_holidays": "closed",
+      "show_in_app": false,
+      "status": "confirm_friday",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/police-FAQs.aspx"
+      ],
+      "note": "Claim hours of the police property unit. Same single source as police_property_unit."
+    },
+    "police_email": {
+      "kind": "email",
+      "value": "martapolice@itsmarta.com",
+      "mailto": "mailto:martapolice@itsmarta.com",
+      "hours": "always",
+      "status": "verified",
+      "single_source": true,
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/helpful-numbers.aspx"
+      ],
+      "note": "Only one source."
+    },
+    "customer_service": {
+      "kind": "phone",
+      "value": "404-848-5000",
+      "tel": "tel:+14048485000",
+      "email": "custserv@itsmarta.com",
+      "mailto": "mailto:custserv@itsmarta.com",
+      "hours": "customer_service_hours",
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/ride/customer-service",
+        "https://itsmarta.com/helpful-numbers.aspx"
+      ],
+      "source_notes": ["GTFS agency.txt"],
+      "note": "GetHuman's \"24/7\" claim conflicts with MARTA's own pages."
+    },
+    "customer_service_hours": {
+      "kind": "hours",
+      "value": "Mon to Fri, 8 AM to 5 PM",
+      "schedule": {
+        "mon": [["08:00", "17:00"]],
+        "tue": [["08:00", "17:00"]],
+        "wed": [["08:00", "17:00"]],
+        "thu": [["08:00", "17:00"]],
+        "fri": [["08:00", "17:00"]],
+        "sat": [],
+        "sun": []
+      },
+      "on_holidays": "closed",
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/ride/customer-service",
+        "https://itsmarta.com/helpful-numbers.aspx"
+      ]
+    },
+    "route_schedule_info": {
+      "kind": "phone",
+      "value": "404-848-5000",
+      "tel": "tel:+14048485000",
+      "email": "schedinfo@itsmarta.com",
+      "mailto": "mailto:schedinfo@itsmarta.com",
+      "hours": "route_schedule_info_hours",
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/ride/customer-service",
+        "https://itsmarta.com/helpful-numbers.aspx"
+      ],
+      "note": "The route and schedule information line, on the same number as customer service. The only MARTA phone line open during demo weekend."
+    },
+    "route_schedule_info_hours": {
+      "kind": "hours",
+      "value": "Mon to Fri, 7 AM to 7 PM; weekends and select holidays, 8 AM to 5 PM",
+      "schedule": {
+        "mon": [["07:00", "19:00"]],
+        "tue": [["07:00", "19:00"]],
+        "wed": [["07:00", "19:00"]],
+        "thu": [["07:00", "19:00"]],
+        "fri": [["07:00", "19:00"]],
+        "sat": [["08:00", "17:00"]],
+        "sun": [["08:00", "17:00"]]
+      },
+      "on_holidays": "sun",
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/ride/customer-service",
+        "https://itsmarta.com/helpful-numbers.aspx"
+      ]
+    },
+    "tty": {
+      "kind": "phone",
+      "value": "404-848-5665",
+      "tel": "tel:+14048485665",
+      "hours": null,
+      "status": "verified",
+      "single_source": true,
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/helpful-numbers.aspx"
+      ],
+      "note": "Only one source. Its hours are not published."
+    },
+    "marta_app_ios": {
+      "kind": "url",
+      "value": "https://apps.apple.com/us/app/marta-official/id386648039",
+      "url": "https://apps.apple.com/us/app/marta-official/id386648039",
+      "hours": "always",
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://apps.apple.com/us/app/marta-official/id386648039"
+      ],
+      "note": "Canonical App Store link (the \"marta-transit\" link only redirects here). In-app safety reporting, and call, message or text MARTA Police."
+    },
+    "marta_app_android": {
+      "kind": "url",
+      "value": "https://play.google.com/store/apps/details?id=com.itsmarta.martaapp",
+      "url": "https://play.google.com/store/apps/details?id=com.itsmarta.martaapp",
+      "hours": "always",
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://play.google.com/store/apps/details?id=com.itsmarta.martaapp"
+      ]
+    },
+    "holidays": {
+      "kind": "calendar",
+      "value": "No holidays Oct 9 to 12, 2026",
+      "checked_from": "2026-10-09",
+      "checked_to": "2026-10-12",
+      "closed_dates": [],
+      "unverified_dates": [
+        {"date": "2026-10-12", "name": "Columbus Day", "why": "MARTA lists no closure, but whether the Lost & Found office opens that day is unverified. The copy says it usually opens."}
+      ],
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/holiday-operating-schedule.aspx"
+      ],
+      "note": "MARTA's holiday operating schedule, updated Aug 27, 2026. Days outside the checked range are not verified either, so an opening there reads \"usually\" too."
+    },
+    "system_hours": {
+      "kind": "fact",
+      "value": "Trains: weekdays 4:45 AM to 1 AM, weekends 6 AM to 1 AM. Buses: weekdays 5 AM to 1 AM, weekends 5 AM to 12:30 AM.",
+      "status": "verified",
+      "verified_at": "2026-10-08",
+      "source_urls": [
+        "https://itsmarta.com/helpful-numbers.aspx"
+      ],
+      "note": "Systemwide only; per-route last trips come from GTFS."
+    }
+  }
+}

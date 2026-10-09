@@ -1,0 +1,27 @@
+[project]
+name = "backtrack-api"
+version = "0.1.0"
+description = "Backtrack API: places, matching, where-now and plans (FastAPI)"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",            # the API framework (ARCHITECTURE.md decision 2)
+  "uvicorn>=0.30",             # its server
+  "psycopg[binary,pool]>=3.2", # Tiger Data
+  "backtrack-worker",          # shared code: time handling, place names, the schedule loader
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "httpx2>=2.13"]   # httpx2: FastAPI's TestClient
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["backtrack_api*"]
+
+[tool.setuptools.package-data]
+backtrack_api = ["data/*.json"]   # contacts.json: the verified contact list ships with the package
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

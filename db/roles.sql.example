@@ -1,0 +1,25 @@
+-- Least-privilege database roles (ARCHITECTURE.md decision 4), adjusted to the real schema.
+-- Run once by hand as the admin (tsdbadmin) AFTER `migrate`, with passwords typed from the
+-- password manager. Never commit a copy with real passwords. If the Tiger trial refuses
+-- CREATE ROLE, keep using the single DSN.
+--
+--   read -s PW_REC && read -s PW_API && read -s PW_RO
+--   psql "$TIGER_DSN_ADMIN" -v pw_rec="$PW_REC" -v pw_api="$PW_API" -v pw_ro="$PW_RO" -f db/roles.sql.example
+
+CREATE ROLE backtrack_rec LOGIN PASSWORD :'pw_rec';   -- recorders (sync thread)
+CREATE ROLE backtrack_api LOGIN PASSWORD :'pw_api';   -- API
+CREATE ROLE backtrack_ro  LOGIN PASSWORD :'pw_ro';    -- healthcheck, Tiger MCP
+
+-- The recorder's upsert is INSERT ... ON CONFLICT DO UPDATE, which needs UPDATE privilege even
+-- when no conflict happens (it only ever fills NULLs). It can still never DELETE, TRUNCATE or DROP.
+GRANT SELECT, INSERT, UPDATE ON vehicle_positions TO backtrack_rec;
+GRANT SELECT, INSERT, UPDATE ON recorder_gaps, recorder_status TO backtrack_rec;
+GRANT USAGE ON SEQUENCE recorder_gaps_id_seq TO backtrack_rec;
+GRANT SELECT ON schema_migrations TO backtrack_rec;
+
+GRANT SELECT ON vehicle_positions, recorder_gaps, recorder_status, recorder_gaps_live,
+                gtfs_routes, gtfs_stops, gtfs_calendar, gtfs_calendar_dates, gtfs_trips, gtfs_stop_times,
+                gtfs_shapes, gtfs_stop_routes, rail_station_map, rail_platforms, place_aliases, static_feed_info
+             TO backtrack_api, backtrack_ro;
+GRANT EXECUTE ON FUNCTION active_services(date) TO backtrack_api, backtrack_ro;
+-- Sessions (migration 004) add: GRANT SELECT, INSERT, UPDATE, DELETE ON sessions TO backtrack_api;
