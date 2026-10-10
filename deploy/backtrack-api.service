@@ -1,0 +1,31 @@
+# Backtrack API: FastAPI, one worker, behind Caddy on the same box as the recorders, because it reads
+# their raw rail archive (train predictions, replays) from /opt/backtrack/data.
+#
+#   sudo cp deploy/backtrack-api.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now backtrack-api
+#   journalctl -u backtrack-api -f
+#
+# Only Caddy can reach 127.0.0.1:8000, so the forwarded client address is trusted from it ('*'): the
+# /api/parse rate limit then sees the rider's address instead of Vercel's or Caddy's. No access log: the
+# rider's coordinates travel in some query strings and are never written anywhere.
+
+[Unit]
+Description=Backtrack API
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=backtrack
+WorkingDirectory=/opt/backtrack/api
+LoadCredential=env:/opt/backtrack/.env
+Environment=BACKTRACK_ENV_FILE=%d/env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/backtrack/api/.venv/bin/uvicorn backtrack_api.app:app --host 127.0.0.1 --port 8000 --workers 1 --proxy-headers --forwarded-allow-ips * --no-access-log
+Restart=always
+RestartSec=3
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target
