@@ -369,8 +369,9 @@ class TurnContext:
         estimate is a whole headway (10 to 14 min) late: in the Oct 9 backtest of this planner (5,137 rail calls)
         those 143 options had |err| p50 522 s, p90 799 s, 77 came over 5 min early, and 35 of the 99
         recommended were missed (every recommended rail miss), against 1,193 without such a slot at p50 37 s,
-        p90 106 s, 0 missed. So with such a slot the window opens as it would for that slot (its ETA - 5 min),
-        and the option is low (may_come_before_you): not recommended until the turn is seen."""
+        p90 106 s, 0 missed. So with such a slot the window opens as it would for that slot (its ETA - 5 min);
+        a rider must be in place by then for any wait, and a platform switch that leaves them ready later is low
+        (may_come_before_you, reunion.py)."""
         notes: list[str] = []
         confidence = "usual"
         if self.picked is None:
@@ -398,9 +399,11 @@ class TurnContext:
         if self.in_effect and self.skipped is not None:
             early_run = self.skipped[1].run_s(self.terminus, station)
             if early_run is not None:
+                # the window opens as that slot would open it; the option stays usual. Every wait already needs the
+                # rider in place by window_from, and a switch that leaves them ready after it is marked low with
+                # may_come_before_you in reunion.py, so the early train can't pass a rider who is not there yet.
+                # (Marking every such option low left a rider already on the platform with no plan at all.)
                 window_from = min(window_from, self.skipped[0] + timedelta(seconds=early_run - WINDOW_EARLY_S))
-                confidence = "low"
-                notes.append("may_come_before_you")
         if self.in_effect and self.late:
             # the late train may turn at once: the window opens at A' plus the run, less a minute (see LATE_SLOT_S)
             window_from = min(window_from, self.arrival + timedelta(seconds=run - LATE_EARLY_S))

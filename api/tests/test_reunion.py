@@ -384,7 +384,8 @@ def test_a_scheduled_departure_inside_the_minimum_turn_opens_the_window_for_it_a
     here = option(body, "wait_here")
     assert here["reunion_at"] == at(16, 32)                          # the 16:30 trip, one hop back to Buckhead
     assert here["window_from"] == at(16, 22) - 300 * S               # as the 16:20 trip would open it
-    assert here["confidence"] == "low" and "may_come_before_you" in here["note_ids"] and not here["recommended"]
+    # the rider is already at Buckhead, in place long before that early window opens: a real plan, not "low"
+    assert here["confidence"] == "usual" and here["recommended"]
 
 
 def test_a_late_train_may_turn_at_once_so_the_window_opens_from_its_arrival(tmp_path, feed, index):
