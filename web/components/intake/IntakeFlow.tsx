@@ -6,6 +6,7 @@ import type { FlowSession } from '@/lib/useFlow'
 import { DoneScreen } from './DoneScreen'
 import { ElsewherePlanScreen } from './ElsewherePlanScreen'
 import { ElsewhereScreen } from './ElsewhereScreen'
+import { ElsewhereWhatScreen } from './ElsewhereWhatScreen'
 import { ModeScreen } from './ModeScreen'
 import { OffScreen } from './OffScreen'
 import { TellScreen } from './TellScreen'
@@ -13,14 +14,15 @@ import { WhenScreen } from './WhenScreen'
 
 // The intake, driven by lib/flow.ts: two questions (where you got off, about when), bus or train only when the
 // place doesn't say it, TellMe's "Say it in one sentence" detour, the done screen that POSTs the match, and the
-// "Lost it somewhere else?" path with its plan. What was lost is asked on the plan screen.
+// "Lost it somewhere else?" path (the places, "What did you lose?", the plan). On the MARTA path what was lost is
+// asked on the plan screen.
 //
 // Mounting (components/screens/registry.tsx):
 //   import { INTAKE_SCREENS } from '@/components/intake/IntakeFlow'
 //   export const SCREENS = { home: HomeScreen, ...INTAKE_SCREENS, results: ..., plan: ... }
 // or render <IntakeFlow flow={flow} /> for any step in INTAKE_STEPS.
 
-export const INTAKE_STEPS = ['off', 'mode', 'when', 'tell', 'done', 'not_marta', 'elsewhere_plan'] as const satisfies readonly Step[]
+export const INTAKE_STEPS = ['off', 'mode', 'when', 'tell', 'done', 'not_marta', 'elsewhere_what', 'elsewhere_plan'] as const satisfies readonly Step[]
 export type IntakeStep = (typeof INTAKE_STEPS)[number]
 
 const SCREEN: Record<IntakeStep, ComponentType<{ flow: FlowSession }>> = {
@@ -30,6 +32,7 @@ const SCREEN: Record<IntakeStep, ComponentType<{ flow: FlowSession }>> = {
   tell: TellScreen,
   done: DoneScreen,
   not_marta: ElsewhereScreen,
+  elsewhere_what: ElsewhereWhatScreen,
   elsewhere_plan: ElsewherePlanScreen,
 }
 

@@ -19,6 +19,7 @@ export interface QuickOption<V extends string> {
 
 export function QuickChoice<V extends string>({
   question,
+  label,
   hint,
   options,
   selected = null,
@@ -27,7 +28,9 @@ export function QuickChoice<V extends string>({
   layout = 'grid',
   headingLevel = 3,
 }: {
-  question: ReactNode
+  /** the question as a heading; leave it out when the screen's own title asks it, and name the group with `label` */
+  question?: ReactNode
+  label?: string
   hint?: ReactNode
   options: readonly QuickOption<V>[]
   selected?: V | null
@@ -42,10 +45,18 @@ export function QuickChoice<V extends string>({
   const heading = useRef<HTMLHeadingElement>(null)
   useEffect(() => keepFocusAt(heading.current), [])
   return (
-    <div className={styles.quick} role="group" aria-labelledby={`${id}-q`} aria-describedby={hint ? `${id}-h` : undefined}>
-      <H id={`${id}-q`} ref={heading} tabIndex={-1} className={styles.quickQuestion}>
-        {question}
-      </H>
+    <div
+      className={styles.quick}
+      role="group"
+      aria-labelledby={question ? `${id}-q` : undefined}
+      aria-label={question ? undefined : label}
+      aria-describedby={hint ? `${id}-h` : undefined}
+    >
+      {question ? (
+        <H id={`${id}-q`} ref={heading} tabIndex={-1} className={styles.quickQuestion}>
+          {question}
+        </H>
+      ) : null}
       {hint ? (
         <p id={`${id}-h`} className={styles.quickHint}>
           {hint}

@@ -3,7 +3,11 @@
 // function takes what it needs, so it is unit-tested with node:test and resumable from sessionStorage.
 //
 //   home -> off -> [mode] -> when -> done -> results -> plan
-//            \-> not_marta -> elsewhere_plan          ("Lost it somewhere else?": the somewhere-else path)
+//            \-> not_marta -> elsewhere_what -> elsewhere_plan   ("Lost it somewhere else?": the somewhere-else path)
+//
+//   elsewhere_what is "What did you lose?" (optional, one tap or Skip) after the places and right before the plan it
+//   changes: a phone or a wallet adds its own step there. The places come first because that is the question the
+//   rider tapped "Lost it somewhere else?" to answer; the item sits where its effect shows at once, as on the plan.
 //
 //   mode (bus or train) is INFERRED from the place tapped on off (inferRide): a station with lines and no routes is a
 //   train, a stop with routes and no lines a bus. Only an ambiguous place (both, the streetcar) or "Not sure" asks it.
@@ -24,7 +28,7 @@ import type { Dir, Intake, IntakeAnchor, ItemCategory, Line, ParsedAnchor, Parse
 import type { CopyId } from './copy.ts'
 import { resolvePickedTime, toNyIso } from './time.ts'
 
-export type Step = 'home' | QuestionStep | 'done' | 'results' | 'plan' | 'not_marta' | 'elsewhere_plan'
+export type Step = 'home' | QuestionStep | 'done' | 'results' | 'plan' | 'not_marta' | 'elsewhere_what' | 'elsewhere_plan'
 
 /** The questions, plus tell: a step answered by one tap that confirms what TellMe read. */
 export type QuestionStep = Asked | 'tell'
@@ -54,7 +58,7 @@ export interface ToldTime {
   picked: boolean // said as a clock time ("around 1:15"), so the anchor is time_kind "picked"
 }
 
-/** "What did you lose?", asked on the plan screen (setExtra), or read by TellMe. */
+/** "What did you lose?", asked on the plan screen or the somewhere-else path (setExtra), or read by TellMe. */
 export type ItemAnswer = ItemCategory | NotSure
 
 export type WhenAnswer =
@@ -98,7 +102,7 @@ export type Told = Asked | 'route' | 'line'
 export type Answers = { [K in Exclude<Asked, 'mode'>]?: AnswerMap[K] } & Refinement & {
   mode?: AnswerMap['mode'] | 'not_marta' // not_marta: "Lost it somewhere else?" (notOnMarta), never a tap on mode
   mode_by?: 'place' // the ride was read from the place tapped on off (inferRide), not asked
-  what?: ItemAnswer // the plan screen's "What did you lose?" (or TellMe's confirmed item); never changes the match
+  what?: ItemAnswer // "What did you lose?" (the plan screen, elsewhere_what, or TellMe's confirmed item); never changes the match
   told?: Told[] // what TellMe answered (confirmed by tap): the walk skips these steps, a new tell replaces them
   role?: 'board' // TellMe's place was where they got on; absent means where they got off (the question's wording)
   walk?: 'normal' | 'slow' // the "I walk slowly or use a mobility aid" toggle (decision 9)
@@ -120,7 +124,7 @@ export type RideMode = 'bus' | 'rail' | 'streetcar' | 'unknown'
 export const ASKED: readonly Asked[] = ['off', 'mode', 'when']
 export const QUESTION_STEPS: readonly QuestionStep[] = [...ASKED, 'tell']
 /** Every step this build has a screen for: a saved step outside it (a tab left open across a redeploy) is stale. */
-export const STEPS: readonly Step[] = ['home', ...QUESTION_STEPS, 'done', 'results', 'plan', 'not_marta', 'elsewhere_plan']
+export const STEPS: readonly Step[] = ['home', ...QUESTION_STEPS, 'done', 'results', 'plan', 'not_marta', 'elsewhere_what', 'elsewhere_plan']
 export const isStep = (s: unknown): s is Step => typeof s === 'string' && (STEPS as readonly string[]).includes(s)
 export const isQuestion = (s: Step): s is QuestionStep => (QUESTION_STEPS as readonly string[]).includes(s)
 export const isAsked = (s: Step): s is Asked => (ASKED as readonly string[]).includes(s)
@@ -215,7 +219,8 @@ export function after(step: Step, a: Answers): Step {
     case 'done': return 'results'
     case 'results': return 'plan'
     case 'plan': return 'plan'
-    case 'not_marta': return 'elsewhere_plan'
+    case 'not_marta': return 'elsewhere_what'
+    case 'elsewhere_what': return 'elsewhere_plan'
     case 'elsewhere_plan': return 'elsewhere_plan'
   }
 }
@@ -256,7 +261,7 @@ function dropTold(a: Answers): Answers {
 export const initialState = (): FlowState => ({ step: 'home', answers: {}, history: [] })
 
 /**
- * Move past a step that has no answer (home, done, results, not_marta). Questions move only by answering.
+ * Move past a step that has no answer (home, done, results, not_marta, elsewhere_what after its optional tap). Questions move only by answering.
  * done is a hand-off that POSTs the match as it opens, so it never goes into the Back history: Back (or "Edit")
  * from results returns to the last question, instead of to done, which would post again and bounce straight back.
  */

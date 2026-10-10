@@ -22,6 +22,7 @@ import type {
   FixtureMeta,
   Health,
   Intake,
+  ItemCategory,
   Line,
   NowQuery,
   ParseResponse,
@@ -492,15 +493,35 @@ function fixtureExists(file: string): Promise<boolean> {
   return p
 }
 
+const PLAN_ITEMS: readonly ItemCategory[] = ['phone', 'wallet', 'bag', 'keys', 'laptop', 'other']
+
 /**
- * 10. POST /api/sessions/{id}/plan. `user` is where the rider is now, used for this one answer. Fixture: the set's
- * plan for where the rider said they are (plan-on_vehicle.json, plan-at_station.json, plan-place.json), else
- * plan.json, the plan before "Where are you now?" is answered.
+ * Which recorded file answers a plan body (pure; `has` says whether the active set has a file):
+ * 1. where the rider said they are: plan-on_vehicle.json, plan-at_station.json or plan-place.json, when the set has it.
+ *    A body with both such a `user` and an item answers with the user variant: the sets record the item variants for
+ *    the default body only, and where the rider is changes the plan far more than the item's extra step.
+ * 2. otherwise, the item tapped on the plan: plan-item_<category>.json (the default body plus `item_category`), when
+ *    the set has it.
+ * 3. otherwise plan.json, the plan before "Where are you now?" and "What did you lose?" are answered.
+ */
+export async function planFixtureFile(
+  body: Pick<PlanRequest, 'user' | 'item_category'>,
+  has: (file: string) => Promise<boolean>,
+): Promise<string> {
+  const variant = planVariant(body.user)
+  if (variant && (await has(`plan-${variant}.json`))) return `plan-${variant}.json`
+  const item = body.item_category
+  if (item && PLAN_ITEMS.includes(item) && (await has(`plan-item_${item}.json`))) return `plan-item_${item}.json`
+  return 'plan.json'
+}
+
+/**
+ * 10. POST /api/sessions/{id}/plan. `user` is where the rider is now, used for this one answer. Fixture:
+ * planFixtureFile (where the rider said they are, else the item they tapped, else plan.json).
  */
 export async function plan(id: string, body: Omit<PlanRequest, 'as_of'>, opts: CallOpts = {}): Promise<ApiResult<Plan>> {
   const as_of = await asOfParam()
-  const variant = planVariant(body.user)
-  const fixture = async () => (variant && (await fixtureExists(`plan-${variant}.json`)) ? `plan-${variant}.json` : 'plan.json')
+  const fixture = () => planFixtureFile(body, fixtureExists)
   return call({ url: `/api/sessions/${encodeURIComponent(id)}/plan`, init: json({ ...body, as_of }) }, fixture, opts, as_of ?? null)
 }
 

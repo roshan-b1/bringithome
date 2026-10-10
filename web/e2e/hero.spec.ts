@@ -112,6 +112,66 @@ test('the hero path, offline: two taps, the match, the meet and the report card'
   expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([])
 })
 
+test('offline, "What did you lose?" on the plan adds the item\'s own steps from the recorded item plans', async ({ page }, info) => {
+  test.setTimeout(60_000)
+  const plans: string[] = []
+  page.on('request', (r) => {
+    const m = /\/fixtures\/hero-rail\/(plan[^/]*\.json)$/.exec(new URL(r.url()).pathname)
+    if (m && r.method() === 'GET') plans.push(m[1]!)
+  })
+  await page.goto(HERO)
+  await page.getByRole('button', { name: /I lost something/ }).click()
+  await page.getByRole('group', { name: 'From the recorded ride' }).getByRole('button').first().click()
+  await page.getByRole('button', { name: '10 to 30 min ago' }).click()
+  await page.getByRole('button', { name: 'See your plan' }).click({ timeout: 15_000 })
+  await expect(h1(page)).toHaveText('Your plan')
+  const freeze = page.getByRole('heading', { name: 'Freeze your cards' })
+  await expect(page.getByText(/A bag left alone may be treated as a safety concern/).first()).toBeAttached()
+  await expect(freeze).toHaveCount(0)
+
+  // Wallet: plan-item_wallet.json, with the API's freeze-cards step and its claim wording from the contacts
+  await page.getByRole('button', { name: 'Wallet or ID' }).click()
+  await expect(page.getByText('What did you lose? Wallet, ID or Breeze card')).toBeVisible()
+  await expect(freeze).toBeAttached({ timeout: 10_000 })
+  const card = freeze.locator('xpath=ancestor::li[1]')
+  await expect(card.getByText(/Freeze your cards now with your bank\./)).toBeAttached()
+  await expect(card.getByText(/Claims are in person with a valid photo ID/)).toBeAttached()
+  await expect(page.getByText(/A bag left alone may be treated as a safety concern/).first()).toBeAttached()
+  await expect.poll(() => plans).toContain('plan-item_wallet.json')
+  await clean(page)
+  await page.screenshot({ path: info.outputPath(`plan-wallet-${info.project.name}.png`) })
+
+  // Bag instead: plan-item_bag.json, the bag line and no freeze-cards step
+  await page.getByText('What did you lose? Wallet, ID or Breeze card').locator('xpath=..').getByRole('button', { name: 'Change' }).click()
+  await page.getByRole('button', { name: 'Bag', exact: true }).click()
+  await expect(page.getByText('What did you lose? Bag or backpack')).toBeVisible()
+  await expect.poll(() => plans, { timeout: 10_000 }).toContain('plan-item_bag.json')
+  await expect(page.getByText(/A bag left alone may be treated as a safety concern/).first()).toBeAttached({ timeout: 10_000 })
+  await expect(freeze).toHaveCount(0)
+  await clean(page)
+})
+
+test('Lost it somewhere else, in the real app: a place, then "What did you lose?", then the plan with the phone\'s step', async ({ page }) => {
+  await page.goto(HERO)
+  await page.getByRole('button', { name: /I lost something/ }).click()
+  await page.getByRole('button', { name: 'Lost it somewhere else?' }).click()
+  await page.getByRole('button', { name: 'The store' }).click()
+  await page.getByRole('button', { name: 'See what to do' }).click()
+  await expect(h1(page)).toHaveText('What did you lose?')
+  await expect(page.getByRole('button', { name: 'Skip' })).toBeVisible()
+  await clean(page)
+  await page.getByRole('button', { name: 'Phone', exact: true }).click()
+  await expect(h1(page)).toHaveText("Here's what you can try")
+  await expect(page.getByText('Call the store. Say what you lost')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mark your phone as lost' })).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Safety' })).toBeVisible()
+  await clean(page)
+  // a reload keeps the step and the answer
+  await page.reload()
+  await expect(h1(page)).toHaveText("Here's what you can try")
+  await expect(page.getByRole('heading', { name: 'Mark your phone as lost' })).toBeVisible()
+})
+
 test('the results question re-runs the match (?case=uncertain: "which way?", then the train)', async ({ page }) => {
   await page.goto(`${HERO}&case=uncertain`)
   await page.getByRole('button', { name: /I lost something/ }).click()

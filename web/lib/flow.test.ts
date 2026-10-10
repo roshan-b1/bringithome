@@ -13,6 +13,7 @@ import {
   goTo,
   inferRide,
   initialState,
+  isStep,
   notOnMarta,
   placeTap,
   progress,
@@ -109,8 +110,11 @@ describe('the two questions', () => {
     const s = notOnMarta(walk())
     assert.equal(s.step, 'not_marta')
     assert.deepEqual(s.history, ['home', 'off'])
-    const t = advance(setExtra(s, { places: ['the store', 'work or school'] }))
+    const w = advance(setExtra(s, { places: ['the store', 'work or school'] }))
+    assert.equal(w.step, 'elsewhere_what') // "What did you lose?", optional, before the plan
+    const t = advance(w) // Skip
     assert.equal(t.step, 'elsewhere_plan')
+    assert.equal(t.answers.what, undefined)
     assert.deepEqual(t.answers.places, ['the store', 'work or school'])
     assert.deepEqual(buildIntake(t.answers, NOW), { ok: false, missing: 'not_marta' })
     // changed their mind: Back to off, tap a stop, and the MARTA path is back
@@ -118,6 +122,27 @@ describe('the two questions', () => {
     assert.equal(b.answers.mode, 'bus')
     assert.equal(b.step, 'when')
     assert.equal(notOnMarta(b), b) // only from off
+  })
+
+  test('somewhere else, "What did you lose?": a tile answers and opens the plan, Back returns to it, and the item stays', () => {
+    const w = advance(setExtra(notOnMarta(walk()), { places: ['the store'] }))
+    assert.equal(w.step, 'elsewhere_what')
+    assert.ok(isStep('elsewhere_what')) // a reload on this step resumes there
+    // the screen's tile tap: setExtra then advance, in one event
+    const p = advance(setExtra(w, { what: 'wallet' }))
+    assert.equal(p.step, 'elsewhere_plan')
+    assert.equal(p.answers.what, 'wallet')
+    assert.deepEqual(p.history, ['home', 'off', 'not_marta', 'elsewhere_what'])
+    const b = back(p)
+    assert.equal(b.step, 'elsewhere_what')
+    assert.equal(b.answers.what, 'wallet') // shown pressed; Continue keeps it
+    assert.equal(advance(b).answers.what, 'wallet')
+    // another tile replaces it
+    assert.equal(advance(setExtra(b, { what: 'phone' })).answers.what, 'phone')
+    assert.equal(back(b).step, 'not_marta')
+    // the plan step goes nowhere further, and no intake is ever built on this path
+    assert.equal(advance(p), p)
+    assert.deepEqual(buildIntake(p.answers, NOW), { ok: false, missing: 'not_marta' })
   })
 
   test('answering a step that is not the current one changes nothing', () => {

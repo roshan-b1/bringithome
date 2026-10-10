@@ -8,7 +8,7 @@ import { HomeScreen } from './HomeScreen'
 
 // One screen component per flow step (lib/flow.ts):
 //   home -> what -> mode -> off -> when -> done -> results -> plan     (tell: "Type it instead", a detour)
-//                    \-> not_marta -> elsewhere_plan                   ("Not on MARTA")
+//                    \-> not_marta -> elsewhere_what -> elsewhere_plan ("Not on MARTA")
 // AppShell renders the registered screen for the current step. MapLibre is not imported here: MatchMap loads it with
 // a dynamic import, so the home screen and the questions never download the map library (decision 12).
 export interface ScreenComponentProps {

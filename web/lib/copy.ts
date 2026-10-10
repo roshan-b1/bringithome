@@ -373,6 +373,8 @@ export const COPY = {
   'elsewhere.plan_title': "Here's what you can try",
   'elsewhere.plan_lead': 'Start with the most recent place.',
   'elsewhere.freeze': 'Freeze your cards now with your bank.',
+  'elsewhere.what_lead': 'Optional. A phone or a wallet gets its own step in your plan.',
+  'elsewhere.what_skip': 'Skip',
   'elsewhere.start_over': 'Start over',
 
   // ===== Results screens (components/results): the match, the one follow-up question, where it is now. Not in PREP section 10: for team review.

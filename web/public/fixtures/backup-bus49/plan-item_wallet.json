@@ -1,0 +1,363 @@
+{
+ "generated_at": "2026-10-09T17:30:00Z",
+ "lost_found": {
+  "open_now": true,
+  "next_open": "2026-10-12T12:30:00Z",
+  "usually": false
+ },
+ "meet": {
+  "possible": false,
+  "reason": "no_eta",
+  "vehicle_keys": [
+   "bus:2331"
+  ]
+ },
+ "cards": [
+  {
+   "kind": "bag_staff",
+   "step": 1,
+   "facts": {
+    "police_non_emergency": "404-848-4900",
+    "tracks_01": 0
+   },
+   "fact_sources": {
+    "police_non_emergency": "contacts",
+    "tracks_01": "rules"
+   },
+   "actions": [
+    {
+     "type": "tel",
+     "label_id": "call_police",
+     "value": "tel:+14048484900"
+    }
+   ],
+   "evidence": [],
+   "source": "static"
+  },
+  {
+   "kind": "freeze_cards",
+   "step": 2,
+   "facts": {
+    "lost_found_claim": "in person with a valid photo ID; a proxy needs a notarized letter plus their own photo ID"
+   },
+   "fact_sources": {
+    "lost_found_claim": "contacts"
+   },
+   "actions": [],
+   "evidence": [],
+   "source": "static"
+  },
+  {
+   "kind": "wait_return",
+   "step": 3,
+   "facts": {
+    "mode": "bus",
+    "vehicle": "Bus 49",
+    "label": "1631",
+    "stop": "Courtland St NE @ Auburn Ave NE",
+    "time": "1:55 PM",
+    "window_from": "1:52 PM",
+    "window_to": "2:02 PM",
+    "minutes": 25,
+    "walk_min": 10,
+    "leave_by": "1:43 PM",
+    "confidence": "usual",
+    "usually": 1,
+    "assumed": 1
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "label": "db",
+    "stop": "static_gtfs",
+    "time": "rules",
+    "window_from": "rules",
+    "window_to": "rules",
+    "minutes": "rules",
+    "walk_min": "rules",
+    "leave_by": "rules",
+    "confidence": "rules",
+    "usually": "rules",
+    "assumed": "rules"
+   },
+   "actions": [
+    {
+     "type": "directions",
+     "label_id": "directions",
+     "value": "33.755912,-84.384348"
+    }
+   ],
+   "evidence": [],
+   "source": "live"
+  },
+  {
+   "kind": "tell_staff",
+   "step": 4,
+   "facts": {
+    "mode": "bus",
+    "vehicle": "Bus 49",
+    "label": "1631",
+    "direction": "Toward North Ave Station"
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "label": "db",
+    "direction": "static_gtfs"
+   },
+   "actions": [],
+   "evidence": [
+    {
+     "role": "alight",
+     "place_label": "Piedmont Ave SE @ Gilmer St SE",
+     "at": "2026-10-09T17:18:52.173888Z",
+     "distance_m": 22
+    }
+   ],
+   "source": "live"
+  },
+  {
+   "kind": "keep",
+   "step": 5,
+   "facts": {
+    "mode": "bus",
+    "vehicle": "Bus 49",
+    "label": "1631",
+    "stop": "Piedmont Ave SE @ Gilmer St SE",
+    "time": "1:18 PM",
+    "role": "alight"
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "label": "db",
+    "stop": "static_gtfs",
+    "time": "db",
+    "role": "rules"
+   },
+   "actions": [
+    {
+     "type": "copy",
+     "label_id": "keep_copy",
+     "value": "Bus 49, vehicle 1631, got off at Piedmont Ave SE @ Gilmer St SE around 1:18 PM on Friday, October 9."
+    }
+   ],
+   "evidence": [
+    {
+     "role": "alight",
+     "place_label": "Piedmont Ave SE @ Gilmer St SE",
+     "at": "2026-10-09T17:18:52.173888Z",
+     "distance_m": 22
+    }
+   ],
+   "source": "live"
+  },
+  {
+   "kind": "report",
+   "step": 6,
+   "facts": {
+    "route_number": "49",
+    "bus_number": "1631",
+    "direction": "Toward North Ave Station",
+    "location": "Piedmont Ave SE @ Gilmer St SE",
+    "time": "Fri Oct 9, about 1:18 PM"
+   },
+   "fact_sources": {
+    "route_number": "db",
+    "bus_number": "db",
+    "direction": "static_gtfs",
+    "location": "static_gtfs",
+    "time": "db"
+   },
+   "actions": [
+    {
+     "type": "link",
+     "label_id": "report_open_form",
+     "value": "https://itsmarta.com/tplecrmcontact-v2.aspx"
+    },
+    {
+     "type": "copy",
+     "label_id": "report_copy",
+     "value": "Route Number: 49\nBus Number: 1631\nDirection of Travel/Destination: Toward North Ave Station\nLocation: Piedmont Ave SE @ Gilmer St SE\nTime: Fri Oct 9, about 1:18 PM"
+    }
+   ],
+   "evidence": [
+    {
+     "role": "alight",
+     "place_label": "Piedmont Ave SE @ Gilmer St SE",
+     "at": "2026-10-09T17:18:52.173888Z",
+     "distance_m": 22
+    }
+   ],
+   "source": "live"
+  },
+  {
+   "kind": "call",
+   "step": 7,
+   "facts": {
+    "open_now": 1,
+    "lost_found_phone": "404-848-3208",
+    "lost_found_hours": "Mon to Fri, 8:30 AM to 5 PM",
+    "lost_found_transit_time": "up to 5 business days",
+    "lost_found_hold": "30 days",
+    "usually": 0
+   },
+   "fact_sources": {
+    "open_now": "contacts",
+    "lost_found_phone": "contacts",
+    "lost_found_hours": "contacts",
+    "lost_found_transit_time": "contacts",
+    "lost_found_hold": "contacts",
+    "usually": "contacts"
+   },
+   "actions": [
+    {
+     "type": "tel",
+     "label_id": "call_lost_found",
+     "value": "tel:+14048483208"
+    },
+    {
+     "type": "mailto",
+     "label_id": "email_lost_found",
+     "value": "mailto:lostandfound@itsmarta.com"
+    }
+   ],
+   "evidence": [],
+   "source": "static"
+  }
+ ],
+ "report": {
+  "form_fields": {
+   "route_number": "49",
+   "bus_number": "1631",
+   "direction": "Toward North Ave Station",
+   "location": "Piedmont Ave SE @ Gilmer St SE",
+   "time": "Fri Oct 9, about 1:18 PM"
+  },
+  "email": {
+   "subject": "Lost item on bus 1631, route 49, Friday, October 9",
+   "body": "Hello,\n\nI misplaced something important. I left [[ITEM]] on bus 1631, route 49, heading toward North Ave Station. I got off at Piedmont Ave SE @ Gilmer St SE on Friday, October 9, at about 1:18 PM.\n\nI submitted the web form as well. Please contact me if it is found so I can claim it. I can share more details and show photo identification.\n\nThank you.",
+   "wording": "gemini"
+  },
+  "call_script": {
+   "text": "Hi, I am calling to report a missing belonging. I left [[ITEM]] on bus 1631, route 49, heading toward North Ave Station. I got off at Piedmont Ave SE @ Gilmer St SE on Friday, October 9, at about 1:18 PM. I also submitted the online report. Has anything like this been turned in, and how should I proceed?",
+   "wording": "gemini"
+  }
+ },
+ "source": "as_of",
+ "reunion": {
+  "options": [
+   {
+    "kind": "wait_on_return",
+    "rank": 1,
+    "recommended": true,
+    "vehicle_keys": [
+     "bus:2331"
+    ],
+    "place_id": "stop:600028",
+    "place_label": "Courtland St NE @ Auburn Ave NE",
+    "stop_lat": 33.755912,
+    "stop_lon": -84.384348,
+    "reunion_at": "2026-10-09T17:55:28Z",
+    "window_from": "2026-10-09T17:52:28Z",
+    "window_to": "2026-10-09T18:02:28Z",
+    "leave_by": "2026-10-09T17:43:20.452512Z",
+    "walk_s": 548,
+    "wait_s": 980,
+    "margin_s": 980,
+    "basis": "estimate",
+    "confidence": "usual",
+    "note_ids": [
+     "usually_comes_back",
+     "assumed_location"
+    ],
+    "facts": {
+     "mode": "bus",
+     "vehicle": "Bus 49",
+     "label": "1631",
+     "stop": "Courtland St NE @ Auburn Ave NE",
+     "time": "1:55 PM",
+     "window_from": "1:52 PM",
+     "window_to": "2:02 PM",
+     "minutes": 25,
+     "walk_min": 10,
+     "leave_by": "1:43 PM"
+    },
+    "fact_sources": {
+     "mode": "rules",
+     "vehicle": "db",
+     "label": "db",
+     "stop": "static_gtfs",
+     "time": "rules",
+     "window_from": "rules",
+     "window_to": "rules",
+     "minutes": "rules",
+     "walk_min": "rules",
+     "leave_by": "rules"
+    }
+   },
+   {
+    "kind": "wait_here",
+    "rank": 2,
+    "recommended": false,
+    "vehicle_keys": [
+     "bus:2331"
+    ],
+    "place_id": "stop:213732",
+    "place_label": "Coca Cola Pl SE @ Jesse Hill Jr Dr SE",
+    "stop_lat": 33.753719,
+    "stop_lon": -84.381169,
+    "reunion_at": "2026-10-09T17:57:12Z",
+    "window_from": "2026-10-09T17:54:12Z",
+    "window_to": "2026-10-09T18:04:12Z",
+    "leave_by": "2026-10-09T17:46:34.785392Z",
+    "walk_s": 458,
+    "wait_s": 1174,
+    "margin_s": 1174,
+    "basis": "estimate",
+    "confidence": "usual",
+    "note_ids": [
+     "usually_comes_back",
+     "assumed_location"
+    ],
+    "facts": {
+     "mode": "bus",
+     "vehicle": "Bus 49",
+     "label": "1631",
+     "stop": "Coca Cola Pl SE @ Jesse Hill Jr Dr SE",
+     "time": "1:57 PM",
+     "window_from": "1:54 PM",
+     "window_to": "2:04 PM",
+     "minutes": 27,
+     "walk_min": 8,
+     "leave_by": "1:46 PM"
+    },
+    "fact_sources": {
+     "mode": "rules",
+     "vehicle": "db",
+     "label": "db",
+     "stop": "static_gtfs",
+     "time": "rules",
+     "window_from": "rules",
+     "window_to": "rules",
+     "minutes": "rules",
+     "walk_min": "rules",
+     "leave_by": "rules"
+    }
+   }
+  ],
+  "not_offered": [
+   {
+    "kind": "walk_ahead",
+    "reason": "not_live"
+   },
+   {
+    "kind": "meet_at_end",
+    "reason": "too_far"
+   }
+  ],
+  "rider_location": "assumed_alight",
+  "computed_at": "2026-10-09T17:30:00Z",
+  "source": "as_of"
+ }
+}

@@ -1,12 +1,13 @@
 # bring it home: web
 
 The rider's app at bringit.casa. Next.js 16.4 (App Router, TypeScript strict, CSS modules), exported as static files
-(`output: 'export'`). In production Caddy serves `out/` and proxies `/api` to FastAPI on the same origin; there is no
-Node server. One page (`app/page.tsx`) runs the whole flow as a client state machine:
+(`output: 'export'`). In production Vercel serves `out/` at www.bringit.casa and forwards `/api/*` to FastAPI on the Vultr
+server (vercel.json), so the app and the API share one origin; there is no Node server. One page (`app/page.tsx`) runs the whole flow as a client state machine:
 
 ```
 home -> off -> [mode] -> when -> done (POST /api/sessions) -> results -> plan -> done / Clear now
-         \-> "Lost it somewhere else?" -> somewhere-else plan        "Say it in one sentence" (TellMe) from off
+         \-> "Lost it somewhere else?" -> places -> "What did you lose?" -> somewhere-else plan
+                                                         "Say it in one sentence" (TellMe) from off
 ```
 
 Two taps before the match ("Question 1 of 2"): **Where did you get off?** (the nearest stops and stations from one
@@ -24,6 +25,12 @@ card is always in it. The plan also asks "Do you think someone took it?", for a 
 station, on another train from `/api/trains/nearby`, somewhere else) and on a train way back "Which part of the
 train?", each only when it changes the plan. Step 2 of the plan is "Ways to get it back" (below), kept live while the
 screen is open.
+
+**Lost it somewhere else?** (on off) is all on the phone: up to 3 places, most recent first (`ElsewhereScreen`),
+then **What did you lose?** (`ElsewhereWhatScreen`, step `elsewhere_what`: the plan's six tiles, optional, Skip), then
+one call card per place plus the item's own step (a phone: mark it as lost; a wallet: freeze your cards). The item
+comes after the places because the places are what the rider tapped the link to answer, and it sits right before
+the plan it changes. An item already known (TellMe, or a tap before Back) shows pressed, and "Continue" keeps it.
 
 ## Run, build, serve
 
@@ -75,12 +82,16 @@ health  places-nearby  places-search  directions  trains-nearby (rail)  parse
 session.json  session-<case>.json
 replay.json
 plan.json  plan-<variant>.json            variant: on_vehicle | at_station | place (where the rider said they are)
+plan-item_<category>.json                 plan.json's body plus item_category (phone wallet bag keys laptop other)
 reunion.json  reunion-<variant>.json      POST /reunion with the same body as that plan
 reunion/<variant>/000..017.json           the reunion poll: as_of + 20 s per frame ("default" = plan.json's body)
 now/<mode>-<id>/000..035.json             /now: as_of + 10 s per frame, with the meet check when the set has a meet
 ```
 
-Every file is checked against the contract by `contracts/fixtures.test.ts` (and every set must have `reunion.json`,
+`node scripts/snapshot.mjs --items [set...]` records only the `plan-item_*` files into the sets on disk (the set's
+recorded session reused when the API still has it, else a new one with the same intake and as_of; it stops if
+plan.json's body no longer answers what plan.json holds), leaving every other file as it was; mock gets hero-rail's.
+The item plans in every set were added that way on Oct 10 from the deployed API. Every file is checked against the contract by `contracts/fixtures.test.ts` (and every set must have `reunion.json`,
 `parse.json` and, when its plan names a vehicle, the poll frames). Recorded on Oct 10 from the deployed API:
 
 | Set | Recorded clue | What it shows |
@@ -92,7 +103,10 @@ Every file is checked against the contract by `contracts/fixtures.test.ts` (and 
 | `mock` | a copy of `hero-rail` | the default set for `?mode=mock` |
 
 In fixture modes each endpoint maps to one file, whatever the request: the plan picks `plan-on_vehicle.json`,
-`plan-at_station.json` or `plan-place.json` from the `user` it sends (falling back to `plan.json`); the reunion poll
+`plan-at_station.json` or `plan-place.json` from the `user` it sends, else `plan-item_<category>.json` from its
+`item_category` (Wallet adds "Freeze your cards", Phone "Mark your phone as lost"), else `plan.json`
+(`planFixtureFile` in `lib/api.ts`). A body with both a `user` variant and an item answers with the user variant: the
+item plans are recorded for the default body only; the reunion poll
 reads `reunion/<variant>/`, frame 001 on its first call (frame 000 is what the plan carried) and one more per 20 s of
 visible time, holding the last; `/now` advances one frame per 10 s of visible time, holding the last one.
 
@@ -174,14 +188,16 @@ Motion tokens drop to zero under `prefers-reduced-motion` (the replay jumps to i
 
 ## Tests
 
-- Unit (`npm test`, node:test): the flow, time, copy (every string, the lint, slot filling), the fixtures against the
+- Unit (`npm test`, node:test): the flow, the fixture plan picker (`lib/api.test.ts`), time, copy (every string, the lint, slot filling), the fixtures against the
   contract, the results and plan models, and the reunion (`reunionModel.test.ts`: sentences, reason and note copy,
   directions links, the poll body; `reunionPoll.test.ts`: interval, hidden, backoff, no storage).
 - e2e (`npm run e2e`; `E2E_BASE_URL=http://localhost:3000` for a running server or the export):
   `hero.spec.ts` taps the hero path on `?mode=offline&set=hero-rail` (Garnett, Pick a time 3:24 PM, then the plan's
   item tap) through the meet and the report card, lints the
   rendered text (no dash, no "AI", no banned word), checks no `/api` call and what sessionStorage holds; plus the
-  results question, reload and Clear now, and the 503 fallback. `pwa.spec.ts` (export only), `smoke.spec.ts`, and
+  results question, reload and Clear now, the 503 fallback, Wallet then Bag on the plan (the recorded item plans:
+  "Freeze your cards" appears, then goes), and "Lost it somewhere else?" through "What did you lose?" (Phone) to its
+  plan. `pwa.spec.ts` (export only), `smoke.spec.ts`, and
   `intake.spec.ts` / `plan.spec.ts`, which use the dev harnesses and skip themselves on the export.
   `reunion.spec.ts`: "Ways to get it back" at 320x568, 375x667, 390x844 and 1280x800 (hero-rail with a reunion,
   late-rail with none, Apple or Google directions by device), the recorded frames on a fake clock (updated, a changed

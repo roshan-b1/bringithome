@@ -164,8 +164,8 @@ test('TellMe falls back to the taps when /api/parse is missing', async ({ page }
   await expect(page.getByRole('heading', { level: 1, name: 'Where did you get off?' })).toBeVisible()
 })
 
-test('Lost it somewhere else: places typed or tapped, most recent first, become call cards with the safety footer', async ({ page }) => {
-  await page.goto(`${H}?screen=off&what=wallet&mode=mock&set=backup-bus49&near=gsu`)
+test('Lost it somewhere else: places typed or tapped, most recent first, then the item, become call cards with the safety footer', async ({ page }) => {
+  await page.goto(`${H}?screen=off&mode=mock&set=backup-bus49&near=gsu`)
   await page.getByRole('button', { name: 'Lost it somewhere else?' }).click()
   await page.getByRole('textbox', { name: 'Place name' }).fill('Starbucks on 10th')
   await page.getByRole('button', { name: 'Add', exact: true }).click()
@@ -173,16 +173,44 @@ test('Lost it somewhere else: places typed or tapped, most recent first, become 
   await expect(page.getByRole('listitem').filter({ hasText: 'Most recent' })).toContainText('Starbucks on 10th')
   await clean(page)
   await page.getByRole('button', { name: 'See what to do' }).click()
+  // "What did you lose?": optional, the plan's six tiles, 56 px or taller, and Skip
+  await expect(page.getByRole('heading', { level: 1, name: 'What did you lose?' })).toBeVisible()
+  const tiles = page.getByRole('group', { name: 'What did you lose?' }).getByRole('button')
+  await expect(tiles).toHaveText(['Phone', 'Wallet or ID', 'Bag', 'Keys', 'Laptop', 'Other'])
+  for (const b of [...(await tiles.all()), page.getByRole('button', { name: 'Skip' })]) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(56)
+  await clean(page)
+  await page.getByRole('button', { name: 'Wallet or ID' }).click()
   await expect(page.getByText('Call Starbucks on 10th. Say what you lost')).toBeVisible()
   await expect(page.getByText('Call the store. Say what you lost')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Freeze your cards' })).toBeVisible()
   await expect(page.getByText('Freeze your cards now with your bank.')).toBeVisible()
+  await expect(page.getByText(/Step 3 of 3/)).toBeVisible()
   await expect(page.getByRole('complementary', { name: 'Safety' })).toBeVisible()
   await clean(page)
+
+  // Back: the wallet shows pressed and Continue keeps it; a phone instead gets the phone's step
+  await page.getByRole('button', { name: 'Back' }).click()
+  await expect(page.getByRole('button', { name: 'Wallet or ID' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Continue' })).toBeVisible()
+  await page.getByRole('button', { name: 'Phone', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Mark your phone as lost' })).toBeVisible()
+  await expect(page.getByText('Freeze your cards now with your bank.')).toHaveCount(0)
+})
+
+test('Lost it somewhere else: Skip the item, and the plan is the call cards alone', async ({ page }) => {
+  await page.goto(`${H}?screen=not_marta&places=the%20store&mode=mock&set=backup-bus49`)
+  await page.getByRole('button', { name: 'See what to do' }).click()
+  await page.getByRole('button', { name: 'Skip' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: "Here's what you can try" })).toBeVisible()
+  await expect(page.getByText('Call the store. Say what you lost')).toBeVisible()
+  await expect(page.getByText(/Step 1 of 1/)).toBeVisible()
+  await expect(page.getByText('Freeze your cards now with your bank.')).toHaveCount(0)
+  await expect(page.getByText(/Mark your phone as lost/)).toHaveCount(0)
 })
 
 test('320 px wide: no sideways scroll on any intake screen', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 })
-  for (const screen of ['mode', 'off&near=gsu', 'when', 'tell', 'done-noplace', 'not_marta&places=Starbucks%20on%2010th', 'elsewhere_plan']) {
+  for (const screen of ['mode', 'off&near=gsu', 'when', 'tell', 'done-noplace', 'not_marta&places=Starbucks%20on%2010th', 'elsewhere_what', 'elsewhere_plan&what=wallet']) {
     await page.goto(`${H}?screen=${screen}&mode=mock&set=backup-bus49`)
     await page.waitForTimeout(600)
     await clean(page)

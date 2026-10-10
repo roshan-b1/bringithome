@@ -5,6 +5,8 @@
 //
 //   node scripts/snapshot.mjs                    every set, then mock = a copy of hero-rail
 //   node scripts/snapshot.mjs hero-rail          one set (mock is refreshed whenever hero-rail is)
+//   node scripts/snapshot.mjs --items [set...]   only the item plans (plan-item_<category>.json) into the sets as
+//                                                they are, every other file left untouched (below)
 //   BACKTRACK_API_ORIGIN=http://127.0.0.1:8000   the API to record from (default). The deployed API answers as_of
 //                                                too: BACKTRACK_API_ORIGIN=https://155-138-217-184.sslip.io
 //
@@ -13,12 +15,20 @@
 // reunion (+ reunion-<variant>: POST /reunion with the same body as that plan), reunion/<variant>/000..017 (the
 // reunion poll's frames, as_of moving 20 s per frame; <variant> is "default" for plan.json's body),
 // now/<mode>-<id>/000..035 (as_of moving 10 s per frame, with the meet check's parameters when the set's meet plan
-// has a meet) and parse when POST /api/parse exists on the running API.
+// has a meet), parse when POST /api/parse exists on the running API, and plan-item_<category>.json for each item
+// category: plan.json's body plus the plan screen's "What did you lose?" (item_category), so a recorded set adds the
+// item's own steps (a wallet's freeze cards, a phone's steps). The item never changes the reunion, so it has no
+// reunion files of its own.
+//
+// --items records just those item plans into sets already on disk: it reuses the set's recorded session when the
+// API still has it (GET /api/sessions/{id}), else creates one with the same intake and as_of; it first checks that
+// plan.json's body still answers exactly what plan.json holds (else the item plans would not belong with the rest
+// of the set, and it stops: record the whole set instead). mock gets hero-rail's item plans.
 //
 // Only GETs and as_of POSTs: a session recorded here is an as_of replay that the API deletes on its normal schedule.
 // The `user` blocks below carry place ids and a vehicle key, never a coordinate.
 
-import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -28,6 +38,7 @@ const FRAMES = 36 // decision 13: one /now frame per 10 s of the demo, six minut
 const FRAME_S = 10
 const REUNION_FRAMES = 18 // the plan screen polls /reunion every 20 s: the same six minutes
 const REUNION_FRAME_S = 20
+const ITEMS = ['phone', 'wallet', 'bag', 'keys', 'laptop', 'other'] // ItemCategory, contracts/api.ts
 
 // The sets. `taps` is what a rider taps in the app to reach `intake` (meta.json keeps it, so a reviewer can redo it
 // live); `variants` are other first POSTs the same set answers with ?case=<name>.
@@ -284,6 +295,8 @@ async function record(name, spec) {
     }
   }
 
+  await recordItems(session.session_id, spec, top, put, log)
+
   // /now frames for the vehicle the plan is about, with the meet check while the set's meet plan has a meet
   const meet = spec.meetPlan ? plans[spec.meetPlan]?.meet : null
   const meetOn = meet?.possible && meet.place_id ? meet : null
@@ -316,7 +329,65 @@ async function record(name, spec) {
   })
 }
 
+/** The body plan.json was recorded with, its vehicle_keys resolved ('top': the match's first candidate). */
+function defaultBody(spec, top) {
+  const body = spec.plans['plan.json']
+  return { ...body, vehicle_keys: body.vehicle_keys === 'top' ? (top ? [top] : []) : body.vehicle_keys }
+}
+
+/** plan-item_<category>.json: plan.json's body plus item_category, at the set's as_of. */
+async function recordItems(sessionId, spec, top, put, log) {
+  const body = defaultBody(spec, top)
+  const base = new Set((await must('POST', `/api/sessions/${sessionId}/plan`, { ...body, as_of: spec.as_of })).cards.map((c) => c.kind))
+  for (const item of ITEMS) {
+    const p = await must('POST', `/api/sessions/${sessionId}/plan`, { ...body, item_category: item, as_of: spec.as_of })
+    put(`plan-item_${item}.json`, p)
+    const added = p.cards.map((c) => c.kind).filter((k) => !base.has(k))
+    log(`plan-item_${item}.json: ${added.length ? `adds ${added.join(', ')}` : 'the same steps as plan.json'}`)
+  }
+}
+
+/** --items: the item plans only, into a set already recorded, nothing else in it touched. */
+async function recordItemsOnly(name, spec) {
+  const dir = join(ROOT, name)
+  const read = (rel) => JSON.parse(readFileSync(join(dir, rel), 'utf8'))
+  const put = (rel, value) => writeFileSync(join(dir, rel), `${JSON.stringify(value, null, 1)}\n`)
+  const log = (s) => console.log(`  ${name}: ${s}`)
+  const recorded = read('session.json')
+  let sessionId = recorded.session_id
+  let match = recorded.match
+  const still = await call('GET', `/api/sessions/${encodeURIComponent(sessionId)}`)
+  if (still.status === 200) log(`reusing the recorded session ${sessionId}`)
+  else {
+    const fresh = await must('POST', '/api/sessions', { intake: spec.intake, as_of: spec.as_of })
+    sessionId = fresh.session_id
+    match = fresh.match
+    log(`recorded session gone (HTTP ${still.status}): a new one with the same intake and as_of, ${sessionId}`)
+  }
+  const top = match.candidates[0]?.vehicle_key ?? null
+  if (top !== (recorded.match.candidates[0]?.vehicle_key ?? null)) throw new Error(`${name}: the match's top vehicle is now ${top}, not the recorded one; record the whole set`)
+  const now = await must('POST', `/api/sessions/${sessionId}/plan`, { ...defaultBody(spec, top), as_of: spec.as_of })
+  if (JSON.stringify(now) !== JSON.stringify(read('plan.json')))
+    throw new Error(`${name}: plan.json's body no longer answers what plan.json holds; record the whole set`)
+  log('plan.json still answers the same, so the item plans belong with it')
+  await recordItems(sessionId, spec, top, put, log)
+}
+
 async function main(argv) {
+  if (argv[0] === '--items') {
+    const want = argv.length > 1 ? argv.slice(1) : Object.keys(SETS)
+    for (const name of want) {
+      if (!SETS[name]) throw new Error(`no set named ${name}; sets: ${Object.keys(SETS).join(', ')}`)
+      console.log(`recording the item plans of ${name} at ${SETS[name].as_of} from ${API}`)
+      await recordItemsOnly(name, SETS[name])
+    }
+    if (want.includes('hero-rail')) {
+      const from = join(ROOT, 'hero-rail')
+      for (const f of readdirSync(from).filter((f) => /^plan-item_[a-z]+\.json$/.test(f))) cpSync(join(from, f), join(ROOT, 'mock', f))
+      console.log('  mock: item plans copied from hero-rail')
+    }
+    return
+  }
   const want = argv.length ? argv : Object.keys(SETS)
   for (const name of want) {
     if (!SETS[name]) throw new Error(`no set named ${name}; sets: ${Object.keys(SETS).join(', ')}`)

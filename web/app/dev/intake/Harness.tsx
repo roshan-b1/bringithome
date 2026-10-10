@@ -16,7 +16,7 @@ import samples from './parse-samples.json'
 // any screen can be opened directly and screenshotted. Data calls go through lib/api.ts as in the app, so the usual
 // runtime parameters apply: live through the dev proxy by default, ?mode=mock|offline&set=..., ?near=<alias>.
 //
-//   ?screen=what|mode|off|when|tell|done|done-noplace|not_marta|elsewhere_plan   open that step (default what)
+//   ?screen=what|mode|off|when|tell|done|done-noplace|not_marta|elsewhere_what|elsewhere_plan   open that step (default what)
 //   &ride=bus|rail|streetcar|not_sure    the answered ride for off, when, done (default bus)
 //   &place=<sample>                      the stop for when and done: gsu-bay-b (default) | piedmont | north-ave
 //   &places=a|b                          somewhere-else places
@@ -62,9 +62,11 @@ function seed(q: URLSearchParams): FlowState {
     case 'done': return at('done', { mode: ride, off: place, when: { kind: 'relative', button: '10_30' } }, ['home', 'off', 'when'])
     case 'done-noplace': return at('done', { mode: ride, off: 'not_sure', when: 'not_sure' }, ['home', 'off', 'mode', 'when'])
     case 'not_marta':
+    case 'elsewhere_what':
     case 'elsewhere_plan': {
       const places = q.get('places')?.split('|').filter(Boolean)
-      return at(screen, { mode: 'not_marta', ...(places ? { places } : {}) }, screen === 'not_marta' ? ['home', 'off'] : ['home', 'off', 'not_marta'])
+      const history: Step[] = screen === 'not_marta' ? ['home', 'off'] : screen === 'elsewhere_what' ? ['home', 'off', 'not_marta'] : ['home', 'off', 'not_marta', 'elsewhere_what']
+      return at(screen, { mode: 'not_marta', ...(places ? { places } : {}) }, history)
     }
     default: return at('off', {}, ['home'])
   }

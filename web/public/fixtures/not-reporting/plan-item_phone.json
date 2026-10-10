@@ -1,0 +1,168 @@
+{
+ "generated_at": "2026-10-09T17:25:00Z",
+ "lost_found": {
+  "open_now": true,
+  "next_open": "2026-10-12T12:30:00Z",
+  "usually": false
+ },
+ "meet": null,
+ "cards": [
+  {
+   "kind": "bag_staff",
+   "step": 1,
+   "facts": {
+    "police_non_emergency": "404-848-4900",
+    "tracks_01": 0
+   },
+   "fact_sources": {
+    "police_non_emergency": "contacts",
+    "tracks_01": "rules"
+   },
+   "actions": [
+    {
+     "type": "tel",
+     "label_id": "call_police",
+     "value": "tel:+14048484900"
+    }
+   ],
+   "evidence": [],
+   "source": "static"
+  },
+  {
+   "kind": "tell_staff",
+   "step": 2,
+   "facts": {
+    "mode": "bus",
+    "vehicle": "Bus 20",
+    "direction": "Toward Five Points Station"
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "static_gtfs",
+    "direction": "static_gtfs"
+   },
+   "actions": [],
+   "evidence": [],
+   "source": "schedule"
+  },
+  {
+   "kind": "keep",
+   "step": 3,
+   "facts": {
+    "mode": "bus",
+    "vehicle": "Bus 20",
+    "stop": "Piedmont Ave SE @ Gilmer St SE",
+    "time": "1:17 PM",
+    "role": "alight"
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "static_gtfs",
+    "stop": "static_gtfs",
+    "time": "rules",
+    "role": "rules"
+   },
+   "actions": [
+    {
+     "type": "copy",
+     "label_id": "keep_copy",
+     "value": "Bus 20, got off at Piedmont Ave SE @ Gilmer St SE around 1:17 PM on Friday, October 9."
+    }
+   ],
+   "evidence": [],
+   "source": "schedule"
+  },
+  {
+   "kind": "report",
+   "step": 4,
+   "facts": {
+    "route_number": "20",
+    "direction": "Toward Five Points Station",
+    "location": "Piedmont Ave SE @ Gilmer St SE",
+    "time": "Fri Oct 9, about 1:17 PM"
+   },
+   "fact_sources": {
+    "route_number": "static_gtfs",
+    "direction": "static_gtfs",
+    "location": "static_gtfs",
+    "time": "rules"
+   },
+   "actions": [
+    {
+     "type": "link",
+     "label_id": "report_open_form",
+     "value": "https://itsmarta.com/tplecrmcontact-v2.aspx"
+    },
+    {
+     "type": "copy",
+     "label_id": "report_copy",
+     "value": "Route Number: 20\nDirection of Travel/Destination: Toward Five Points Station\nLocation: Piedmont Ave SE @ Gilmer St SE\nTime: Fri Oct 9, about 1:17 PM"
+    }
+   ],
+   "evidence": [],
+   "source": "schedule"
+  },
+  {
+   "kind": "call",
+   "step": 5,
+   "facts": {
+    "open_now": 1,
+    "lost_found_phone": "404-848-3208",
+    "lost_found_hours": "Mon to Fri, 8:30 AM to 5 PM",
+    "lost_found_transit_time": "up to 5 business days",
+    "lost_found_hold": "30 days",
+    "usually": 0
+   },
+   "fact_sources": {
+    "open_now": "contacts",
+    "lost_found_phone": "contacts",
+    "lost_found_hours": "contacts",
+    "lost_found_transit_time": "contacts",
+    "lost_found_hold": "contacts",
+    "usually": "contacts"
+   },
+   "actions": [
+    {
+     "type": "tel",
+     "label_id": "call_lost_found",
+     "value": "tel:+14048483208"
+    },
+    {
+     "type": "mailto",
+     "label_id": "email_lost_found",
+     "value": "mailto:lostandfound@itsmarta.com"
+    }
+   ],
+   "evidence": [],
+   "source": "static"
+  },
+  {
+   "kind": "phone_lost",
+   "step": 6,
+   "facts": {},
+   "fact_sources": {},
+   "actions": [],
+   "evidence": [],
+   "source": "static"
+  }
+ ],
+ "report": {
+  "form_fields": {
+   "route_number": "20",
+   "direction": "Toward Five Points Station",
+   "location": "Piedmont Ave SE @ Gilmer St SE",
+   "time": "Fri Oct 9, about 1:17 PM"
+  },
+  "email": {
+   "subject": "Lost item on a route 20 bus, Friday, October 9",
+   "body": "Hello,\n\nI hope you are doing well. I need to report a missing belonging. I accidentally left [[ITEM]] on a route 20 bus, moving toward Five Points Station. I got off at Piedmont Ave SE @ Gilmer St SE on Friday, October 9, at about 1:17 PM.\n\nI also submitted these details via the web form. If it is found, please let me know how I can pick it up. I am happy to provide a full description and show my photo ID.\n\nThank you.",
+   "wording": "gemini"
+  },
+  "call_script": {
+   "text": "Hi, I am calling to report a missing belonging. I left [[ITEM]] on a route 20 bus, moving toward Five Points Station. I got off at Piedmont Ave SE @ Gilmer St SE on Friday, October 9, at about 1:17 PM. I have also sent the web report. Has anything of that sort been turned in, and what are my options?",
+   "wording": "gemini"
+  }
+ },
+ "source": "as_of",
+ "reunion": null
+}
