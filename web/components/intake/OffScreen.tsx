@@ -1,6 +1,6 @@
 'use client'
 
-import type { Place } from '@/contracts/api'
+import type { Place, QueryMode } from '@/contracts/api'
 import { BigButton } from '@/components/ui/BigButton'
 import { SourceChip } from '@/components/ui/Chip'
 import { ChoiceList } from '@/components/ui/ChoiceList'
@@ -8,22 +8,26 @@ import { LiveRegion } from '@/components/ui/LiveRegion'
 import { Screen } from '@/components/ui/Screen'
 import { fixtureData } from '@/lib/api'
 import { t } from '@/lib/copy'
-import { isPlace, NOT_SURE, placeTap } from '@/lib/flow'
+import { isPlace, NOT_SURE, placeTap, type Answers } from '@/lib/flow'
 import { backOf, IntakeBanner, Note, NotSureButton, PlaceSub, placeIcon, SayItCard, SomewhereElse, type IntakeProps } from './parts'
 import { PlaceSearch } from './PlaceSearch'
 import { useNearby } from './useNearby'
 import styles from './intake.module.css'
 
-// Question 1: where did you get off? "Say it in one sentence" (TellMe) on top, then the nearest stops and stations
+// Question 2: where did you get off? "Say it in one sentence" (TellMe) on top, then the nearest stops and stations
 // to where the rider is now (most notice soon after getting off), each with its bus or train icon and its routes or
-// lines, then a search, "Not sure" and "Lost it somewhere else?". Both kinds are listed (mode "any"): the place
-// tapped says bus or train (flow.inferRide), so that question is asked only when the place can't. With location
+// lines, then a search, "Not sure" and "Lost it somewhere else?". Only the places of the ride tapped on "Bus or
+// train?" are listed (mode bus, rail or streetcar); after "Not sure" both kinds are (mode "any"), and the place
+// tapped says bus or train (flow.inferRide), so the follow-up is asked only when the place can't. With location
 // denied or unavailable, the search comes first and nothing else waits on GPS.
 
-const mode = 'any' as const
+/** The places to list: the tapped ride's, or every kind after "Not sure" (or a ride TellMe read, never asked here). */
+export const queryMode = (a: Pick<Answers, 'ride'>): QueryMode =>
+  a.ride === 'bus' || a.ride === 'rail' || a.ride === 'streetcar' ? a.ride : 'any'
 
 export function OffScreen({ flow }: IntakeProps) {
   const a = flow.state.answers
+  const mode = queryMode(a)
   const { state, retry } = useNearby(mode)
   const chosen = isPlace(a.off) ? a.off : null
   const pick = (p: Place) => flow.answer('off', placeTap(p))

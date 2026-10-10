@@ -12,8 +12,8 @@ import { OffScreen } from './OffScreen'
 import { TellScreen } from './TellScreen'
 import { WhenScreen } from './WhenScreen'
 
-// The intake, driven by lib/flow.ts: two questions (where you got off, about when), bus or train only when the
-// place doesn't say it, TellMe's "Say it in one sentence" detour, the done screen that POSTs the match, and the
+// The intake, driven by lib/flow.ts: three questions (bus or train, where you got off, about when), bus or train
+// again only when a "Not sure" ride's place doesn't say it, TellMe's "Say it in one sentence" detour, the done screen that POSTs the match, and the
 // "Lost it somewhere else?" path (the places, "What did you lose?", the plan). On the MARTA path what was lost is
 // asked on the plan screen.
 //
@@ -22,10 +22,11 @@ import { WhenScreen } from './WhenScreen'
 //   export const SCREENS = { home: HomeScreen, ...INTAKE_SCREENS, results: ..., plan: ... }
 // or render <IntakeFlow flow={flow} /> for any step in INTAKE_STEPS.
 
-export const INTAKE_STEPS = ['off', 'mode', 'when', 'tell', 'done', 'not_marta', 'elsewhere_what', 'elsewhere_plan'] as const satisfies readonly Step[]
+export const INTAKE_STEPS = ['ride', 'off', 'mode', 'when', 'tell', 'done', 'not_marta', 'elsewhere_what', 'elsewhere_plan'] as const satisfies readonly Step[]
 export type IntakeStep = (typeof INTAKE_STEPS)[number]
 
 const SCREEN: Record<IntakeStep, ComponentType<{ flow: FlowSession }>> = {
+  ride: ModeScreen,
   mode: ModeScreen,
   off: OffScreen,
   when: WhenScreen,

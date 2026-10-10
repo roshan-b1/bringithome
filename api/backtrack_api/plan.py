@@ -20,7 +20,9 @@ Card order (decision 10, changed Oct 10: the way back comes first, the rest is w
   1 safety       taken is Maybe or Yes: wb_12_safe with MARTA Police and 911
   2 meet         a meet is possible; else the reunion planner's recommended way back when it is a wait
                  (wait_return), the end of the line (meet_end) or a ride and a platform change
-                 (switch_platform), each with its facts; else too_far (only when a meet was asked for).
+                 (switch_platform), each with its facts; else, when the match names no live vehicle, the
+                 timetable's way back (timetable_return: "if it runs on schedule, it comes back past {stop}
+                 about {time}", always low confidence); else too_far (only when a meet was asked for).
                  tell_staff follows whenever there is no meet: reporting the item never waits on a plan
   3 bag_staff    every transit loss: bag_01_staff; a train loss adds tracks_01 (too_far, when there is no way
                  back, comes after it)
@@ -41,6 +43,11 @@ Which statuses get what: matched and ambiguous name the vehicles in vehicle_keys
 uncertain, not_reporting and no_match never name a vehicle and never get a meet (a low-confidence
 guess must not send anyone across town), but still get bag_staff, tell_staff, keep, report (with the
 candidates note at uncertain) and call, built from the rider's clue.
+The rider's own pick is the exception (request.picked, sent only when the rider tapped a vehicle on the results
+screen: "Yes, that's it", one of the others, or a "which way" answer that covers one vehicle): a rider who says "that one" is not a low-confidence guess, so at uncertain the tapped
+vehicle_keys are this plan's match (as_picked: matched for one key, ambiguous for two) and get the meet, the
+reunion and the named report like any match. The keys must still be the session's candidates (else 400), and
+without picked an uncertain session's keys are ignored as before.
 
 The reunion planner (reunion.py) answers alongside the meet, for the same vehicles and the same rider:
 reunion.resolve_user decides once where the rider stands (a chosen place, a trusted fix, their train, or
@@ -68,7 +75,7 @@ from typing import Any
 
 from backtrack_worker.timeutil import ATL
 
-from . import contacts, meet, reunion
+from . import contacts, meet, reunion, scheduled
 from . import report as report_mod
 from . import wording
 from .models import CardAction, PlanRequest, PlanUser
@@ -81,7 +88,7 @@ THEFT = ("maybe", "yes")                        # "Do you think someone took it?
 NAMED = ("matched", "ambiguous")                # statuses whose chosen vehicles the plan names (and may meet)
 # The plan is a plan of action: the fastest way back to the item comes first, and everything after it is what to
 # do if it isn't there. Only the theft safety card (MARTA Police, 911) goes above it.
-WAY_BACK = ("meet", "wait_return", "meet_end", "switch_platform")
+WAY_BACK = ("meet", "wait_return", "meet_end", "switch_platform", "timetable_return")
 ORDER = ("safety",) + WAY_BACK + ("bag_staff", "too_far", "tell_staff", "keep", "report", "call", "freeze_cards",
                                   "phone_lost", "police_property")
 REUNION_CARDS = {"wait_here": "wait_return", "wait_on_return": "wait_return", "meet_at_end": "meet_end",
@@ -109,6 +116,9 @@ COPY: dict[str, tuple[tuple[str, ...], frozenset[str]]] = {
     "wait_return": (("reunion_wait",), REUNION_SLOTS),
     "meet_end": (("reunion_end",), REUNION_SLOTS),
     "switch_platform": (("reunion_switch",), REUNION_SLOTS),
+    # no live vehicle: the timetable says the block's next trip passes the rider's stop again (scheduled.py)
+    "timetable_return": (("reunion_timetable",), frozenset({"mode", "way", "vehicle", "stop", "time", "pulls_out",
+                                                           "walk_min", "leave_by", "toward", "confidence"})),
     "too_far": (("res_04_far",), frozenset()),
     "tell_staff": (("plan_body_2_none", "res_03_tell_train"),
                    frozenset({"mode", "vehicle", "label", "train_run", "direction"})),
@@ -304,6 +314,31 @@ def reunion_card(option: Mapping, location: str) -> dict:
     return card(kind, f, actions=actions, source="schedule" if option["basis"] == "timetable" else "live")
 
 
+def timetable_return_card(entries: Sequence[Mapping]) -> dict | None:
+    """reunion_timetable: the way back the timetable allows when no live vehicle is named (scheduled.timetable_way):
+    wait for the block's trip back past the rider's stop, meet it at the end of the line during its scheduled layover,
+    or walk to a stop ahead it is scheduled to reach. From Plan.scheduled, when every scheduled vehicle agrees on it
+    (both times on a tie). Always an estimate from the timetable, confidence low; a Directions action to the place."""
+    back = scheduled.return_slots(entries)
+    if back is None:
+        return None
+    way = back["way"]
+    f = Facts()
+    f.put("mode", back["entries"][0]["mode"], "rules")
+    f.put("way", way["kind"], "rules")
+    f.put("vehicle", join_or(_unique(scheduled.vehicle_name(e) for e in back["entries"])), "static_gtfs")
+    f.put("stop", way["stop_label"], "static_gtfs")
+    f.put("time", _clocks(back["times"]), "static_gtfs")
+    if back["pulls_out"]:
+        f.put("pulls_out", _clocks(back["pulls_out"]), "static_gtfs")
+    f.put("walk_min", math.ceil(way["walk_s"] / 60) if way["walk_s"] > 0 else None, "rules")
+    f.put("leave_by", rider_clock(way["leave_by"]), "static_gtfs")
+    f.put("toward", join_or(_unique(back["toward"])), "static_gtfs")
+    f.put("confidence", "low", "rules")
+    return card("timetable_return", f, source="schedule",
+                actions=[CardAction(type="directions", label_id="directions", value=f"{way['lat']:.6f},{way['lon']:.6f}")])
+
+
 def too_far_card() -> dict:
     """res_04_far: "Too far to meet right now. That's okay. Here's your plan." No slots."""
     return card("too_far", source="live")
@@ -446,6 +481,25 @@ def with_taps(session: Mapping, request: PlanRequest) -> Mapping:
     return {**session, "intake": {**session["intake"], **over}} if over else session
 
 
+def as_picked(session: Mapping, request: PlanRequest) -> Mapping:
+    """The session as this plan sees it once the rider picked (request.picked): at uncertain, the tapped
+    vehicle_keys become this plan's match (matched for one, ambiguous for two), picked first, so the meet, the
+    reunion, the report and the live map all name them. Only the rider's own tap does this: the matcher still
+    never names a vehicle at uncertain. Keys that are not the session's candidates leave it as it is (the
+    callers answer those with 400), as does a pick at any other status."""
+    match = session["result"]["match"]
+    keys = list(request.vehicle_keys)
+    if not request.picked or not keys or match.get("status") != "uncertain":
+        return session
+    cands = list(match.get("candidates") or ())
+    by_key = {c["vehicle_key"]: c for c in cands}
+    if any(k not in by_key for k in keys):
+        return session
+    picked = {**match, "status": "matched" if len(keys) == 1 else "ambiguous", "separate_by": None,
+              "candidates": [by_key[k] for k in keys] + [c for c in cands if c["vehicle_key"] not in keys]}
+    return {**session, "result": {**session["result"], "match": picked}}
+
+
 def reunion_keys(match: Mapping, keys: Sequence[str]) -> list[str]:
     """The vehicles a reunion is about: the request's, else the match's own (the top one, both on a tie)."""
     if keys:
@@ -462,7 +516,7 @@ def build_reunion(store, index, session: Mapping, request: PlanRequest | Mapping
     if t.tzinfo is None:
         raise PlanError("t must be timezone-aware")
     request = request if isinstance(request, PlanRequest) else PlanRequest.model_validate(request)
-    session = with_taps(session, request)
+    session = as_picked(with_taps(session, request), request)
     intake, match = session["intake"], session["result"]["match"]
     user = rider_now(request.user, intake)
     assumed, location = reunion.resolve_user(index, intake, user)
@@ -516,7 +570,7 @@ def build_plan(store, index, session: Mapping, request: PlanRequest | Mapping, *
     if t.tzinfo is None:
         raise PlanError("t must be timezone-aware")
     request = request if isinstance(request, PlanRequest) else PlanRequest.model_validate(request)
-    session = with_taps(session, request)
+    session = as_picked(with_taps(session, request), request)
     intake, result = session["intake"], session["result"]
     match = result["match"]
     keys = list(request.vehicle_keys)
@@ -546,6 +600,12 @@ def build_plan(store, index, session: Mapping, request: PlanRequest | Mapping, *
     office = contacts.lost_found_status(t)
     evidence = evidence_of(named)
 
+    # no live vehicle named: where the timetable says it is now, and whether it comes back past the rider's stop
+    spot = meet.rider_spot(index, assumed) if match["status"] in scheduled.STATUSES else None
+    sched = scheduled.scheduled_now(store, index, session, t, as_of=as_of, rider=spot.point if spot else None,
+                                    walk=user.walk) if match["status"] in scheduled.STATUSES else []
+    timetable = timetable_return_card(sched) if sched else None
+
     cards = [bag_staff_card(train_loss)]
     if taken:
         cards.append(safety_card())
@@ -556,6 +616,8 @@ def build_plan(store, index, session: Mapping, request: PlanRequest | Mapping, *
     else:
         if top is not None and top["kind"] in REUNION_CARDS:
             cards.append(reunion_card(top, location))
+        elif timetable is not None:
+            cards.append(timetable)
         elif m is not None:
             cards.append(too_far_card())
         cards.append(tell_staff_card(rf, named, evidence))
@@ -575,4 +637,13 @@ def build_plan(store, index, session: Mapping, request: PlanRequest | Mapping, *
             "cards": order_cards(cards, wallet_or_theft=item == "wallet" or taken),
             "report": report.model_dump(exclude_none=True),
             "source": "as_of" if as_of else "live",
-            "reunion": r}
+            "reunion": r,
+            "scheduled": sched}
+
+
+def build_scheduled(store, index, session: Mapping, *, t: datetime, as_of: bool) -> dict:
+    """GET /scheduled: models.ScheduledNow, the plan's `scheduled` at t, for the phone's 30 s refresh of the map."""
+    if t.tzinfo is None:
+        raise PlanError("t must be timezone-aware")
+    return {"scheduled": scheduled.scheduled_now(store, index, session, t, as_of=as_of),
+            "computed_at": t.astimezone(UTC), "source": "as_of" if as_of else "live"}

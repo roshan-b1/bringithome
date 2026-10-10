@@ -7,35 +7,33 @@ import type { ItemCategory, NotOffered, Reunion, ReunionOption } from '@/contrac
 import { t, tLoose, type CopyId } from '@/lib/copy'
 import { useVisibleInterval } from '@/lib/hooks'
 import {
-  arrivalLine,
+  boldParts,
   type CarHint,
-  confidenceLine,
   directionsUrl,
   failedLine,
   leaveParts,
   mainOption,
-  noteLines,
-  optionSentence,
+  moreLines,
+  otherLine,
   otherOptions,
   pastOption,
   reasonText,
+  safetyLine,
+  shortLines,
   tellingReasonId,
   updatedLine,
   walksThere,
-  wayStepLines,
-  whenParts,
-  whenSentence,
   whyNotLines,
 } from './reunionModel'
 import { NoBreak } from './FactText'
 import { useAppleMaps } from './useAppleMaps'
 import styles from './plan.module.css'
 
-// "Your best plan" (the reunion planner, ARCHITECTURE 7.9): the recommended way as numbered steps with New York times
-// (reunionModel.wayStepLines: board, get off, cross, it arrives, when it pulls in), under a ticket with the place, the
-// time, the window for an estimate, Live/Estimate/Timetable and "Leave by" with a calm countdown; walking directions
-// to the stop's own coordinates; one line to tell staff. Every other way is folded under "Other ways (n)", with
-// "Why not other ways" folded inside it. With nothing to recommend it says so plainly with the most telling reason;
+// "Your best plan" (the reunion planner, ARCHITECTURE 7.9), short and simple: two or three action lines with the place
+// and the time in bold (reunionModel.shortLines), the Live/Estimate/Timetable chip and "Leave by" with a calm
+// countdown as compact labels, walking directions to the stop's own coordinates, one safety line, and everything
+// else (the window, how the time is worked out, notes, what to do as it pulls in, telling staff) folded under "More".
+// Every other way is one line under "Other ways (n)", with "Why not other ways" folded inside it. With nothing to recommend it says so plainly with the most telling reason;
 // the screen then opens the backup steps. Every sentence is reunionModel's, from copy.ts.
 
 export interface WaysProps {
@@ -105,8 +103,7 @@ export function Ways(p: WaysProps) {
     <div className={styles.ways}>
       {usable ? (
         <>
-          <MainWay option={usable} reunion={r} receivedAt={p.receivedAt} detail={detail} apple={apple} item={p.item ?? null} extra={p.extra} />
-          <p className={styles.staffLine}>{t('steps.staff')}</p>
+          <MainWay option={usable} reunion={r} receivedAt={p.receivedAt} detail={detail} apple={apple} extra={p.extra} />
         </>
       ) : p.meetShown ? (
         <p className={styles.staffLine}>{t('steps.staff')}</p>
@@ -174,13 +171,35 @@ interface Detail {
   whereAsked: boolean
 }
 
+/** A short line with its **bold** place and time; "~" is said as "about" to a screen reader. */
+export function Bold({ line }: { line: string }) {
+  return (
+    <>
+      {boldParts(line).map((seg, i) => {
+        const tilde = seg.text.startsWith('~')
+        const body = (
+          <>
+            {tilde ? (
+              <>
+                <span aria-hidden="true">~</span>
+                <span className="sr-only">{t('ways.about_sr')}</span>
+              </>
+            ) : null}
+            <NoBreak text={tilde ? seg.text.slice(1) : seg.text} />
+          </>
+        )
+        return seg.bold ? <strong key={i}>{body}</strong> : <span key={i}>{body}</span>
+      })}
+    </>
+  )
+}
+
 function MainWay({
   option: o,
   reunion,
   receivedAt,
   detail,
   apple,
-  item,
   extra,
 }: {
   option: ReunionOption
@@ -188,61 +207,44 @@ function MainWay({
   receivedAt: number | null
   detail: Detail
   apple: boolean
-  item: ItemCategory | null
   extra?: ReactNode
 }) {
-  const when = whenParts(o)
-  const confidence = confidenceLine(o)
-  const steps = wayStepLines(o, { item, car: detail.car })
-  // the notes the steps don't already say (the assumed place, "other trains may stop first", the night line)
-  const notes = noteLines(o, detail)
+  const lines = shortLines(o)
+  const more = moreLines(o, detail)
   return (
     <section className={styles.wayMain} aria-labelledby="ways-best">
-      <div className={styles.ticket}>
-        <div className={styles.ticketTop}>
-          <p className={styles.eyebrowSmall} id="ways-best">
-            {t('ways.best')}
-          </p>
-          <BasisChip basis={o.basis} />
-        </div>
-        <p className={styles.ticketPlace}>{o.place_label}</p>
-        <p className={styles.ticketTime}>
-          <strong>{when.big}</strong>
-          {when.small ? <span>{when.small}</span> : null}
+      <div className={styles.ticketTop}>
+        <p className={styles.eyebrowSmall} id="ways-best">
+          {t('ways.best')}
         </p>
-        {confidence ? <p className={styles.confidence}>{confidence}</p> : null}
-        <LeaveBy option={o} reunion={reunion} receivedAt={receivedAt} />
+        <BasisChip basis={o.basis} />
       </div>
-      <ol className={styles.waySteps} aria-label={t('steps.label')}>
-        {steps.map((s, i) => (
-          <li key={i} className={styles.wayStep}>
+      <ol className={styles.shortSteps} aria-label={t('steps.label')}>
+        {lines.map((l, i) => (
+          <li key={i} className={styles.shortStep}>
             <span className={styles.wayStepNo} aria-hidden="true">
               {i + 1}
             </span>
-            <div className={styles.wayStepText}>
-              <p className={s.sub ? styles.wayStepTitle : undefined}>
-                <NoBreak text={s.text} />
-              </p>
-              {s.sub ? (
-                <ul role="list" className={styles.wayStepSub}>
-                  {s.sub.map((l, j) => (
-                    <li key={j}>
-                      <NoBreak text={l} />
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
+            <p>
+              <Bold line={l} />
+            </p>
           </li>
         ))}
       </ol>
+      <LeaveBy option={o} reunion={reunion} receivedAt={receivedAt} />
       {walksThere(o, reunion.rider_location) ? <Directions option={o} apple={apple} /> : null}
-      {notes.length ? (
-        <div className={styles.wayNotes}>
-          {notes.map((l, i) => (
-            <p key={i}>{l}</p>
-          ))}
-        </div>
+      <p className={styles.safeLine}>{safetyLine(o)}</p>
+      {more.length ? (
+        <details className={styles.details}>
+          <summary>{t('ways.more')}</summary>
+          <ul className={styles.moreList}>
+            {more.map((l, i) => (
+              <li key={i}>
+                <NoBreak text={l} />
+              </li>
+            ))}
+          </ul>
+        </details>
       ) : null}
       {extra}
     </section>
@@ -270,32 +272,22 @@ function LeaveBy({ option: o, reunion, receivedAt }: { option: ReunionOption; re
   )
 }
 
-function WayList({ heading, options, reunion, apple, detail }: { heading: string; options: ReunionOption[]; reunion: Reunion; apple: boolean; detail: Detail }) {
+function WayList({ heading, options, reunion, apple }: { heading: string; options: ReunionOption[]; reunion: Reunion; apple: boolean; detail: Detail }) {
   return (
     <section className={styles.wayList}>
       <h3 className={styles.wayListHeading}>{heading}</h3>
       <ol role="list" className={styles.wayItems} aria-label={heading}>
-        {options.map((o) => {
-          const confidence = confidenceLine(o)
-          // a low way says why it is not certain ("it may not come back tonight", the night line)
-          const notes = o.confidence === 'low' ? noteLines(o, detail) : []
-          return (
-            <li key={`${o.kind}-${o.place_id}-${o.direction ?? ''}`} className={styles.wayItem}>
-              <div className={styles.wayItemHead}>
-                <p className={styles.wayItemPlace}>{o.place_label}</p>
-                <BasisChip basis={o.basis} />
-              </div>
-              <p className={styles.wayItemTime}>{whenSentence(o)}</p>
-              <p>{optionSentence(o)}</p>
-              {confidence ? <p className={styles.confidence}>{confidence}</p> : null}
-              {notes.map((l, i) => (
-                <p key={i}>{l}</p>
-              ))}
-              <p className={styles.arrivalShort}>{arrivalLine(o)}</p>
-              {walksThere(o, reunion.rider_location) ? <Directions option={o} apple={apple} size="md" /> : null}
-            </li>
-          )
-        })}
+        {options.map((o) => (
+          <li key={`${o.kind}-${o.place_id}-${o.direction ?? ''}`} className={styles.wayItem}>
+            <div className={styles.wayItemHead}>
+              <p className={styles.otherLine}>
+                <Bold line={otherLine(o)} />
+              </p>
+              <BasisChip basis={o.basis} />
+            </div>
+            {walksThere(o, reunion.rider_location) ? <Directions option={o} apple={apple} size="md" /> : null}
+          </li>
+        ))}
       </ol>
     </section>
   )

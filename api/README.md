@@ -34,6 +34,7 @@ they never touch the real tables.
 | `GET /api/vehicles/{mode}/{id}/now` | Where the matched bus or train is now: position, state, next stops (see "Where is it now"). With `meet_place_id` and `remaining_walk_s`, also whether a meet still holds (see "The meet check on /now") |
 | `POST /api/sessions/{id}/plan` | The No-Panic Plan: ordered cards of facts, the meet, Lost & Found hours and MARTA's form filled in (see "The plan") |
 | `POST /api/sessions/{id}/reunion` | Every way back to the item, soonest first: walk ahead, ride on and change platforms, wait for it to come back, or meet it at the end of the line, each with its time window and why the others aren't offered. Cheap enough to poll every 20 s (see "The reunion planner") |
+| `GET /api/sessions/{id}/scheduled` | Where the timetable says the rider's bus or train is now, when the match names no live vehicle: the plan's `scheduled` again, for a 30 s refresh (see "Where the timetable says it is") |
 | `DELETE /api/sessions/{id}` | "Clear now" |
 
 Sessions, trains nearby, replay, now, the plan and /parse (like the place and direction reads) take `as_of`
@@ -191,6 +192,7 @@ tests hold every card to it.
 | `bag_staff` | bag_01_staff, tracks_01 | `police_non_emergency`, `tracks_01` (1 for a train loss) |
 | `meet` | res_02_meet; bus: plan_body_2_bus, res_03_tell_bus; train: plan_body_2_train, res_03_tell_train | `mode`, `stop` ({stop}, {station}), `time` ("3:59 PM", or "3:58 PM or 4:05 PM" on a tie), `minutes` ({N}); train only: `toward` ("Airport"), `platform_hint` (front, middle, back, from the car tap), `night` (1 from 10 PM to 5 AM: "If you're alone, ask station staff to help."), `on_train` (1 when the rider is on a train: "get off at") |
 | `wait_return`, `meet_end`, `switch_platform` | reunion_wait, reunion_end, reunion_switch (new keys for copy.ts) | the reunion option's facts (`stop`, `time`, `window_from`, `window_to`, `minutes`, `walk_min`, `leave_by`, `vehicle`, `train_run` or `label`, `toward`, `night`, `platform_hint`, `board_at`, `board_time`, `get_off_at`, `off_time`, `ride_run`, `ride_toward`, `departs`, `pulls_out`), plus `confidence` (high, usual, low), `usually` (1: "usually comes back, about 9 in 10") and `assumed` (1: we assumed you are where you got off); a `directions` action ("lat,lon" of the stop) on `wait_return` and `meet_end` |
+| `timetable_return` | reunion_timetable | `mode`, `vehicle` ("Bus 20", "Red Line train"; both on a tie), `stop` (where it passes again), `time` ("1:30 PM", or "1:30 PM or 1:41 PM"), `toward`, `confidence` (always `low`); a `directions` action ("lat,lon" of that stop); source `schedule` |
 | `too_far` | res_04_far | none |
 | `tell_staff` | plan_body_2_none; train: res_03_tell_train | `mode`, `vehicle` ("Bus 49", "Red Line train"), `label` (the bus's painted number), `train_run` ("405 or 407"), `direction`. Both vehicles on a tie; facts only |
 | `keep` | plan_body_1 | `mode`, `vehicle` ({Bus 49}), `label` ({label}, buses only), `train_run` (trains: "train run 405", never "vehicle"), `stop`, `time` ({3:10 PM}), `role` (alight: "got off at", board: "got on at"); a Copy action with the same line and the day |
@@ -210,6 +212,15 @@ get a meet: a low-confidence guess must not send anyone across town. They still 
 `tell_staff`, `keep`, `report` and `call` from the rider's clue (and the timetable). At `uncertain`
 the bus number stays blank and the report says "possibly one of 1405, 1412 or 1433". A key that is not
 one of the session's candidates is `400`.
+
+**The rider's own pick.** `picked: true` says the rider tapped `vehicle_keys` themselves ("Yes, that's
+it", one of the others, or a "which way" answer that covers one vehicle on the results screen; the web
+sends it only then). A rider saying "that one" is not a
+low-confidence guess, so at `uncertain` the plan and the reunion treat the session as matched to the tapped
+vehicle (`plan.as_picked`: matched for one key, ambiguous for two) for that request only: the meet, the
+reunion options, the named report and the live map all work. The stored session keeps its own status. The keys
+must still be the session's candidates (else `400`); without `picked` an uncertain session's keys name nothing,
+as above.
 
 **as_of.** The request's `as_of`, else the session's own. Everything is read at that moment and
 nothing live-only is read (no TripUpdates, so a bus meet is always `no_eta` under as_of; no recorder
@@ -237,9 +248,37 @@ from on board): what `remaining_walk_s` counts down. `margin_min` is the margin 
 minutes. `direction` (rail) is the meet platform's direction ("Wait at West End southbound"); it is an
 addition to 6.2's Meet so the /now check can tell the platforms apart.
 
+## Where the timetable says it is (`scheduled.py`)
+
+For a session whose match names no live vehicle (`uncertain`, `not_reporting`, `no_match`), the plan carries
+`scheduled`: at most 2 `ScheduledVehicle`s, and `GET /api/sessions/{id}/scheduled?as_of=` answers
+`{scheduled, computed_at, source}` with the same list at that moment (as_of: the query's, else the session's own),
+so the phone can move the point every 30 s. A matched or ambiguous session gets `[]`.
+
+1. **Which trip.** The same timetable read the matcher makes for `not_reporting` (`store.scheduled` with the alight
+   anchor's stops, its window W + 3 min, the route and direction when given), costed like an unreported vehicle
+   (`unreported_cost`, plus the line penalty for a rail trip on another line), one trip per block. The best one, and
+   a second only when its time at the stop is under a minute closer or further than the best's (the reunion's tie).
+2. **Where now.** Placed by the clock between two of its stops, along its shape when the stops lie on it in running
+   order, else on the straight line. Past its last stop it follows the block (`where.next_block_trip`, at most 12
+   trips): `layover` at the end of the line until the next trip leaves, then `on_trip` on that trip (`now_trip_id`,
+   `continuing_as` when the route changes). `ended` when the block has no later trip, `not_started` before its first
+   stop. `lat`, `lon` are the timetable's point on the route; every other place is a public stop.
+3. **Comes back.** `back_at_your_stop`: the first later trip of the block with a stop within 400 m of the rider's
+   stop, 2 minutes to 3 hours after now. When every scheduled vehicle comes back past the same stop, the plan adds a
+   `timetable_return` card (the way back, first; confidence low, never recommended as certain), and `tell_staff`,
+   `keep`, `report` and `call` follow as always. Without one there is no way-back card, and the map still shows the
+   point.
+4. **Never live.** `basis` is always `timetable`. A bus reporting a trip of the same block in the last 10 minutes is
+   named in `block_vehicle_now` (probably the same bus), so the phone can ask `/now` and prefer it once it is live.
+   Buses carry `route_shape` (the trip running now, at most 200 points, `[lon*1e5, lat*1e5]`); trains draw the
+   line's own geometry. Reads go through `store.scheduled`, `where.trip_stops`, `where.next_block_trip`,
+   `replay.trip_shape` and `store.block_vehicle_now` (horizon under as_of); `tests/test_scheduled_parity.py` holds
+   whole answers to SQL parity.
+
 ## The reunion planner (`reunion.py`, `railturn.py`, `busturn.py`)
 
-`POST /api/sessions/{id}/reunion` with the `/plan` body (`{vehicle_keys, user, as_of?, taken?, car?, item_category?}`) returns every
+`POST /api/sessions/{id}/reunion` with the `/plan` body (`{vehicle_keys, user, as_of?, taken?, car?, item_category?, picked?}`) returns every
 way the rider can get back to the item, soonest first, and nothing else: no cards, no wording, no Gemini, so the
 phone can poll it every 20 s with a live fix (about 60 ms a call on Oct 9's archive once the rail timetable is
 built; the app builds it in the background at startup). The plan carries the same object as `reunion`.

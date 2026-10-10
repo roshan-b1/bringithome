@@ -544,3 +544,125 @@ export const REUNION_COPY_IDS: readonly CopyId[] = [
   ...Object.values(REASON_COPY),
   ...Object.values(KIND_NAME),
 ].filter((id) => id in COPY)
+
+// ------------------------------------------------------------------------------------------ short and simple
+
+/** A line with **bold** marks, as segments ("Take the **3:34** train" -> text, bold, text). */
+export interface Seg {
+  text: string
+  bold?: boolean
+}
+
+export function boldParts(line: string): Seg[] {
+  return line
+    .split('**')
+    .map((text, i) => ({ text, ...(i % 2 ? { bold: true } : {}) }))
+    .filter((s) => s.text !== '')
+}
+
+/** A line with its bold marks taken out (what is announced, and what the tests read). */
+export const plainLine = (line: string): string => line.replaceAll('**', '')
+
+/** "3:34 PM" -> "3:34": the short lines and pins drop AM and PM (the card's chip and Leave by keep them). */
+export const shortClock = (time: string | null | undefined): string | null => (time ? time.replace(/\s?[AP]M$/i, '') : null)
+
+/** An option's time as the short lines say it: "~3:53" for an estimate or the timetable, "3:53" when live. */
+export function shortWhen(o: ReunionOption, iso: string = o.reunion_at): string {
+  const time = shortClock(clock(iso))!
+  return o.basis === 'live' ? time : `~${time}`
+}
+
+/**
+ * "Your best plan" in two or three very short lines, each an action with a time, the place and the time in **bold**.
+ * Everything else (the window, how the time is worked out, notes, the platform hint, what to do as it pulls in) is
+ * in moreLines, folded. Built only from the option's own facts; a line whose facts are missing is left out.
+ */
+export function shortLines(o: ReunionOption): string[] {
+  const f = o.facts
+  const rail = wayMode(o) === 'rail'
+  const stop = o.place_label || text(f.stop)
+  const time = shortWhen(o)
+  const walk = { stop, walk_min: text(f.walk_min), leave_by: shortClock(text(f.leave_by)) }
+  const toward = text(f.toward)
+  const tilde = (v: string | null) => (v ? (o.basis === 'live' ? v : `~${v}`) : null)
+  const lines: (string | null)[] = []
+  switch (o.kind) {
+    case 'wait_here':
+      if (rail) lines.push(toward ? tFacts('short.wait_at_platform', { stop, toward }) : tFacts('short.wait_at', { stop }), t('short.train_back', { time }), t('short.get_on'))
+      else lines.push(tFacts('short.wait_at', { stop }), t('short.bus_back', { time }))
+      break
+    case 'wait_on_return':
+      if (rail) {
+        lines.push(tFacts('short.walk_to', walk))
+        lines.push([toward ? t('short.wait_platform', { toward }) : null, t('short.train_back', { time })].filter(Boolean).join(' '))
+        lines.push(t('short.get_on'))
+      } else lines.push(tFacts('short.wait_at_walk', walk), t('short.bus_back', { time }))
+      break
+    case 'switch_platform':
+      lines.push(
+        text(f.board_at) && text(f.board_time)
+          ? tFacts('short.take_train', { board_time: shortClock(text(f.board_time)), get_off_at: text(f.get_off_at) ?? stop })
+          : tFacts('short.stay_on', { get_off_at: text(f.get_off_at) ?? stop, off_time: tilde(shortClock(text(f.off_time))) }),
+      )
+      lines.push(t('short.cross'), t('short.train_arrives', { time }))
+      break
+    case 'walk_ahead':
+      lines.push(tFacts('short.walk_to', walk), rail ? t('short.train_arrives', { time }) : t('short.bus_arrives', { time }))
+      break
+    case 'shared_track':
+      lines.push(tFacts('short.get_off', { stop, off_time: tilde(shortClock(text(f.off_time))) }), t('short.same_platform', { time }))
+      break
+    case 'meet_at_end':
+      if (rail) {
+        lines.push(text(f.board_at) && text(f.board_time) ? tFacts('short.take_to_end', { board_time: shortClock(text(f.board_time)), stop }) : tFacts('short.walk_to_end', walk))
+        lines.push(tFacts('short.train_waits', { departs: tilde(shortClock(text(f.departs))) }))
+      } else {
+        lines.push(tFacts('short.walk_to_end', walk))
+        lines.push(tFacts('short.bus_waits', { pulls_out: tilde(shortClock(text(f.pulls_out))) }))
+      }
+      break
+  }
+  return lines.filter((l): l is string => Boolean(l))
+}
+
+/** The one safety line that stays visible under the steps. */
+export const safetyLine = (o: ReunionOption): string => (wayMode(o) === 'rail' ? t('arrive.train_safe') : t('short.safe_bus'))
+
+/**
+ * Everything the short lines leave out, for the folded "More": the window, how the time was worked out, how sure it
+ * is, which bus to look for, the platform hint, the notes, what to do as it pulls in, and telling staff. Short lines.
+ */
+export function moreLines(o: ReunionOption, opts: DetailOpts = {}): string[] {
+  const rail = wayMode(o) === 'rail'
+  const f = o.facts
+  const lines: (string | null)[] = []
+  if (o.basis !== 'live') lines.push(t('more.window', { from: clock(o.window_from), to: clock(o.window_to) }))
+  lines.push(`${tLoose(o.basis === 'live' ? 'basis.live_label' : o.basis === 'estimate' ? 'basis.estimate_label' : 'basis.timetable_label')}.`)
+  const sure = confidenceLine(o)
+  if (sure) lines.push(`${sure}.`)
+  if (!rail) lines.push(tFacts('way.vehicle', f))
+  if (rail) {
+    const hint = carOf(o, opts.car)
+    if (hint) lines.push(t('ways.platform_hint', { platform_hint: hint }))
+  }
+  lines.push(...noteLines(o, opts))
+  if (rail) lines.push(t('arrive.train_board', { car: carOf(o, opts.car) }), t('arrive.train_check'), t('arrive.train_step_off'))
+  else lines.push(t('arrive.bus_board'))
+  lines.push(t('steps.staff'))
+  return [...new Set(lines.filter((l): l is string => Boolean(l)))]
+}
+
+const OTHER_COPY: Record<ReunionKind, CopyId> = {
+  wait_here: 'other.wait',
+  wait_on_return: 'other.wait',
+  walk_ahead: 'other.walk_ahead',
+  switch_platform: 'other.switch_platform',
+  shared_track: 'other.shared_track',
+  meet_at_end: 'other.meet_at_end',
+}
+
+/** One of the other ways, in one line: "Wait at **Garnett**, ~3:59". */
+export function otherLine(o: ReunionOption): string {
+  const stop = (o.kind === 'switch_platform' ? text(o.facts.get_off_at) : null) ?? o.place_label ?? text(o.facts.stop) ?? ''
+  return tLoose(OTHER_COPY[o.kind], { stop, time: shortWhen(o) })
+}

@@ -400,6 +400,10 @@ export interface PlanRequest {
   car?: PlanCar | null
   // "What did you lose?", asked on the plan screen (never before the match): the item's own steps only
   item_category?: ItemCategory | null
+  // the rider tapped vehicle_keys themselves (a closest-fit card or a tie option on the results screen): at
+  // uncertain the API then plans as if the session were matched to them (api README "The rider's own pick").
+  // Sent only after such a tap (lib/riderPick.ts), never for keys the app chose
+  picked?: boolean
 }
 
 export interface LostFound {
@@ -445,6 +449,7 @@ export type CardKind =
   | 'wait_return'
   | 'meet_end'
   | 'switch_platform'
+  | 'timetable_return' // no live vehicle: "if it keeps to its timetable, it comes back past {stop} about {time}" (low)
   | 'too_far'
   | 'tell_staff'
   | 'keep'
@@ -551,6 +556,64 @@ export interface Reunion {
   source: Source
 }
 
+// 10b. where the timetable says it is, when the match names no live vehicle (api scheduled.py) ----------------------
+
+export type ScheduledState = 'on_trip' | 'layover' | 'not_started' | 'ended'
+
+/** The soonest way back the timetable allows, with the reunion's margins on timetable times. Never certain. */
+export interface ScheduledWay {
+  kind: 'wait' | 'meet_at_end' | 'walk_ahead'
+  stop_label: string
+  lat: number // the place's public coordinates, for Directions
+  lon: number
+  at: ISO
+  walk_s: number
+  leave_by: ISO
+  pulls_out?: ISO | null
+  toward?: string | null
+  basis?: 'timetable'
+}
+
+/** The trip that fits the rider's clue, placed by its timetable at `at`. Never live (basis is always "timetable"):
+ *  lat/lon is the timetable's point on the route, never the rider's; every other place is a public stop. */
+export interface ScheduledVehicle {
+  mode: 'bus' | 'rail' | 'streetcar'
+  trip_id: string
+  route: string // route short name; for rail, the line
+  toward?: string | null // where the trip it is on now (or about to run) is heading
+  now_trip_id: string
+  now_route: string
+  continuing_as?: string | null
+  state: ScheduledState
+  lat: number
+  lon: number
+  next_stop_label?: string | null
+  next_stop_time?: ISO | null
+  ended_at?: ISO | null
+  ended_stop_label?: string | null
+  your_stop_label: string
+  your_stop_lat: number
+  your_stop_lon: number
+  passed_at: ISO
+  back_at_your_stop?: ISO | null // a later trip of its block passes within 400 m of your stop (2 min to 3 h from now)
+  back_stop_label?: string | null
+  back_stop_lat?: number | null
+  back_stop_lon?: number | null
+  back_toward?: string | null
+  route_shape?: [number, number][] | null // buses: [lon*1e5, lat*1e5]; trains draw their line
+  block_vehicle_now?: BlockVehicle | null // a bus reporting a trip of this block now: probably the same bus
+  basis?: 'timetable'
+  at: ISO
+  way?: ScheduledWay | null // the timetable's way back for the rider (the plan's place, else the stop they got off at)
+}
+
+/** GET /api/sessions/{id}/scheduled: the plan's `scheduled` again, refreshed every 30 s. */
+export interface ScheduledNow {
+  scheduled: ScheduledVehicle[]
+  computed_at: ISO
+  source: Source
+}
+
 export interface Plan {
   generated_at: ISO
   lost_found: LostFound
@@ -559,6 +622,7 @@ export interface Plan {
   report: Report
   source: Source
   reunion?: Reunion | null // the reunion planner's answer for the same vehicles (null without a meet ask)
+  scheduled?: ScheduledVehicle[] // where the timetable says it is, when no live vehicle is named (empty otherwise)
 }
 
 // 6. POST /api/parse (typed or spoken where-and-when clues; taps never call it) ----------------------------------
@@ -805,6 +869,26 @@ export const ReunionCheck = obj<Reunion>({
   source,
 })
 
+const blockVehicle = obj<BlockVehicle>({ vehicle_key: str, label: str, note: opt(lit('probably the same bus')) })
+
+export const ScheduledVehicleCheck = obj<ScheduledVehicle>({
+  mode: lit('bus', 'rail', 'streetcar'), trip_id: str, route: str, toward: opt(nullable(str)), now_trip_id: str,
+  now_route: str, continuing_as: opt(nullable(str)), state: lit('on_trip', 'layover', 'not_started', 'ended'),
+  lat: num, lon: num, next_stop_label: opt(nullable(str)), next_stop_time: opt(nullable(iso)),
+  ended_at: opt(nullable(iso)), ended_stop_label: opt(nullable(str)), your_stop_label: str, your_stop_lat: num,
+  your_stop_lon: num, passed_at: iso, back_at_your_stop: opt(nullable(iso)), back_stop_label: opt(nullable(str)),
+  back_stop_lat: opt(nullable(num)), back_stop_lon: opt(nullable(num)), back_toward: opt(nullable(str)),
+  route_shape: opt(nullable(arr(tuple<[number, number]>(int, int)))), block_vehicle_now: opt(nullable(blockVehicle)),
+  basis: opt(lit('timetable')), at: iso,
+  way: opt(nullable(obj<ScheduledWay>({
+    kind: lit('wait', 'meet_at_end', 'walk_ahead'), stop_label: str, lat: num, lon: num, at: iso, walk_s: int,
+    leave_by: iso, pulls_out: opt(nullable(iso)), toward: opt(nullable(str)), basis: opt(lit('timetable')),
+  }))),
+})
+
+/** 10b. GET /api/sessions/{id}/scheduled */
+export const ScheduledNowCheck = obj<ScheduledNow>({ scheduled: arr(ScheduledVehicleCheck, { max: 2 }), computed_at: iso, source })
+
 export const PlanCheck = obj<Plan>({
   generated_at: iso,
   lost_found: obj<LostFound>({ open_now: bool, next_open: iso, usually: opt(bool) }),
@@ -814,8 +898,8 @@ export const PlanCheck = obj<Plan>({
     direction: opt(nullable(dir)), eta: opt(nullable(arr(iso))), walk_s: opt(nullable(int)), margin_min: opt(nullable(int)),
   })),
   cards: arr(obj<Card>({
-    kind: lit('safety', 'bag_staff', 'meet', 'wait_return', 'meet_end', 'switch_platform', 'too_far', 'tell_staff', 'keep',
-      'report', 'call', 'freeze_cards', 'phone_lost', 'police_property'),
+    kind: lit('safety', 'bag_staff', 'meet', 'wait_return', 'meet_end', 'switch_platform', 'timetable_return', 'too_far',
+      'tell_staff', 'keep', 'report', 'call', 'freeze_cards', 'phone_lost', 'police_property'),
     step: int, facts: record(oneOf(str, num)), fact_sources: record(factSource),
     actions: arr(obj<CardAction>({ type: lit('copy', 'tel', 'mailto', 'link', 'ics', 'directions'), label_id: str, value: str })),
     evidence: arr(obj<CardEvidence>({ role: str, place_label: str, at: iso, distance_m: int })),
@@ -833,6 +917,7 @@ export const PlanCheck = obj<Plan>({
   }),
   source,
   reunion: opt(nullable(ReunionCheck)),
+  scheduled: opt(arr(ScheduledVehicleCheck, { max: 2 })),
 })
 
 const parsedAnchor = obj<ParsedAnchor>({
@@ -864,6 +949,7 @@ export function checkerForFixture(relPath: string): Validator | null {
   if (/^now\/[a-z]+-[^/]+\/\d{3}\.json$/.test(relPath)) return VehicleNowCheck
   if (/^reunion\/[a-z_]+\/\d{3}\.json$/.test(relPath)) return ReunionCheck
   if (relPath === name && /^reunion(-[a-z_]+)?\.json$/.test(name)) return ReunionCheck
+  if (/^scheduled\/\d{3}\.json$/.test(relPath) || relPath === 'scheduled.json') return ScheduledNowCheck
   if (/^session(-[a-z_]+)?\.json$/.test(name)) return SessionCheck
   if (/^plan(-.+)?\.json$/.test(name)) return PlanCheck
   const table: Record<string, Validator> = {

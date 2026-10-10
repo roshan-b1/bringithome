@@ -181,3 +181,80 @@
   white-space: nowrap;
   box-shadow: 0 1px 3px rgb(20 33 61 / 0.25);
 }
+
+/* where the timetable says it is: hollow and dashed, so it never reads as a live position */
+.scheduled .vehicleDot {
+  inset: 0;
+  background: rgb(255 255 255 / 0.9);
+  border: 4px dashed var(--orange);
+  box-shadow: 0 0 0 2px var(--navy), 0 2px 6px rgb(20 33 61 / 0.3);
+}
+
+.scheduled .vehicleChip {
+  background: var(--white);
+  color: var(--navy);
+  border: 2px dashed var(--orange);
+}
+
+/* the plan's route: pins with short times ("Board here 3:34", "Get off here 3:42", "Meet it here ~3:53") */
+.pin {
+  position: absolute; /* as MapLibre places markers: in flow, each marker would push the next one down */
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+}
+
+.pinDot {
+  position: absolute;
+  inset: 0;
+  border: 4px solid var(--white);
+  border-radius: 50%;
+  background: var(--navy);
+  box-shadow: 0 0 0 2px var(--navy), 0 2px 6px rgb(20 33 61 / 0.35);
+}
+
+.pin_meet .pinDot,
+.pin_off .pinDot {
+  background: var(--orange);
+  box-shadow: 0 0 0 3px var(--orange), 0 2px 8px rgb(20 33 61 / 0.35);
+}
+
+.pin_back .pinDot {
+  background: var(--white);
+  border: 3px dashed var(--orange);
+  box-shadow: 0 0 0 2px var(--navy);
+}
+
+.pinLabel {
+  position: absolute;
+  top: 50%;
+  left: 30px;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--navy);
+  color: var(--white);
+  font-size: 0.8125rem;
+  font-weight: var(--fw-heavy);
+  line-height: 1.35;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgb(20 33 61 / 0.25);
+}
+
+.pin_meet .pinLabel,
+.pin_off .pinLabel {
+  background: var(--orange);
+  color: var(--navy);
+}
+
+.pin_back .pinLabel {
+  background: var(--white);
+  color: var(--navy);
+  border: 2px dashed var(--orange);
+}
+
+.pinLine {
+  display: block;
+}

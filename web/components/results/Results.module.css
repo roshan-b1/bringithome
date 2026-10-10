@@ -148,3 +148,36 @@
   flex-direction: column;
   gap: var(--sp-4);
 }
+
+/* under a "which way" answer: each train or bus it covers, by line colour and name, and when it passed */
+.passes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.pass {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.passSwatch {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--white), 0 0 0 3px var(--navy-14);
+}
+
+@media (forced-colors: active) {
+  .passSwatch {
+    forced-color-adjust: none;
+  }
+}
+
+/* the one vehicle (matched, or "Most likely yours"), big */
+.hero {
+  padding: var(--sp-5) var(--sp-4);
+}

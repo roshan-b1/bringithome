@@ -24,6 +24,7 @@ const TONE: Partial<Record<Card['kind'], CardTone>> = {
   wait_return: 'accent',
   meet_end: 'accent',
   switch_platform: 'accent',
+  timetable_return: 'accent',
 }
 
 export interface CardOverride {
@@ -128,6 +129,13 @@ function CardBody({ card }: { card: Card }) {
       return (
         <>
           <Lines lines={[tFacts(card.kind === 'wait_return' ? 'reunion_wait' : card.kind === 'meet_end' ? 'reunion_end' : 'reunion_switch', f)]} />
+          <Actions card={card} />
+        </>
+      )
+    case 'timetable_return': // through slots on the plan screen; on its own, the plain line and the caution
+      return (
+        <>
+          <Lines lines={[tFacts('reunion_timetable', f), fact(f, 'mode') === 'rail' ? t('timetable.not_certain_rail') : t('timetable.not_certain_bus')]} />
           <Actions card={card} />
         </>
       )

@@ -12,7 +12,7 @@ import { t } from '@/lib/copy'
 import { useOnline, useReducedMotion } from '@/lib/hooks'
 import { clock } from '@/lib/time'
 import { busLabel, countedNoun, formatDistance, haversineM, isLine, stateLine, trainRun, vehicleName } from './format'
-import type { Engine, Highlight, MapStyleKind, Phase, TargetPoint } from './mapEngine'
+import type { Engine, EngineRoute, Highlight, MapStyleKind, Phase, TargetPoint } from './mapEngine'
 import type { RiderFix, RiderStatus } from './useRiderLocation'
 import styles from './MatchMap.module.css'
 
@@ -39,6 +39,8 @@ export interface MatchMapProps {
   tall?: boolean
   /** the plan's best way back: a stop or station's public coordinates and its words */
   target?: TargetPoint | null
+  /** the plan's recommended way drawn as a route (pins with times, the walk, the ride); wins over `target` */
+  route?: EngineRoute | null
   /** open on where things are now (the plan: the rider has already watched the replay on results) */
   skipReplay?: boolean
   /** the plan: the one named vehicle's chip reads this ("Your bag is here") instead of its run or fleet number */
@@ -87,6 +89,7 @@ export function MatchMap({
   className,
   tall = false,
   target = null,
+  route = null,
   skipReplay = false,
   hereLabel = null,
   plan = false,
@@ -219,6 +222,12 @@ export function MatchMap({
     // compared by value: a new object for the same place is the same target
   }, [targetKey, phase, drawn])
 
+  const routeKey = route ? JSON.stringify(route) : ''
+  useEffect(() => {
+    engine.current?.setRoute(route)
+    // compared by value: the same route again is not a new one
+  }, [routeKey, phase, drawn])
+
   // the live distance under "Show both": one named vehicle only (on a tie it couldn't say which one it measures)
   const soleNow = candidates.length === 1 ? (nowList.find((n) => n.vehicle_key === candidates[0]!.vehicle_key) ?? null) : null
   const riderDistance = rider && soleNow ? haversineM(rider, soleNow.position) : null
@@ -235,7 +244,8 @@ export function MatchMap({
       now={nowList}
       nowSource={nowSource}
       rider={rider ?? null}
-      target={target}
+      target={route ? null : target}
+      route={route}
       hereLabel={hereLabel && candidates.length === 1 ? hereLabel : null}
     />
   )
@@ -358,6 +368,7 @@ function MapInWords({
   nowSource,
   rider,
   target,
+  route = null,
   hereLabel,
 }: {
   replay: Replay | null
@@ -367,6 +378,7 @@ function MapInWords({
   nowSource: 'live' | 'as_of' | 'fixture'
   rider: RiderFix | null
   target: TargetPoint | null
+  route?: EngineRoute | null
   hereLabel: string | null
 }) {
   const radius = formatDistance(replay?.focus.radius_m ?? match.context.radius_m ?? 400)
@@ -391,6 +403,7 @@ function MapInWords({
     if (rider) items.push(t('map.mirror_you', { distance: formatDistance(haversineM(rider, n.position)) }))
   }
   if (target) items.push(t('map.mirror_target', { place: target.place }))
+  for (const p of route?.pins ?? []) items.push(t('map.mirror_pin', { label: p.lines.join(', '), place: p.place }))
   return (
     <ul className={styles.mirror}>
       {items.map((s, i) => (

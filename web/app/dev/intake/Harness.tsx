@@ -16,9 +16,10 @@ import samples from './parse-samples.json'
 // any screen can be opened directly and screenshotted. Data calls go through lib/api.ts as in the app, so the usual
 // runtime parameters apply: live through the dev proxy by default, ?mode=mock|offline&set=..., ?near=<alias>.
 //
-//   ?screen=what|mode|off|when|tell|done|done-noplace|not_marta|elsewhere_what|elsewhere_plan   open that step (default what)
-//   &ride=bus|rail|streetcar|not_sure    the answered ride for off, when, done (default bus)
-//   &place=<sample>                      the stop for when and done: gsu-bay-b (default) | piedmont | north-ave
+//   ?screen=ride|mode|off|when|tell|done|done-noplace|not_marta|elsewhere_what|elsewhere_plan   open that step (default off)
+//   &ride=bus|rail|streetcar|not_sure    the first question's tap for off, when, done (default: not_sure on off and
+//                                        tell, so off lists every kind and the place says the ride; bus on when, done)
+//   &place=<sample>                      the stop for mode, when and done: gsu-bay-b (default) | piedmont | north-ave
 //   &places=a|b                          somewhere-else places
 //   &what=<item>                         the answered item (default bag; "none" leaves it unanswered)
 //   &parse=<sample>|404|500              answer POST /api/parse with a recorded body from parse-samples.json
@@ -50,25 +51,29 @@ function patchParse(which: string | null): void {
 function seed(q: URLSearchParams): FlowState {
   const screen = q.get('screen') ?? 'off'
   const what = q.get('what') ?? 'none'
-  const ride = (q.get('ride') ?? 'bus') as AnswerMap['mode']
+  const ride = (q.get('ride') ?? 'bus') as AnswerMap['ride']
   const place = PLACES[q.get('place') ?? 'gsu-bay-b'] ?? PLACES['gsu-bay-b']!
   const a: Answers = what === 'none' ? {} : { what: what as Answers['what'] }
   const at = (step: Step, extra: Answers, history: Step[]): FlowState => ({ step, answers: { ...a, ...extra }, history })
+  // the first question's tap, as flow.answer('ride') leaves it: a ride decides the mode, "Not sure" leaves it open
+  const rode = (r: AnswerMap['ride']): Answers => (r === 'not_sure' ? { ride: r } : { ride: r, mode: r, mode_by: 'ride' })
+  const early = (q.get('ride') ?? 'not_sure') as AnswerMap['ride']
   switch (screen) {
-    case 'mode': return at('mode', { off: place }, ['home', 'off'])
-    case 'off': return at('off', {}, ['home'])
-    case 'when': return at('when', { mode: ride, mode_by: 'place', off: place }, ['home', 'off'])
-    case 'tell': return at('tell', {}, ['home', 'off'])
-    case 'done': return at('done', { mode: ride, off: place, when: { kind: 'relative', button: '10_30' } }, ['home', 'off', 'when'])
-    case 'done-noplace': return at('done', { mode: ride, off: 'not_sure', when: 'not_sure' }, ['home', 'off', 'mode', 'when'])
+    case 'ride': return at('ride', {}, ['home'])
+    case 'mode': return at('mode', { ride: 'not_sure', off: place }, ['home', 'ride', 'off'])
+    case 'off': return at('off', rode(early), ['home', 'ride'])
+    case 'when': return at('when', { ...rode(ride), off: place }, ['home', 'ride', 'off'])
+    case 'tell': return at('tell', rode(early), ['home', 'ride', 'off'])
+    case 'done': return at('done', { ...rode(ride), off: place, when: { kind: 'relative', button: '10_30' } }, ['home', 'ride', 'off', 'when'])
+    case 'done-noplace': return at('done', { ride: 'not_sure', mode: ride, off: 'not_sure', when: 'not_sure' }, ['home', 'ride', 'off', 'mode', 'when'])
     case 'not_marta':
     case 'elsewhere_what':
     case 'elsewhere_plan': {
       const places = q.get('places')?.split('|').filter(Boolean)
-      const history: Step[] = screen === 'not_marta' ? ['home', 'off'] : screen === 'elsewhere_what' ? ['home', 'off', 'not_marta'] : ['home', 'off', 'not_marta', 'elsewhere_what']
+      const history: Step[] = screen === 'not_marta' ? ['home', 'ride'] : screen === 'elsewhere_what' ? ['home', 'ride', 'not_marta'] : ['home', 'ride', 'not_marta', 'elsewhere_what']
       return at(screen, { mode: 'not_marta', ...(places ? { places } : {}) }, history)
     }
-    default: return at('off', {}, ['home'])
+    default: return at('off', rode(early), ['home', 'ride'])
   }
 }
 

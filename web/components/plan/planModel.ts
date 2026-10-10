@@ -140,12 +140,12 @@ export function withdrawnCards(plan: Plan, meet: Card): Card[] {
  * listed here is left out (a numbered step with no words would be worse). Add a kind here together with its wording.
  */
 export const RENDERED_KINDS: ReadonlySet<CardKind> = new Set<CardKind>([
-  'safety', 'bag_staff', 'meet', 'wait_return', 'meet_end', 'switch_platform', 'too_far', 'tell_staff', 'keep', 'report',
-  'call', 'freeze_cards', 'phone_lost', 'police_property',
+  'safety', 'bag_staff', 'meet', 'wait_return', 'meet_end', 'switch_platform', 'timetable_return', 'too_far', 'tell_staff',
+  'keep', 'report', 'call', 'freeze_cards', 'phone_lost', 'police_property',
 ])
 
 /** The cards that hold the plan's "how to get it back" step: the meet, the reunion's way, or "no meet right now". */
-export const WAY_KINDS: ReadonlySet<CardKind> = new Set<CardKind>(['meet', 'wait_return', 'meet_end', 'switch_platform', 'too_far'])
+export const WAY_KINDS: ReadonlySet<CardKind> = new Set<CardKind>(['meet', 'wait_return', 'meet_end', 'switch_platform', 'timetable_return', 'too_far'])
 
 /**
  * The cards the screen shows, in order, steps renumbered 1..n: the API's list (kinds this build can word), with the

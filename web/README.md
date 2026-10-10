@@ -5,20 +5,33 @@ The rider's app at bringit.casa. Next.js 16.4 (App Router, TypeScript strict, CS
 server (vercel.json), so the app and the API share one origin; there is no Node server. One page (`app/page.tsx`) runs the whole flow as a client state machine:
 
 ```
-home -> off -> [mode] -> when -> done (POST /api/sessions) -> results -> plan -> done / Clear now
-         \-> "Lost it somewhere else?" -> places -> "What did you lose?" -> somewhere-else plan
+home -> ride -> off -> [mode] -> when -> done (POST /api/sessions) -> results -> plan -> done / Clear now
+          \------\-> "Lost it somewhere else?" -> places -> "What did you lose?" -> somewhere-else plan
                                                          "Say it in one sentence" (TellMe) from off
 ```
 
-Two taps before the match ("Question 1 of 2"): **Where did you get off?** (the nearest stops and stations from one
-GPS fix, `mode: any`, each with its bus or train icon and its routes or lines; the search; "Not sure"; and on top a
-"Say it in one sentence" card that opens TellMe) and **About when?** ("Just now", the under-10-minutes bucket, first
-and biggest; the other buckets, "Pick a time" and "Not sure" smaller). Bus or train is read from the place
+Three taps before the match ("Question 1 of 3", "2 of 3", "3 of 3"): **Bus or train?** (Bus, Train, Streetcar, "Not
+sure", and the small "Lost it somewhere else?" link), **Where did you get off?** (the nearest places from one GPS fix
+and the search, only the tapped ride's: `mode` bus, rail or streetcar; after "Not sure" both kinds, `mode: any`, each
+with its bus or train icon and its routes or lines; "Not sure"; and on top a "Say it in one sentence" card that opens
+TellMe) and **About when?** ("Just now", the under-10-minutes bucket, first and biggest; the other buckets, "Pick a
+time" and "Not sure" smaller, in two columns). On the "Not sure" path bus or train is read from the place
 (`inferRide` in `lib/flow.ts`): a station with lines and no routes is a train, a stop with routes and no lines a bus;
-only a place that serves both, a streetcar stop or "Not sure" asks "Bus or train?" as a follow-up ("Question 2 of 3").
-TellMe's confirmed facts (item, ride, line or route, place, time) skip what they answer. Route, line and direction
-are never asked up front: when the match comes back tied or uncertain, the results screen asks that one question and
-re-runs the match. The intake sends the neutral item `other`: **What did you lose?** is an optional tap on the plan
+only a place that serves both or a streetcar stop asks "Bus or train?" again as a follow-up ("Question 3 of 4").
+Changing the ride clears a place picked for the other one.
+
+**About when?** also has one optional row above "Just now", only when the place has more than one route or line to
+choose from: "Know your bus? Tap it." with the stop's routes, or "Know your line? Tap it." with the station's lines
+and their colours (`rideChips`, following the mode). One tap sets `Intake.route` ("49") or `Intake.line` ("RED"), a
+second tap clears it, and it never blocks; a route or line from TellMe shows picked; changing the place clears one it
+doesn't serve. Each time button searches its own half-width either side of its centre ("Just now" +/- 5 min, 10 to 30
++/- 10, 30 to 60 +/- 15, 1 to 2 hours +/- 30, over 2 hours +/- 120, "Not sure" +/- 90), a picked clock time +/- 10,
+a TellMe time the parse's own window.
+
+TellMe's confirmed facts (item, ride, line or route, place, time) skip what they answer: after "Yes, that's right" a
+sentence that names the ride, the place and the time goes straight to the match, and only what is missing is asked.
+Direction is never asked up front: when the match comes back tied or uncertain, the results screen asks that one
+question and re-runs the match. The intake sends the neutral item `other`: **What did you lose?** is an optional tap on the plan
 (it never changes the match), sent as `item_category` in the plan and reunion bodies for the item's own steps (wallet:
 freeze cards first; phone: lock or erase it). Unanswered, the plan is worded for any item, and the unattended-bag
 card is always in it. The plan screen, top to bottom: the live map of where the item is now (`PlanAside`: the

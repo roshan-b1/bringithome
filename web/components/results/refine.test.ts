@@ -99,3 +99,27 @@ test('an unknown mode becomes the picked one', () => {
   const p = planRefine(session([red407, gold306]).match, intake({ mode: 'unknown' }), { kind: 'tie', vehicleKey: 'rail:407' })
   assert.equal(p.patch.mode, 'rail')
 })
+
+test('"To Bankhead" at Georgia State narrows to the Green Line, never ties with a Blue train also going W', async () => {
+  // Blue and Green share the track west of Five Points: both are W there, so the direction alone let Blue 103 back in
+  const green202 = cand('rail:202', { line: 'GREEN' as Line, route: 'GREEN', direction_label: 'To Bankhead', evidence: ev('2026-10-09T15:31:00Z') })
+  const blue103 = cand('rail:103', { line: 'BLUE' as Line, route: 'BLUE', direction_label: 'To H. E. Holmes', evidence: ev('2026-10-09T15:29:00Z') })
+  const s = session([green202, blue103], {
+    status: 'uncertain',
+    separate_by: { question: 'direction', options: [{ label: 'To Bankhead', vehicle_keys: ['rail:202'] }, { label: 'To H. E. Holmes', vehicle_keys: ['rail:103'] }] },
+  })
+  const dirs: FetchDirections = async (q) =>
+    q.line === 'GREEN'
+      ? [{ direction_id: 0, direction: 'W', label: 'To Bankhead', stop_ids: [] }, { direction_id: 1, direction: 'E', label: 'To Edgewood Candler Park', stop_ids: [] }]
+      : [{ direction_id: 0, direction: 'W', label: 'To H. E. Holmes', stop_ids: [] }, { direction_id: 1, direction: 'E', label: 'To Indian Creek', stop_ids: [] }]
+  const gsu = intake({ anchors: [{ role: 'alight', place_id: 'station:georgia-state', stop_ids: ['1'], at: '2026-10-09T11:31:00-04:00', time_kind: 'picked', window_min: 5 }] })
+  const option = s.match.separate_by!.options[0]!
+  const r = await buildRefinedIntake(gsu, s, { kind: 'separate', question: 'direction', option }, dirs)
+  assert.equal(r.intake?.line, 'GREEN') // the line goes with the direction
+  assert.equal(r.intake?.direction, 'W')
+  // a group of two lines going the same way still narrows by direction only (Red and Gold "To Airport")
+  const red = cand('rail:407', { line: 'RED' as Line, route: 'RED', direction_label: 'To Airport' })
+  const gold = cand('rail:302', { line: 'GOLD' as Line, route: 'GOLD', direction_label: 'To Airport' })
+  const p = planRefine(session([red, gold]).match, intake(), { kind: 'separate', question: 'direction', option: { label: 'To Airport', vehicle_keys: ['rail:407', 'rail:302'] } })
+  assert.equal(p.patch.line, undefined)
+})

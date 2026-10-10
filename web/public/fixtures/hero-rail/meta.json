@@ -5,11 +5,11 @@
  "recorded_at": "2026-10-10T04:14:06-04:00",
  "git_sha": "dev",
  "taps": [
+  "ride: Train (Bus or train?, the first question: mode rail)",
   "off: Garnett station (alias:garnett, stop_ids 907843, 908600)",
-  "mode: rail, read from the station (not asked)",
   "when: picked 15:24 (3:24 PM), window 5",
   "plan, What did you lose: bag (item_category, the wording only; the recorded match was made with item bag)",
-  "line RED and direction S (Red Line, To Airport: the results question, or said in Say it in one sentence)",
+  "line RED and direction S (Red Line, To Airport: the results question, or said in Say it in one sentence; the line alone also by the About when? chip)",
   "plan, Where are you now: On another train, Gold Line run 310 (user.on_vehicle rail:310)",
   "plan, Which part of the train: middle",
   "or plan, Where are you now: At a station, Five Points (user.place_id station:510015, at_station)"

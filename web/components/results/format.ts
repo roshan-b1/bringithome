@@ -213,3 +213,35 @@ export function replayVehicleKeys(match: Pick<Match, 'status' | 'candidates' | '
   if (match.status === 'uncertain') return match.candidates.slice(0, 3).map((c) => c.vehicle_key)
   return namedVehicleKeys(match)
 }
+
+// ------------------------------------------------------------------------------------------- the rider's pick
+
+/** "To Airport" or "Toward North Ave Station" (the API's direction_label) as "toward Airport"; unknown: null. */
+export function towardWords(directionLabel: string | null | undefined): string | null {
+  const m = /^(?:to|toward|towards)\s+(.+)$/i.exec((directionLabel ?? '').trim())
+  return m ? t('pick.toward', { place: m[1]!.trim() }) : null
+}
+
+/** The line or route a pick row leads with: "Green Line", "Route 49" (a train with no line: "Train"). */
+export function pickVehicle(c: Pick<MatchCandidate, 'mode' | 'route' | 'line'>): string {
+  if (c.mode === 'rail') {
+    const line = c.line ?? (isLine(c.route) ? c.route : null)
+    return line ? lineWords(line) : t('vehicle.rail_unknown')
+  }
+  return c.route ? t('route.badge', { route: c.route }) : t('noun.bus')
+}
+
+/** When it passed the rider's stop (its first evidence), New York clock; none recorded: null. */
+export const passedClock = (c: Pick<MatchCandidate, 'evidence'>): string | null => (c.evidence[0] ? clock(c.evidence[0].at) : null)
+
+/** "Green Line toward Bankhead, passed 11:31 AM" / "Route 49 toward Five Points, passed 1:18 PM". */
+export function pickRow(c: Pick<MatchCandidate, 'mode' | 'route' | 'line' | 'direction_label' | 'evidence'>): string {
+  return t('pick.row', { vehicle: pickVehicle(c), toward: towardWords(c.direction_label), time: passedClock(c) })
+}
+
+/** The uncertain and ambiguous heading, by what the choices are: all trains, all buses, or a mix. */
+export function pickTitle(cands: readonly Pick<MatchCandidate, 'mode'>[]): string {
+  if (cands.length && cands.every((c) => c.mode === 'rail')) return t('pick.title_train')
+  if (cands.length && cands.every((c) => c.mode === 'bus')) return t('pick.title_bus')
+  return t('pick.title_either')
+}

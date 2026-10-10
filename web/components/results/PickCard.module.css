@@ -1,0 +1,103 @@
+.pick {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  min-height: var(--tap-lg);
+  padding: var(--sp-3) var(--sp-4);
+  border: 2px solid var(--navy-14);
+  border-radius: var(--r-md);
+  background: var(--white);
+  color: var(--navy);
+  text-align: left;
+  box-shadow: var(--shadow-1);
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+
+.badge {
+  display: flex;
+  flex: none;
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.sub {
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+}
+
+.trail {
+  flex: none;
+  color: var(--navy-24);
+  transition: color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+
+@media (hover: hover) {
+  .pick:hover:not(:disabled) {
+    border-color: var(--navy-24);
+    background: var(--navy-04);
+  }
+  .pick:hover:not(:disabled) .trail {
+    color: var(--navy);
+    transform: translateX(2px);
+  }
+}
+
+.pick:active:not(:disabled) {
+  transform: scale(0.99);
+  border-color: var(--orange);
+  background: var(--orange-06);
+}
+
+.pick:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.pick:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+@media (forced-colors: active) {
+  .pick {
+    border-color: ButtonText;
+  }
+}
+
+/* one vehicle, big: the match, or the uncertain view's "Most likely yours" */
+.hero {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-4);
+}
+
+.heroName {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-heavy);
+  line-height: var(--lh-snug);
+  text-wrap: balance;
+}
+
+.heroWhen {
+  margin-top: 4px;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+}

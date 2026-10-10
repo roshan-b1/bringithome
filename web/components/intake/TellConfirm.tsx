@@ -81,7 +81,7 @@ export function TellConfirm({ flow, proposal: p, onAgain }: IntakeProps & { prop
         {ride ? (
           <div className={styles.fact}>
             <p className={styles.factEyebrow}>{t('tell.ride')}</p>
-            <Check checked={keepRide} onChange={setKeepRide} icon={p.mode ? RIDE_ICON[p.mode] : 'bus'} label={ride} />
+            <Check checked={keepRide} onChange={setKeepRide} icon={p.mode ? RIDE_ICON[p.mode] : p.line ? 'train' : 'bus'} label={ride} />
           </div>
         ) : null}
 

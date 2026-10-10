@@ -10,6 +10,7 @@ import type { VehicleKey } from '../contracts/api.ts'
 import { ApiError, deleteSession, runtime, syncServerClock, type ApiResult } from './api.ts'
 import * as flow from './flow.ts'
 import type { AnswerMap, FlowState, QuestionStep, Step } from './flow.ts'
+import { clearPick, loadPick, savePick } from './riderPick.ts'
 import { clearNow as clearEverything, resume, saveFlow } from './session.ts'
 
 export interface FlowSession {
@@ -26,7 +27,11 @@ export interface FlowSession {
   progress: { n: number; m: number } | null
   /** the vehicles the rider settled on in results (0 to 2), for the plan; memory only (the plan keeps its own tap) */
   pick: VehicleKey[] | null
-  setPick: (keys: VehicleKey[] | null) => void
+  /** picked: the rider tapped these themselves (a closest-fit card or a tie option), so the plan sends picked and
+   *  plans as matched to them even at uncertain (riderPick.ts); kept per session so a reload on the plan keeps it */
+  setPick: (keys: VehicleKey[] | null, opts?: { picked?: boolean }) => void
+  /** the rider's own tap for this session (setPick with picked), else null */
+  riderPick?: VehicleKey[] | null
   answer: <K extends QuestionStep>(step: K, value: AnswerMap[K]) => void
   advance: () => void
   back: () => void
@@ -52,7 +57,8 @@ export function useFlowSession(): FlowSession {
   const [resumeError, setResumeError] = useState<ApiError | null>(null)
   const [expired, setExpired] = useState(false)
   const [attempt, setAttempt] = useState(0)
-  const [pick, setPick] = useState<VehicleKey[] | null>(null)
+  const [pick, setPickState] = useState<VehicleKey[] | null>(null)
+  const [riderPick, setRiderPick] = useState<VehicleKey[] | null>(null)
   const loaded = useRef(false)
 
   // resume once (and again on retryResume); also read the URL params and learn the server clock early
@@ -70,6 +76,8 @@ export function useFlowSession(): FlowSession {
       if (r.kind === 'session') {
         setSessionId(r.sessionId)
         setSessionResult(r.session)
+        const p = loadPick()
+        setRiderPick(p && p.sessionId === r.sessionId ? p.keys : null)
       }
       if (r.kind === 'error') {
         setSessionId(r.sessionId)
@@ -98,7 +106,9 @@ export function useFlowSession(): FlowSession {
     const old = latestId.current
     setSessionId(null)
     setSessionResult(null)
-    setPick(null)
+    setPickState(null)
+    setRiderPick(null)
+    clearPick()
     deleteSession(old).catch(() => {})
   }, [ready, state.step])
 
@@ -117,10 +127,26 @@ export function useFlowSession(): FlowSession {
     const old = latestId.current
     const id = result.data.session_id
     if (old && old !== id) deleteSession(old).catch(() => {})
+    if (old !== id) {
+      // a pick names the session it was tapped on
+      clearPick()
+      setRiderPick(null)
+    }
     latestId.current = id
     setSessionResult(result)
     setSessionId(id)
     setResumeError(null)
+  }, [])
+  const setPick = useCallback((keys: VehicleKey[] | null, opts: { picked?: boolean } = {}) => {
+    setPickState(keys)
+    const id = latestId.current
+    if (opts.picked && keys?.length && id) {
+      savePick(id, keys)
+      setRiderPick(keys)
+    } else {
+      clearPick()
+      setRiderPick(null)
+    }
   }, [])
   const retryResume = useCallback(() => setAttempt((n) => n + 1), [])
   const restart = useCallback(() => {
@@ -129,7 +155,9 @@ export function useFlowSession(): FlowSession {
     setSessionResult(null)
     setResumeError(null)
     setExpired(false)
-    setPick(null)
+    setPickState(null)
+    setRiderPick(null)
+    clearPick()
   }, [])
   const clearNow = useCallback(async () => {
     await clearEverything(sessionId)
@@ -139,7 +167,7 @@ export function useFlowSession(): FlowSession {
   const progress = useMemo(() => flow.progress(state), [state])
 
   return {
-    state, ready, sessionId, session, resumeError, expired, progress, pick, setPick,
+    state, ready, sessionId, session, resumeError, expired, progress, pick, setPick, riderPick,
     answer, advance, back, goTo, setExtra, notOnMarta, setSession, retryResume, clearNow, restart,
   }
 }

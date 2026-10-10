@@ -6,9 +6,10 @@
 // bus stops from /api/places/search on the stop's label (a lookup with nothing of the rider's in it), kept only
 // when the answer names the same place id.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { placesSearch } from '@/lib/api'
 import type { LatLon } from './planModel'
+import { stationKey } from './wayRoute'
 
 interface StationFeature {
   properties: { place_id: string; label: string }
@@ -67,4 +68,38 @@ export function usePlaceCoords(placeId: string | null | undefined, label: string
     }
   }, [placeId, label])
   return at
+}
+
+let byName: Promise<Map<string, LatLon>> | null = null
+
+/** The bundled stations by name ("Garnett", "Five Points"), for the route's board and get-off pins. */
+function stationsByName(): Promise<Map<string, LatLon>> {
+  byName ??= fetch('/geo/rail_stations.geojson', { cache: 'force-cache' })
+    .then((r) => (r.ok ? r.json() : { features: [] }))
+    .then((g: { features?: StationFeature[] }) => {
+      const m = new Map<string, LatLon>()
+      for (const f of g.features ?? []) m.set(stationKey(f.properties.label), { lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] })
+      return m
+    })
+    .catch(() => {
+      byName = null
+      return new Map<string, LatLon>()
+    })
+  return byName
+}
+
+/** A lookup from a station's name to its coordinates, once the bundled stations have loaded (null before). */
+export function useStationLookup(enabled: boolean): ((name: string) => LatLon | null) | null {
+  const [map, setMap] = useState<Map<string, LatLon> | null>(null)
+  useEffect(() => {
+    if (!enabled || map) return
+    let live = true
+    stationsByName().then((m) => {
+      if (live) setMap(m)
+    })
+    return () => {
+      live = false
+    }
+  }, [enabled, map])
+  return useMemo(() => (map ? (name: string) => map.get(stationKey(name)) ?? null : null), [map])
 }

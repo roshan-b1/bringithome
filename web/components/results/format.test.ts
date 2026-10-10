@@ -112,3 +112,15 @@ test('state lines follow decision 8', () => {
   assert.match(stateLine(now({ state: 'dark', age_s: 900 }), 'live'), /^This bus stopped sharing its location 15 min ago/)
   assert.equal(stateLine(now({ vehicle_key: 'rail:407', state: 'at_terminus', terminus_label: 'Airport' }), 'live'), 'It is at the end of the line at Airport. Staff there can check it.')
 })
+
+test('a pick row names the line or route, which way and when it passed', async () => {
+  const { pickRow, pickTitle, towardWords } = await import('./format.ts')
+  const ev = [{ role: 'alight' as const, place_label: 'Georgia State', at: '2026-10-09T15:31:00Z', t_in: '2026-10-09T15:31:00Z', t_out: '2026-10-09T15:31:00Z', distance_m: 20 }]
+  assert.equal(pickRow({ mode: 'rail', route: 'GREEN', line: 'GREEN', direction_label: 'To Bankhead', evidence: ev }), 'Green Line toward Bankhead, passed 11:31 AM')
+  assert.equal(pickRow({ mode: 'bus', route: '49', line: null, direction_label: 'Toward Five Points', evidence: ev }), 'Route 49 toward Five Points, passed 11:31 AM')
+  assert.equal(pickRow({ mode: 'rail', route: 'RED', line: 'RED', direction_label: 'Direction unknown', evidence: [] }), 'Red Line')
+  assert.equal(towardWords('Direction unknown'), null)
+  assert.equal(pickTitle([{ mode: 'rail' }, { mode: 'rail' }]), 'Which train were you on?')
+  assert.equal(pickTitle([{ mode: 'bus' }]), 'Which bus were you on?')
+  assert.equal(pickTitle([{ mode: 'bus' }, { mode: 'rail' }]), 'Which one were you on?')
+})

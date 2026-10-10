@@ -60,7 +60,7 @@ from . import wordcache
 from . import wording
 from . import railturn
 from .models import (Directions, Health, ParseRequest, ParseResponse, PlacesNearby, PlacesSearch, Plan, PlanRequest,
-                     Replay, Reunion, SessionRequest, SessionResponse, TrainsNearby, VehicleNow)
+                     Replay, Reunion, ScheduledNow, SessionRequest, SessionResponse, TrainsNearby, VehicleNow)
 from .replay import ReplayError, build_replay, parse_vehicle_keys
 from .resolver import PlaceIndex
 from .service import MatchService
@@ -612,6 +612,26 @@ def create_app(*, settings: Settings | None = None, index_loader: Callable[[], P
             return run_store(lambda: plan_mod.build_reunion(
                 get_store(), idx, stored, body, t=at or now(), as_of=at is not None, data_dir=settings.data_dir,
                 tripupdates=None if at is not None else trip_updates))
+        except ValueError as e:
+            raise ApiError(400, "bad_request", str(e)) from None
+
+    # 10b -------------------------------------------------------------------------------
+    @app.get("/api/sessions/{session_id}/scheduled", response_model=ScheduledNow, response_model_exclude_unset=True)
+    def get_scheduled(session_id: str, response: Response, as_of: str | None = None):
+        """Where the timetable says the rider's bus or train is now (scheduled.py), for a session whose match names
+        no live vehicle: the plan's `scheduled` again, cheap enough to refresh every 30 s. Never live; as_of as /plan
+        (the query's, else the session's own)."""
+        at = parse_as_of(as_of)
+        stored = stored_session(session_id)
+        try:
+            at = at or plan_mod.session_as_of(stored)
+        except ValueError:
+            at = None
+        response.headers["X-Backtrack-Source"] = "as_of" if at is not None else "live"
+        idx = index()
+        try:
+            return run_store(lambda: plan_mod.build_scheduled(get_store(), idx, stored, t=at or now(),
+                                                              as_of=at is not None))
         except ValueError as e:
             raise ApiError(400, "bad_request", str(e)) from None
 

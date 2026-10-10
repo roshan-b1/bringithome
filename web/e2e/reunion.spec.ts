@@ -36,7 +36,7 @@ async function clean(page: Page) {
   expect(text).not.toMatch(/[‒-―⸺⸻]/)
   expect(text).not.toMatch(/(?<![A-Za-z0-9])A\.?I(?![A-Za-z0-9])/)
   // the two negated safety lines of "When it pulls in" are the only place "doors" and "chase" may appear
-  const safe = text.replace(/\btrain runs? /gi, '').replace(/Never hold the doors\.|Never chase a bus or step in front of it\./g, '')
+  const safe = text.replace(/\btrain runs? /gi, '').replace(/Never hold the doors\.|Never chase a bus or step in front of it\.|Never chase a bus\./g, '')
   expect(safe).not.toMatch(/\b(?:run|hurry|rush|chase|confront|catch|jump|door|doors)\b/i)
   // no reason or note id ever shows raw
   expect(text).not.toMatch(/\b(?:may_leave_service|not_turned|no_location|watch_after_turn|assumed_location|switch_platform|wait_here|wait_on_return|meet_at_end|walk_ahead|shared_track)\b/)
@@ -45,9 +45,10 @@ async function clean(page: Page) {
 }
 
 /** The recorded ride up to the plan (no network). */
-async function toPlan(page: Page, set: string, _mode: 'Train' | 'Bus', hhmm: string, use: string) {
+async function toPlan(page: Page, set: string, mode: 'Train' | 'Bus', hhmm: string, use: string) {
   await page.goto(`/?mode=offline&set=${set}`)
   await page.getByRole('button', { name: /I lost something/ }).click()
+  await page.getByRole('button', { name: mode, exact: true }).click()
   await page.getByRole('group', { name: 'From the recorded ride' }).getByRole('button').first().click()
   await page.getByRole('button', { name: 'Pick a time' }).click()
   await page.getByLabel('About what time?').fill(hhmm)
@@ -73,21 +74,23 @@ for (const size of SIZES) {
       await expect(card).toBeVisible()
       const best = card.getByRole('region', { name: 'Best way now' })
       await expect(best.getByText('Lakewood-Ft McPherson', { exact: true })).toBeVisible()
-      await expect(best.getByText('About 3:53 PM', { exact: true })).toBeVisible()
-      await expect(best.getByText('between 3:48 PM and 4:01 PM', { exact: true })).toBeVisible()
-      await expect(best.getByText('Estimated from how it usually turns around')).toBeAttached()
+      await expect(best.getByText('Estimated from how it usually turns around').first()).toBeAttached()
       await expect(best.getByText('Leave by 3:33 PM', { exact: true })).toBeVisible()
-      // the way as numbered steps with times, in order, the last one "When it pulls in"
+      // the way as two or three short action lines, the place and the time in bold
       const steps = best.getByRole('list', { name: 'Your best plan, step by step' }).locator(':scope > li')
-      await expect(steps).toHaveCount(5)
-      await expect(steps.nth(0)).toContainText('Take the 3:34 PM train toward Airport from Garnett. Leave by 3:33 PM.')
-      await expect(steps.nth(1)).toContainText('Get off at Lakewood-Ft McPherson at about 3:42 PM.')
-      await expect(steps.nth(2)).toContainText('Cross to the platform toward North Springs.')
-      await expect(steps.nth(3)).toContainText("Your item's train arrives about 3:53 PM (between 3:48 PM and 4:01 PM).")
-      await expect(steps.nth(4)).toContainText('When it pulls in')
-      await expect(steps.nth(4)).toContainText('Your train: Red Line toward North Springs, due about 3:53 PM.')
-      await expect(steps.nth(4)).toContainText('Never hold the doors.')
-      await expect(card.getByText("Tell any staff you pass that it's yours.")).toBeVisible()
+      await expect(steps).toHaveCount(3)
+      await expect(steps.nth(0)).toHaveText('1Take the 3:34 train to Lakewood-Ft McPherson.')
+      await expect(steps.nth(0).locator('strong')).toHaveText(['3:34', 'Lakewood-Ft McPherson'])
+      await expect(steps.nth(1)).toHaveText('2Cross to the other platform.')
+      await expect(steps.nth(2)).toHaveText(/^3Your train arrives ~(about )?3:53\. Get on, check your seat\.$/)
+      await expect(best.getByText('Never hold the doors.', { exact: true })).toBeVisible()
+      // everything else is folded under "More", in short lines
+      const fold = best.locator('details', { hasText: 'More' })
+      await expect(best.getByText('It may come between 3:48 PM and 4:01 PM.')).toBeHidden()
+      await expect(best.getByText("Tell any staff you pass that it's yours.")).toBeHidden()
+      await fold.locator('summary').click()
+      await expect(best.getByText('It may come between 3:48 PM and 4:01 PM.')).toBeVisible()
+      await expect(best.getByText("Tell any staff you pass that it's yours.")).toBeVisible()
       // a station the rider rides to gets no walking directions
       await expect(best.getByRole('link', { name: 'Walking directions' })).toHaveCount(0)
 
@@ -95,12 +98,11 @@ for (const size of SIZES) {
       await expect(card.getByRole('list', { name: 'Other ways' })).toBeHidden()
       await openOthers(page)
       const others = card.getByRole('list', { name: 'Other ways' })
-      await expect(others.getByText('About 3:59 PM, between 3:54 PM and 4:07 PM.')).toBeVisible()
+      await expect(others.getByRole('listitem').first()).toContainText(/Wait at Garnett, ~(about )?3:59/)
       const href = await others.getByRole('link', { name: 'Walking directions' }).getAttribute('href')
       if (size.phone) expect(href).toMatch(/^https:\/\/maps\.apple\.com\/\?daddr=33\.\d{6},-84\.\d{6}&dirflg=w$/)
       else expect(href).toMatch(/^https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=33\.\d{6},-84\.\d{6}&travelmode=walking$/)
 
-      await expect(others.getByText('When it pulls in: Red Line toward North Springs. Let people off first, then check the seat and the floor.')).toBeVisible()
 
       // why not other ways: folded inside the other ways, then plain sentences
       const why = card.locator('details', { hasText: 'Why not other ways' }).last()
@@ -112,7 +114,7 @@ for (const size of SIZES) {
 
       // the car tap: get on that car when it pulls in
       await card.getByRole('button', { name: 'Back car', exact: true }).click()
-      await expect(steps.nth(4)).toContainText('Let people off first, then get on the back car, where you were.')
+      await expect(best.getByText('Let people off first, then get on the back car, where you were.')).toBeVisible()
 
       // the report and tell staff wait behind "Didn't find it?"; the safety footer stays
       const more = page.getByRole('button', { name: "Didn't find it?" })
@@ -122,7 +124,9 @@ for (const size of SIZES) {
       await expect(page.getByRole('heading', { name: 'Tell staff now' })).toBeVisible()
       await expect(page.getByRole('heading', { name: 'Fill in the lost item form' })).toBeVisible()
       await expect(page.getByText(/In danger\? Call/).first()).toBeAttached()
-      await expect(page.getByText('Meet it here: Lakewood-Ft McPherson.')).toBeAttached() // the map, in words, on every size now
+      // the map, in words, on every size: the route's pins with their times
+      await expect(page.getByText('Board here 3:34: Garnett.')).toBeAttached()
+      await expect(page.getByText('Get off here ~3:42, Meet it here ~3:53: Lakewood-Ft McPherson.')).toBeAttached()
       // the live map without a tap: in the first screen on a phone, the right pane on a laptop
       const map = page.getByRole('region', { name: 'Where it is now' })
       await expect(map).toBeAttached()
@@ -156,6 +160,58 @@ for (const size of SIZES) {
   })
 }
 
+test.describe('the plan as a route, and the timetable when the bus is not live', () => {
+  test.use({ viewport: { width: 390, height: 844 }, userAgent: IPHONE_UA, isMobile: true, hasTouch: true })
+
+  test('hero-rail: the map draws the route with board, get-off and meet labels, and a one-line legend', async ({ page }, info) => {
+    await toPlan(page, 'hero-rail', 'Train', '15:24', 'Use 3:24 PM')
+    const map = page.getByRole('region', { name: 'Where it is now' })
+    await expect(map).toBeVisible()
+    // the pins' own labels (drawn on the map) and the same in words under it
+    await expect(map.getByText('Board here 3:34', { exact: true })).toBeAttached()
+    await expect(map.getByText('Get off here ~3:42', { exact: true })).toBeAttached()
+    await expect(map.getByText('Meet it here ~3:53', { exact: true })).toBeAttached()
+    await expect(map.getByText('You are the blue dot, the dashed line is your walk, the bold line is your ride. Pins show where to go.')).toBeVisible()
+    await clean(page)
+    await page.screenshot({ path: info.outputPath('route-hero-390.png') })
+  })
+
+  test('not-reporting: the timetable point on the map, a timetable way back, then "Didn\'t find it?"', async ({ page }, info) => {
+    test.setTimeout(90_000)
+    await toPlan(page, 'not-reporting', 'Bus', '13:17', 'Use 1:17 PM')
+    await expect(page.getByText("We can't see this bus live, so this plan uses its timetable.")).toBeVisible()
+    const map = page.getByRole('region', { name: 'Where it probably is' })
+    await expect(map).toBeVisible()
+    await expect(map.getByText("Route 20 toward Snapfinger Wds Dr, by its timetable. We can't see this bus live, so it may not be exactly here.").first()).toBeVisible()
+    await expect(map.getByText('Wait here ~2:47', { exact: true })).toBeAttached()
+    await expect(map.getByText(/is probably here|Probably about here \(timetable\)/).first()).toBeAttached()
+    // the best plan from the timetable: short lines, never certain
+    const card = waysCard(page)
+    await expect(card.getByText('Estimate from the timetable')).toBeVisible()
+    const steps = card.getByRole('list', { name: 'Your best plan, step by step' }).locator(':scope > li')
+    await expect(steps).toHaveCount(2)
+    await expect(steps.nth(0)).toHaveText('1Wait at Piedmont Ave SE @ Gilmer St SE (1 min walk). Leave by 2:43.')
+    await expect(steps.nth(1)).toHaveText(/^2Your bus should come back ~(about )?2:47\. Tell the driver, check your seat\.$/)
+    await expect(card.getByText("We can't see this bus live, so this is not certain.")).toBeVisible()
+    await expect(card.getByRole('link', { name: 'Walking directions' })).toHaveAttribute('href', /33\.752543,-84\.384156/)
+    // then everything else, behind "Didn't find it?"
+    const more = page.getByRole('button', { name: "Didn't find it?" })
+    await expect(more).toHaveAttribute('aria-expanded', 'false')
+    await more.click()
+    await expect(page.getByRole('heading', { name: 'Fill in the lost item form' })).toBeVisible()
+    // the point moves with the recorded timetable frames (one per 30 s)
+    const frames: string[] = []
+    page.on('request', (r) => {
+      const m = /\/fixtures\/not-reporting\/scheduled\/(\d{3})\.json$/.exec(new URL(r.url()).pathname)
+      if (m) frames.push(m[1]!)
+    })
+    await expect.poll(() => frames.length, { timeout: 40_000 }).toBeGreaterThan(0)
+    await clean(page)
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await page.screenshot({ path: info.outputPath('not-reporting-390.png') })
+  })
+})
+
 test.describe('live updates', () => {
   test.use({ viewport: { width: 390, height: 844 }, userAgent: IPHONE_UA })
 
@@ -175,7 +231,7 @@ test.describe('live updates', () => {
     await card.getByRole('button', { name: 'At a station' }).click()
     await card.getByRole('button', { name: 'Five Points station' }).click()
     await expect(card.getByText('You are at Five Points station.')).toBeVisible()
-    await expect(best.getByText(/^Take the 3:32\sPM train toward Airport from Five Points\./)).toBeVisible()
+    await expect(best.getByRole('listitem').first()).toHaveText('1Take the 3:32 train to Lakewood-Ft McPherson.')
     await expect(best.getByText('Lakewood-Ft McPherson', { exact: true })).toBeVisible()
     await expect(card.getByText('Updated just now')).toBeVisible()
     await elapse(page, 12_000)

@@ -13,8 +13,11 @@
 //   separate_by route        the route (bus) or line (rail) the chosen group shares
 //   separate_by direction    the direction, from /api/directions. Rail: N/S/E/W, which the matcher applies with or
 //                            without a line, so a group of Red and Gold trains "To Airport" still narrows, as long as
-//                            the label means the same direction on every line in it. Bus: a direction_id only
-//                            means something on one route, so it goes in only with that route.
+//                            the label means the same direction on every line in it. A group of one line adds that
+//                            line too (Blue and Green both run W at Georgia State: W alone tied "To Bankhead" with
+//                            a Blue train). Bus: a direction_id only means something on one route, so it goes in
+//                            only with that route.
+//   An option that covers exactly one vehicle is not re-run at all: Results treats the tap as the rider's pick.
 //   separate_by board_place  nothing: options carry a label but no stops, so the rider's tap can't become an anchor
 // Mode becomes bus or rail when the pick settles it (an "unknown" mode intake).
 //
@@ -97,7 +100,9 @@ export function planRefine(match: Pick<Match, 'candidates' | 'tie_break'>, intak
   const line = mode === 'rail' && lines.length === 1 ? lines[0]! : null
   if (mode && intake.mode === 'unknown') patch.mode = mode
 
-  const wantsGroupId = answer.kind === 'tie' || answer.question === 'route'
+  // a direction group of one line (or one route) names it too: at Georgia State "To Bankhead" (Green) and "To H. E.
+  // Holmes" (Blue) are both W, so the direction alone would let the other line back in
+  const wantsGroupId = answer.kind === 'tie' || answer.question === 'route' || answer.question === 'direction'
   if (wantsGroupId) {
     if (route && !intake.route) patch.route = route
     if (line && !intake.line) patch.line = line

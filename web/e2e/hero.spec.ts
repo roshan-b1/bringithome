@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { lint } from '../scripts/copylint.mjs'
 
 // The hero path (ARCHITECTURE.md decision 12): the real app at /, on the recorded hero set with no network
-// (?mode=offline&set=hero-rail, recorded from the API by scripts/snapshot.mjs). Two taps, the match with its map and
+// (?mode=offline&set=hero-rail, recorded from the API by scripts/snapshot.mjs). Three taps, the match with its map and
 // live card, then the plan: "On another train", the Gold train, the meet at East Point, the car, the report card.
 // Runs on both phone projects (iPhone 14 390x844 and iPhone SE 375x667), against `next dev` or the static export:
 //   npx playwright test e2e/hero.spec.ts                                       starts next dev on 3000
@@ -24,7 +24,7 @@ async function clean(page: Page) {
 
 const h1 = (page: Page) => page.getByRole('heading', { level: 1 })
 
-test('the hero path, offline: two taps, the match, the meet and the report card', async ({ page }, info) => {
+test('the hero path, offline: three taps, the match, the meet and the report card', async ({ page }, info) => {
   test.setTimeout(90_000)
   const api: string[] = []
   const frames = new Set<string>()
@@ -40,24 +40,34 @@ test('the hero path, offline: two taps, the match, the meet and the report card'
   await clean(page)
   await page.getByRole('button', { name: /I lost something/ }).click()
 
-  // 1. where: the recorded set needs no location, so no prompt; "Say it in one sentence" on top, and the way out
-  await expect(page.getByText('Question 1 of 2', { exact: true })).toBeVisible()
+  // 1. bus or train, with the way out to the somewhere-else path
+  await expect(h1(page)).toHaveText('Bus or train?')
+  await expect(page.getByText('Question 1 of 3', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Lost it somewhere else?' })).toBeVisible()
+  await clean(page)
+  await page.getByRole('button', { name: 'Train', exact: true }).click()
+
+  // 2. where: the recorded set needs no location, so no prompt; "Say it in one sentence" on top, and the way out
+  await expect(page.getByText('Question 2 of 3', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /Say it in one sentence/ })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Lost it somewhere else?' })).toBeVisible()
   const near = page.getByRole('group', { name: 'From the recorded ride' }).getByRole('button')
   await expect(near.first()).toContainText('Garnett station')
   await clean(page)
   await near.first().click()
-  // 2. when (a station: bus or train is never asked): the picked time the set was recorded with
-  await expect(page.getByText('Question 2 of 2', { exact: true })).toBeVisible()
+  // 3. when: the picked time the set was recorded with (the line chips are optional and left alone here)
+  await expect(page.getByText('Question 3 of 3', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /Just now/ })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Know your line? Tap it.' })).toBeVisible()
   await clean(page)
   await page.getByRole('button', { name: 'Pick a time' }).click()
   await page.getByLabel('About what time?').fill('15:24')
   await page.getByRole('button', { name: 'Use 3:24 PM' }).click()
 
   // the match: named, labeled as a replay, with the map (or its text mirror) and where it is now
-  await expect(h1(page)).toContainText('Red Line train, train run 407', { timeout: 15_000 })
+  await expect(h1(page)).toHaveText('Your train', { timeout: 15_000 })
+  await expect(page.getByText('Red Line toward Airport', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Train run 407', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('How sure: Medium', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Recorded data, replayed').first()).toBeAttached()
   await expect(page.getByText('The map, in words')).toBeAttached()
@@ -139,6 +149,7 @@ test('offline, "What did you lose?" on the plan adds the item\'s own steps from 
   })
   await page.goto(HERO)
   await page.getByRole('button', { name: /I lost something/ }).click()
+  await page.getByRole('button', { name: 'Train', exact: true }).click()
   await page.getByRole('group', { name: 'From the recorded ride' }).getByRole('button').first().click()
   await page.getByRole('button', { name: '10 to 30 min ago' }).click()
   await page.getByRole('button', { name: 'See your plan' }).click({ timeout: 15_000 })
@@ -171,6 +182,41 @@ test('offline, "What did you lose?" on the plan adds the item\'s own steps from 
   await clean(page)
 })
 
+test('"Say it in one sentence" that says it all goes from the confirm screen straight to the match, no question again', async ({ page }) => {
+  test.setTimeout(60_000)
+  // every h1 the app shows, in order, so a question screen that flashes by is caught too
+  await page.addInitScript(() => {
+    const seen: string[] = ((window as unknown as { __h1s: string[] }).__h1s = [])
+    new MutationObserver(() => {
+      const h = document.querySelector('h1')?.textContent?.trim()
+      if (h && seen[seen.length - 1] !== h) seen.push(h)
+    }).observe(document, { subtree: true, childList: true, characterData: true })
+  })
+  await page.goto(HERO)
+  await page.getByRole('button', { name: /I lost something/ }).click()
+  await page.getByRole('button', { name: 'Not sure', exact: true }).click()
+  await page.getByRole('button', { name: /Say it in one sentence/ }).click()
+  // the set's recorded /api/parse answer: bag, rail, Red Line, Garnett, around 3:24
+  await page.getByRole('textbox', { name: 'Where and when' }).fill('left my bag on the red line, got off at garnett around 3:24')
+  await page.getByRole('button', { name: 'Use this' }).click()
+  await expect(h1(page)).toHaveText('Is this right?')
+  await expect(page.getByRole('checkbox', { name: 'Train, Red Line' })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: /Garnett/ })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: /About 3:24 PM/ })).toBeChecked()
+  await clean(page)
+  await page.getByRole('button', { name: "Yes, that's right" }).click()
+
+  await expect(h1(page)).toHaveText('Your train', { timeout: 15_000 })
+
+  await expect(page.getByText('Red Line toward Airport', { exact: true }).first()).toBeVisible()
+
+  await expect(page.getByText('Train run 407', { exact: true }).first()).toBeVisible()
+  const after = (await page.evaluate(() => (window as unknown as { __h1s: string[] }).__h1s)).slice(
+    (await page.evaluate(() => (window as unknown as { __h1s: string[] }).__h1s)).indexOf('Is this right?') + 1,
+  )
+  expect(after.filter((h) => /Bus or train\?|Where did you get off\?|About when did you get off\?/.test(h))).toEqual([])
+})
+
 test('Lost it somewhere else, in the real app: a place, then "What did you lose?", then the plan with the phone\'s step', async ({ page }) => {
   await page.goto(HERO)
   await page.getByRole('button', { name: /I lost something/ }).click()
@@ -192,22 +238,83 @@ test('Lost it somewhere else, in the real app: a place, then "What did you lose?
   await expect(page.getByRole('heading', { name: 'Mark your phone as lost' })).toBeVisible()
 })
 
-test('the results question re-runs the match (?case=uncertain: "which way?", then the train)', async ({ page }) => {
+/** The uncertain fixture's results screen ("Which train were you on?", most likely one first). */
+async function toUncertain(page: Page) {
   await page.goto(`${HERO}&case=uncertain`)
   await page.getByRole('button', { name: /I lost something/ }).click()
+  await page.getByRole('button', { name: 'Train', exact: true }).click()
   await page.getByRole('group', { name: 'From the recorded ride' }).getByRole('button').first().click()
   await page.getByRole('button', { name: '10 to 30 min ago' }).click()
+  await expect(h1(page)).toHaveText('Which train were you on?', { timeout: 15_000 })
+}
 
-  await expect(h1(page)).toHaveText("We couldn't pin down the exact one yet.", { timeout: 15_000 })
-  await expect(page.getByRole('heading', { name: 'Which way was it going?' })).toBeVisible()
+const PASSED = /passed \d{1,2}:\d{2} [AP]M/
+
+test('uncertain leads with the most likely train: "Yes, that\'s it" goes straight to its plan, with the map', async ({ page }, info) => {
+  await toUncertain(page)
+  await expect(page.getByText('A few passed your stop around then.', { exact: true })).toBeVisible()
+  const likely = page.getByRole('region', { name: 'Most likely yours' })
+  await expect(likely.getByText('Red Line toward Airport', { exact: true })).toBeVisible()
+  await expect(likely.getByText(/^Passed .+ at \d{1,2}:\d{2} [AP]M$/)).toBeVisible()
+  await expect(likely.getByText('Train run 407', { exact: true })).toBeVisible()
+  const yes = page.getByRole('button', { name: "Yes, that's it" })
+  const no = page.getByRole('button', { name: 'No, show the others' })
+  for (const b of [yes, no]) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(56)
+  await expect(page.getByRole('heading', { name: 'Which way was it going?' })).toHaveCount(0) // one answer first, no list
   await clean(page)
+  await page.screenshot({ path: info.outputPath(`uncertain-${info.project.name}.png`) })
+  await yes.click()
+  await expect(h1(page)).toHaveText('Your plan', { timeout: 15_000 })
+  await expect(page.getByRole('region', { name: 'Where it is now' })).toBeVisible({ timeout: 15_000 })
+  expect(await page.evaluate(() => sessionStorage.getItem('bring-it-home:pick:v1'))).toContain('rail:407')
+  await page.reload() // the pick survives a reload on the plan
+  await expect(h1(page)).toHaveText('Your plan', { timeout: 15_000 })
+  await expect(page.getByRole('region', { name: 'Where it is now' })).toBeVisible({ timeout: 15_000 })
+})
+
+test('"No, show the others": every train to tap, by line, way and time; a tap goes straight to that train\'s plan', async ({ page }, info) => {
+  await toUncertain(page)
+  await page.getByRole('button', { name: 'No, show the others' }).click()
+  const fits = page.getByRole('region', { name: 'Tap yours' }).getByRole('button')
+  await expect(fits).toHaveCount(4)
+  for (const name of await fits.allInnerTexts()) expect(name).toMatch(/^(Red|Gold|Blue|Green) Line toward .+, passed \d{1,2}:\d{2} [AP]M/)
+  for (const box of await Promise.all((await fits.all()).map((b) => b.boundingBox()))) expect(box!.height).toBeGreaterThanOrEqual(56)
+  // the one question is there too, each answer naming the trains going that way
+  await expect(page.getByRole('heading', { name: 'Which way was it going?' })).toBeVisible()
+  const airport = page.getByRole('button', { name: /^To Airport/ })
+  await expect(airport).toContainText(/Red Line, passed/)
+  await expect(airport).toContainText(/Gold Line, passed/)
+  await clean(page)
+  await page.screenshot({ path: info.outputPath(`others-${info.project.name}.png`), fullPage: true })
+  const gold = fits.filter({ hasText: 'Gold Line toward Doraville' })
+  await expect(gold).toContainText(PASSED)
+  await gold.click()
+  await expect(h1(page)).toHaveText('Your plan', { timeout: 15_000 })
+  expect(await page.evaluate(() => sessionStorage.getItem('bring-it-home:pick:v1'))).toContain('rail:306')
+})
+
+test('a "which way" answer that covers one train is the rider pointing at it: straight to its plan', async ({ page }) => {
+  await toUncertain(page)
+  await page.getByRole('button', { name: 'No, show the others' }).click()
+  const doraville = page.getByRole('button', { name: /^To Doraville/ })
+  await expect(doraville).toContainText(/Gold Line, passed/)
+  await doraville.click()
+  await expect(h1(page)).toHaveText('Your plan', { timeout: 15_000 })
+  expect(await page.evaluate(() => sessionStorage.getItem('bring-it-home:pick:v1'))).toContain('rail:306')
+})
+
+test('a "which way" answer that covers two trains re-runs the match (?case=uncertain)', async ({ page }) => {
+  await toUncertain(page)
+  await page.getByRole('button', { name: 'No, show the others' }).click()
   await page.getByRole('button', { name: /^To Airport/ }).click()
-  await expect(h1(page)).toContainText('Red Line train, train run 407', { timeout: 15_000 })
+  await expect(h1(page)).toHaveText('Your train', { timeout: 15_000 })
+  await expect(page.getByText('Train run 407', { exact: true }).first()).toBeVisible()
 })
 
 test('a reload on the plan resumes there, and Clear now empties the tab', async ({ page }) => {
   await page.goto(HERO)
   await page.getByRole('button', { name: /I lost something/ }).click()
+  await page.getByRole('button', { name: 'Train', exact: true }).click()
   await page.getByRole('group', { name: 'From the recorded ride' }).getByRole('button').first().click()
   await page.getByRole('button', { name: '10 to 30 min ago' }).click()
   await page.getByRole('button', { name: 'See your plan' }).click({ timeout: 15_000 })
@@ -243,6 +350,7 @@ for (const down of DOWN) {
     })
     await page.goto('/')
     await page.getByRole('button', { name: /I lost something/ }).click()
+    await page.getByRole('button', { name: 'Train', exact: true }).click()
     await page.getByRole('group', { name: 'Near you now' }).getByRole('button').first().click()
     await page.getByRole('button', { name: '10 to 30 min ago' }).click()
 
@@ -256,7 +364,9 @@ for (const down of DOWN) {
     await clean(page)
 
     await page.getByRole('button', { name: 'See a recorded example' }).click()
-    await expect(h1(page)).toContainText('Red Line train, train run 407', { timeout: 15_000 })
+    await expect(h1(page)).toHaveText('Your train', { timeout: 15_000 })
+    await expect(page.getByText('Red Line toward Airport', { exact: true }).first()).toBeVisible()
+    await expect(page.getByText('Train run 407', { exact: true }).first()).toBeVisible()
     expect(new URL(page.url()).searchParams.get('mode')).toBe('offline')
   })
 }
@@ -265,6 +375,7 @@ for (const down of DOWN) {
 async function toPlan(page: Page) {
   await page.goto(HERO)
   await page.getByRole('button', { name: /I lost something/ }).click()
+  await page.getByRole('button', { name: 'Train', exact: true }).click()
   await page.getByRole('group', { name: 'From the recorded ride' }).getByRole('button').first().click()
   await page.getByRole('button', { name: 'Pick a time' }).click()
   await page.getByLabel('About what time?').fill('15:24')
@@ -376,6 +487,7 @@ test('a live no_match with an empty place label and a zero-length window renders
   })
   await page.goto('/')
   await page.getByRole('button', { name: /I lost something/ }).click()
+  await page.getByRole('button', { name: 'Train', exact: true }).click()
   await page.getByRole('group', { name: 'Near you now' }).getByRole('button').first().click()
   await page.getByRole('button', { name: '10 to 30 min ago' }).click()
   await expect(page.getByText('No buses passed within 0.25 mi of your stop.')).toBeVisible({ timeout: 10_000 })
@@ -399,6 +511,7 @@ test('a screen that throws keeps the frame: the report from the clues, the safet
   })
   await page.goto('/')
   await page.getByRole('button', { name: /I lost something/ }).click()
+  await page.getByRole('button', { name: 'Train', exact: true }).click()
   await page.getByRole('group', { name: 'Near you now' }).getByRole('button').first().click()
   await page.getByRole('button', { name: '10 to 30 min ago' }).click()
   await expect(h1(page)).toHaveText("That didn't load", { timeout: 10_000 })
@@ -406,7 +519,9 @@ test('a screen that throws keeps the frame: the report from the clues, the safet
   await expect(page.getByRole('complementary', { name: 'Safety' }).getByRole('link', { name: 'Call 911' })).toBeVisible()
   await expect(page.getByText("data from MARTA's public feeds").first()).toBeAttached()
   await page.getByRole('button', { name: 'See a recorded example' }).click()
-  await expect(h1(page)).toContainText('Red Line train, train run 407', { timeout: 15_000 })
+  await expect(h1(page)).toHaveText('Your train', { timeout: 15_000 })
+  await expect(page.getByText('Red Line toward Airport', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Train run 407', { exact: true }).first()).toBeVisible()
 })
 
 test('results saved with no session id (a reload mid-POST) goes back to Looking, which posts and matches', async ({ page }) => {
@@ -415,7 +530,7 @@ test('results saved with no session id (a reload mid-POST) goes back to Looking,
   // results with no session id (a reload while Looking was posting): back to Looking, which posts and matches
   await seed({ sessionId: null, step: 'results', answers, history: ['home', 'off', 'when'] })
   await page.goto(HERO)
-  await expect(h1(page)).toContainText(/Red Line train, train run 407|couldn't pin down/, { timeout: 15_000 })
+  await expect(h1(page)).toHaveText(/^(Your train|Which train were you on\?)$/, { timeout: 15_000 })
 })
 
 test('a saved step this build has no screen for starts fresh, never the placeholder', async ({ page }) => {

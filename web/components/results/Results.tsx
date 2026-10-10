@@ -1,28 +1,30 @@
 'use client'
 
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
-import type { Intake, Match, MatchCandidate, SessionResponse, VehicleKey, VehicleNow } from '@/contracts/api'
+import type { Intake, Match, MatchCandidate, SeparateBy, SessionResponse, VehicleKey, VehicleNow } from '@/contracts/api'
 import { Banner, ReplayBanner } from '@/components/ui/Banner'
 import { BigButton } from '@/components/ui/BigButton'
 import { SourceChip } from '@/components/ui/Chip'
 import { ChoiceList, type Choice } from '@/components/ui/ChoiceList'
 import { lineColor } from '@/components/ui/LineBadge'
-import { NoBreak } from '@/components/plan/FactText'
 import { Screen } from '@/components/ui/Screen'
 import { createSession, directions, type ApiResult } from '@/lib/api'
 import { t } from '@/lib/copy'
 import { useWide } from '@/lib/hooks'
-import { clock } from '@/lib/time'
-import { CandidateCard } from './CandidateCard'
+import { CandidateCard, LevelMeter } from './CandidateCard'
+import { idLine, PickCard, VehicleHero } from './PickCard'
+import { Card } from '@/components/ui/Card'
 import { ContextLine } from './ContextLine'
 import {
-  evidenceLine,
   headline,
-  headlineParts,
   isLine,
   levelWord,
   lineWords,
   namedVehicleKeys,
+  passedClock,
+  pickRow,
+  pickTitle,
+  pickVehicle,
   replayVehicleKeys,
   scheduleKind,
   tieKeys,
@@ -36,16 +38,22 @@ import { ScheduleList } from './ScheduleList'
 import { useRiderLocation } from './useRiderLocation'
 import styles from './Results.module.css'
 
-// The match result, one view per status (decision 7's table, CHANGES 1):
-//   matched        the vehicle, the replay map, its evidence and where it is now
-//   ambiguous      the tie_break as ONE question ("Which one were you on?"); the answer re-runs the match
-//   uncertain      separate_by as ONE question (route, direction or where they got on); the answer re-runs it
+// The match result, one view per status (decision 7's table, CHANGES 1). Riders want ONE answer, not a list:
+//   matched        "Your train" (or bus): that vehicle alone, big, with its line or route, which way it went and
+//                  where and when it passed, the replay map and where it is now. No list
+//   ambiguous and  "Which train were you on?" (bus, or one, for a mix), leading with the single most likely one as
+//   uncertain      "Most likely yours": "Yes, that's it" picks it, "No, show the others" shows every choice as a big
+//                  tap target (line badge, which way, when it passed), plus the matcher's one question (separate_by:
+//                  route, direction or where they got on; its answer re-runs the match) or planning without a pick
 //   not_reporting  the timetable's buses, labeled schedule only, with "probably the same bus"
 //   no_match       the plan anyway
-// The question is asked once. Whatever the re-run says is what shows: a tie it couldn't split shows both (the plan
-// covers both), an uncertain one shows its closest fits and names none. So the plan, which reads the session, always
-// agrees with this screen. Nothing here is invented: names, times, distances and states come from the session, the
-// replay and /now, and the rider's distance from their own fix, which never leaves the phone.
+// Several trains pass a busy stop in any 10 minutes, so those headings are a calm question, never a failure. A tap on
+// a vehicle (or a "which way" answer that covers exactly one) is the rider's own pick: onPick goes straight to the
+// plan for it, which the API then plans as the match (picked, lib/riderPick.ts), so a train the rider didn't choose
+// is never shown after they chose one. The question is asked once; a re-run shows its own most likely one.
+// Without onPick (the results harness) the older views stand: the tie as one question, the closest fits as cards.
+// Nothing here is invented: names, times, distances and states come from the session, the replay and /now, and the
+// rider's distance from their own fix, which never leaves the phone.
 
 export interface ResultsProps {
   session: ApiResult<SessionResponse>
@@ -55,6 +63,9 @@ export interface ResultsProps {
   onSession: (result: ApiResult<SessionResponse>) => void
   /** on to the plan, with the vehicles this session names (0 to 2; the plan's vehicle_keys) */
   onContinue: (vehicleKeys: VehicleKey[]) => void
+  /** the rider tapped one vehicle themselves (a closest fit, or a tie option the re-run couldn't name): on to the
+   *  plan for it, sent as picked. Without it the closest fits are shown as plain cards */
+  onPick?: ((vehicleKey: VehicleKey) => void) | null
   /** no_match: back to the questions to change an answer */
   onEdit?: (() => void) | null
   onBack?: (() => void) | null
@@ -62,7 +73,6 @@ export interface ResultsProps {
 
 type View = 'matched' | 'tie' | 'tie_open' | 'separate' | 'uncertain' | 'not_reporting' | 'no_match'
 
-const lowerFirst = (s: string) => (s ? s.charAt(0).toLowerCase() + s.slice(1) : s)
 const lineOf = (c: Pick<MatchCandidate, 'line' | 'route'>) => c.line ?? (isLine(c.route) ? c.route : null)
 
 function viewOf(match: Match, asked: boolean): View {
@@ -85,7 +95,7 @@ const candidatesFor = (match: Match, keys: readonly VehicleKey[]): MatchCandidat
 
 const fetchDirections: FetchDirections = async (q) => (await directions(q)).data.options
 
-export function Results({ session, intake, onSession, onContinue, onEdit, onBack }: ResultsProps) {
+export function Results({ session, intake, onSession, onContinue, onPick = null, onEdit, onBack }: ResultsProps) {
   const s = session.data
   const match = s.match
   const [answeredHere, setAnsweredHere] = useState<string | null>(null) // the session id the answer produced
@@ -96,6 +106,14 @@ export function Results({ session, intake, onSession, onContinue, onEdit, onBack
   // read per session: a reload of the re-run session must not ask again (resultsStore)
   const asked = useMemo(() => answeredHere === s.session_id || wasAsked(s.session_id), [answeredHere, s.session_id])
   const view = viewOf(match, asked)
+  const [othersFor, setOthersFor] = useState<string | null>(null) // "No, show the others", per session
+  const showOthers = othersFor === s.session_id
+  const likelyView = view === 'tie' || view === 'tie_open' || view === 'separate' || view === 'uncertain'
+  // the choices, most likely first: a tie's two, then the rest of the candidates (at most 4 in all)
+  const pool = useMemo(() => {
+    const first = match.status === 'ambiguous' ? candidatesFor(match, tieKeys(match)) : []
+    return [...first, ...match.candidates.filter((c) => !first.includes(c))].slice(0, 4)
+  }, [match])
   const hasMap = view !== 'not_reporting' && view !== 'no_match' && match.candidates.length > 0
   const rider = useRiderLocation(hasMap)
 
@@ -110,6 +128,12 @@ export function Results({ session, intake, onSession, onContinue, onEdit, onBack
           markAsked(result.data.session_id)
           setAnsweredHere(result.data.session_id)
           onSession(result)
+          // the rider tapped one of a tie: unless the re-run names exactly that one, their tap stands (never show a
+          // train they didn't choose after they chose one)
+          const m = result.data.match
+          const key = answer.kind === 'tie' ? answer.vehicleKey : null
+          const namesIt = m.status === 'matched' && m.candidates[0]?.vehicle_key === key
+          if (key && onPick && !namesIt && m.candidates.some((c) => c.vehicle_key === key)) onPick(key)
         } else {
           // nothing the answer can add to the intake: show this session as it is, without the question
           markAsked(s.session_id)
@@ -121,7 +145,7 @@ export function Results({ session, intake, onSession, onContinue, onEdit, onBack
         setBusy(null)
       }
     },
-    [intake, s, onSession],
+    [intake, s, onSession, onPick],
   )
 
   // the laptop: the map and the live view go to the right pane (one map either way: the phone keeps them inline)
@@ -174,36 +198,136 @@ export function Results({ session, intake, onSession, onContinue, onEdit, onBack
       onNow={onNow}
     />
   )
+  // separate_by as ONE question; an answer that covers one train or bus is the rider pointing at it (their pick)
+  const separateQuestion = (sep: SeparateBy) => {
+    const choices: Choice<string>[] = sep.options.map((o) => {
+      const cands = match.candidates.filter((c) => o.vehicle_keys.includes(c.vehicle_key))
+      const lines = [...new Set(cands.map(lineOf))]
+      const railLine = cands.length && cands.every((c) => c.mode === 'rail') && lines.length === 1 ? lines[0] : null
+      return {
+        value: o.label,
+        label: sep.question === 'route' && railLine ? lineWords(railLine) : o.label,
+        sublabel: cands.length ? <Passes cands={cands} /> : undefined,
+        swatch: sep.question === 'route' && railLine ? lineColor(railLine) : undefined,
+        icon: sep.question === 'route' && !railLine ? 'bus' : undefined,
+      }
+    })
+    return (
+      <section key="separate" className={styles.question} aria-labelledby="separate-q">
+        <h2 id="separate-q" className={styles.questionTitle}>
+          {questionText(sep)}
+        </h2>
+        {sep.question === 'direction' ? <p className={styles.muted}>{t('wb_09_way.hint')}</p> : null}
+        <ChoiceList
+          labelledBy="separate-q"
+          choices={choices}
+          busy={busy}
+          notSure={t('separate.not_sure')}
+          onChoose={(v) => {
+            const option = sep.options.find((o) => o.label === v)
+            const only = option?.vehicle_keys.length === 1 ? option.vehicle_keys[0]! : null
+            if (v === 'not_sure' || !option) onContinue([])
+            else if (only && onPick && match.candidates.some((c) => c.vehicle_key === only)) onPick(only)
+            else void refine({ kind: 'separate', question: sep.question, option }, v)
+          }}
+        />
+        {busy ? <p className={styles.checking}>{t('refine.checking')}</p> : null}
+      </section>
+    )
+  }
+
   const main = view === 'matched' ? (match.candidates[0] ?? null) : null
 
   if (main) {
-    const parts = headlineParts(main)
-    titleNode = (
-      <>
-        <span className={styles.titleLead}>{parts.lead}</span> {parts.name}
-      </>
-    )
+    // one fits: that vehicle alone, big ("Your train", its line, which way, where and when it passed), no list
+    titleNode = main.mode === 'rail' ? t('pick.your_train') : t('pick.your_bus')
     announce = `${headline(main)}. ${t('results.how_sure', { level: levelWord(main.level) })}`
     body = (
       <>
-        <ContextLine match={match} />
+        <Card tone="accent" className={styles.hero}>
+          <VehicleHero c={main} />
+          <LevelMeter level={main.level} />
+        </Card>
         {place(map([main.vehicle_key], 'match'))}
-        <CandidateCard c={main} tone="accent" />
         {place(live(main, false))}
       </>
     )
     actions = seePlan
+  } else if (onPick && likelyView && pool.length > 0) {
+    // uncertain or ambiguous: lead with the one most likely, "Yes, that's it" or "No, show the others" (then each of
+    // them to tap, the one question, and planning without a pick). A tap is the rider's pick: straight to its plan
+    const top = pool[0]!
+    const title = pickTitle(pool)
+    titleNode = title
+    lead = t('pick.lead')
+    const sep = view === 'separate' ? (match.separate_by ?? null) : null
+    if (!showOthers) {
+      announce = `${title} ${lead} ${t('pick.likely')}: ${headline(top)}`
+      body = (
+        <>
+          <section className={styles.section} aria-labelledby="likely-heading">
+            <h2 id="likely-heading" className={styles.h2}>
+              {t('pick.likely')}
+            </h2>
+            <Card tone="accent" className={styles.hero}>
+              <VehicleHero c={top} />
+            </Card>
+          </section>
+          {place(map([top.vehicle_key], 'candidate'))}
+        </>
+      )
+      actions = (
+        <>
+          <BigButton variant="primary" iconEnd="next" onClick={() => onPick(top.vehicle_key)}>
+            {t('pick.yes')}
+          </BigButton>
+          <BigButton variant="secondary" onClick={() => setOthersFor(s.session_id)}>
+            {t('pick.no')}
+          </BigButton>
+        </>
+      )
+    } else {
+      announce = `${title} ${t('pick.others')}`
+      body = (
+        <>
+          <section className={styles.section} aria-labelledby="fits-heading">
+            <h2 id="fits-heading" className={styles.h2}>
+              {t('pick.others')}
+            </h2>
+            {sep ? <p className={styles.muted}>{t('pick.others_lead')}</p> : null}
+            <ul role="list" className={styles.fits}>
+              {pool.map((c) => (
+                <li key={`pick:${c.vehicle_key}`}>
+                  <PickCard c={c} onPick={onPick} disabled={busy !== null} />
+                </li>
+              ))}
+            </ul>
+          </section>
+          {sep ? separateQuestion(sep) : null}
+          <ContextLine match={match} />
+          {place(map(view === 'tie' || view === 'tie_open' ? tieKeys(match) : replayVehicleKeys(match), 'candidate'))}
+        </>
+      )
+      // no question left: plan without a pick (both, on a tie)
+      actions = sep ? null : (
+        <BigButton variant="quiet" size="md" onClick={() => onContinue(namedVehicleKeys(match))}>
+          {match.status === 'ambiguous' ? t('pick.plan_both') : t('separate.not_sure')}
+        </BigButton>
+      )
+    }
   } else if (view === 'tie') {
     const both = candidatesFor(match, tieKeys(match))
-    titleNode = t('tie.title')
+    const title = pickTitle(both)
+    titleNode = title
     lead = t('tie.lead')
-    announce = `${t('tie.title')} ${lead}`
+    announce = `${title} ${lead}`
     const choices: Choice<VehicleKey>[] = both.map((c) => {
       const line = lineOf(c)
+      const id = idLine(c)
       return {
         value: c.vehicle_key,
-        label: t('tie.option', { vehicle: vehicleName(c), direction: lowerFirst(c.direction_label) }),
-        sublabel: c.evidence[0] ? <NoBreak text={evidenceLine(c.evidence[0])} /> : undefined,
+        label: pickRow(c),
+        sublabel: id ?? undefined,
         swatch: c.mode === 'rail' && line ? lineColor(line) : undefined,
         icon: c.mode === 'rail' ? (line ? undefined : 'train') : 'bus',
       }
@@ -226,6 +350,7 @@ export function Results({ session, intake, onSession, onContinue, onEdit, onBack
       </>
     )
   } else if (view === 'tie_open') {
+    // (without onPick only: the results harness) a tie the re-run couldn't split, both shown, the plan covers both
     const both = candidatesFor(match, tieKeys(match))
     titleNode = t('tie.open_title')
     lead = t('tie.open_lead')
@@ -243,51 +368,23 @@ export function Results({ session, intake, onSession, onContinue, onEdit, onBack
     actions = seePlan
   } else if (view === 'separate' && match.separate_by) {
     const sep = match.separate_by
-    titleNode = t('results.nomatch_title')
+    const title = pickTitle(fitsOf(match))
+    titleNode = title
     lead = t('separate.lead')
-    const question = sep.question === 'route' ? t('wb_08_bus') : sep.question === 'direction' ? t('wb_09_way') : t('separate.board_place')
-    announce = `${t('results.nomatch_title')} ${lead} ${question}`
-    const choices: Choice<string>[] = sep.options.map((o) => {
-      const cands = match.candidates.filter((c) => o.vehicle_keys.includes(c.vehicle_key))
-      const lines = [...new Set(cands.map(lineOf))]
-      const railLine = cands.length && cands.every((c) => c.mode === 'rail') && lines.length === 1 ? lines[0] : null
-      const times = cands.map((c) => c.evidence[0]?.at).filter((x): x is string => !!x).sort().map((x) => clock(x))
-      return {
-        value: o.label,
-        label: sep.question === 'route' && railLine ? lineWords(railLine) : o.label,
-        sublabel: times.length ? t('separate.times', { times: [...new Set(times)].join(t('separate.or')) }) : undefined,
-        swatch: sep.question === 'route' && railLine ? lineColor(railLine) : undefined,
-        icon: sep.question === 'route' && !railLine ? 'bus' : undefined,
-      }
-    })
+    announce = `${title} ${lead} ${questionText(sep)}`
     body = (
       <>
-        <section className={styles.question} aria-labelledby="separate-q">
-          <h2 id="separate-q" className={styles.questionTitle}>
-            {question}
-          </h2>
-          {sep.question === 'direction' ? <p className={styles.muted}>{t('wb_09_way.hint')}</p> : null}
-          <ChoiceList
-            labelledBy="separate-q"
-            choices={choices}
-            busy={busy}
-            notSure={t('separate.not_sure')}
-            onChoose={(v) => {
-              const option = sep.options.find((o) => o.label === v)
-              if (v === 'not_sure' || !option) onContinue([])
-              else void refine({ kind: 'separate', question: sep.question, option }, v)
-            }}
-          />
-          {busy ? <p className={styles.checking}>{t('refine.checking')}</p> : null}
-        </section>
+        {separateQuestion(sep)}
         <Fits match={match} />
         {place(map(replayVehicleKeys(match), 'candidate'))}
       </>
     )
   } else if (view === 'uncertain' || view === 'separate') {
-    titleNode = t('results.nomatch_title')
+    const fits = fitsOf(match)
+    const title = fits.length ? pickTitle(fits) : t('results.nomatch_title')
+    titleNode = title
     lead = t('results.nomatch_lead')
-    announce = `${t('results.nomatch_title')} ${lead}`
+    announce = `${title} ${lead}`
     body = (
       <>
         <ContextLine match={match} />
@@ -357,9 +454,18 @@ export function Results({ session, intake, onSession, onContinue, onEdit, onBack
   )
 }
 
-/** Decision 7's uncertain view: the top 3 with their times, none of them named as the match. */
-function Fits({ match }: { match: Match }) {
-  const top = match.candidates.slice(0, 3)
+/** The closest fits decision 7's uncertain view shows: the top 3, none of them named as the match by us. */
+const fitsOf = (match: Match): MatchCandidate[] => match.candidates.slice(0, 3)
+
+const questionText = (sep: SeparateBy): string =>
+  sep.question === 'route' ? t('wb_08_bus') : sep.question === 'direction' ? t('wb_09_way') : t('separate.board_place')
+
+/**
+ * The closest fits. With onPick each is a big tap target (the rider's own pick, on to the plan for it); without it
+ * they are plain cards with their times, as decision 7 first had them.
+ */
+function Fits({ match, onPick, disabled = false }: { match: Match; onPick?: ((key: VehicleKey) => void) | null; disabled?: boolean }) {
+  const top = fitsOf(match)
   if (top.length === 0) return null
   return (
     <section className={styles.section} aria-labelledby="fits-heading">
@@ -367,10 +473,36 @@ function Fits({ match }: { match: Match }) {
         {t('separate.fits_heading')}
       </h2>
       <ul role="list" className={styles.fits}>
-        {top.map((c) => (
-          <CandidateCard key={c.vehicle_key} c={c} compact as="li" />
-        ))}
+        {top.map((c) =>
+          onPick ? (
+            <li key={c.vehicle_key}>
+              <PickCard c={c} onPick={onPick} disabled={disabled} />
+            </li>
+          ) : (
+            <CandidateCard key={c.vehicle_key} c={c} compact as="li" />
+          ),
+        )}
       </ul>
     </section>
+  )
+}
+
+/** Under a "which way" (or route, or place) option: each train or bus it covers, by line colour and name, and when it
+ *  passed ("Red Line, passed 3:23 PM"), earliest first. */
+function Passes({ cands }: { cands: readonly MatchCandidate[] }) {
+  const sorted = [...cands].sort((a, b) => (a.evidence[0]?.at ?? '').localeCompare(b.evidence[0]?.at ?? ''))
+  return (
+    <span className={styles.passes}>
+      {sorted.map((c) => {
+        const line = lineOf(c)
+        const time = passedClock(c)
+        return (
+          <span key={c.vehicle_key} className={styles.pass}>
+            {c.mode === 'rail' && line ? <span className={styles.passSwatch} style={{ background: lineColor(line) }} aria-hidden="true" /> : null}
+            {time ? t('pick.passed', { vehicle: pickVehicle(c), time }) : pickVehicle(c)}
+          </span>
+        )
+      })}
+    </span>
   )
 }

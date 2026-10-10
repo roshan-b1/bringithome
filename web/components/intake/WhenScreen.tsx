@@ -4,10 +4,11 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { BigButton } from '@/components/ui/BigButton'
 import { SourceChip } from '@/components/ui/Chip'
 import { Icon } from '@/components/ui/Icon'
+import { lineColor, lineName } from '@/components/ui/LineBadge'
 import { Screen } from '@/components/ui/Screen'
 import { serverNow } from '@/lib/api'
 import { t } from '@/lib/copy'
-import { NOT_SURE, type TimeButton } from '@/lib/flow'
+import { NOT_SURE, rideChips, type TimeButton } from '@/lib/flow'
 import { clock, nyParts, resolvePickedTime, sameNyDay } from '@/lib/time'
 import { backOf, IntakeBanner, NotSureButton, type IntakeProps } from './parts'
 import styles from './intake.module.css'
@@ -16,7 +17,13 @@ import styles from './intake.module.css'
 // most riders notice soon after, then the other time buttons (decision 6: each resolves against the server clock
 // when the intake is built, so a phone set to the wrong time can't skew the match), "Pick a time" with the phone's
 // own time picker read as New York time, and "Not sure". The last tap before the match.
-// The smaller buttons sit in two columns, so everything fits on an iPhone SE without scrolling, in time order.
+// The smaller buttons sit in two columns, so everything fits on an iPhone SE without scrolling, in time order, with
+// "Not sure" in the last cell.
+//
+// Above them, only when the place has more than one: "Know your bus? Tap it." with the stop's routes, or "Know your
+// line? Tap it." with the station's lines (flow.rideChips, following the mode). Optional and quiet (outlined, no
+// fill), so "Just now" stays the obvious tap; it sits first because a time tap moves on at once. One tap picks a
+// route or line (Intake.route or Intake.line), a second tap clears it.
 
 const BUTTONS: readonly TimeButton[] = ['10_30', '30_60', '1_2h', 'over_2h']
 type Choice = TimeButton | 'pick'
@@ -69,6 +76,7 @@ export function WhenScreen({ flow }: IntakeProps) {
 
   return (
     <Screen stepKey="when" title={t('wb_06_when')} progress={flow.progress} onBack={backOf(flow)} chip={<SourceChip />} banner={<IntakeBanner />}>
+      <RideChipRow flow={flow} />
       <button
         type="button"
         className={styles.nowTile}
@@ -109,6 +117,11 @@ export function WhenScreen({ flow }: IntakeProps) {
             <span className={styles.timeLabel}>{t('wb_06_when.pick')}</span>
           </button>
         </li>
+        {/* "Not sure" fills the grid's last cell beside "Pick a time", so the optional chips above still leave
+            every choice on an iPhone SE screen */}
+        <li>
+          <NotSureButton pressed={!picking && selected === NOT_SURE} onClick={() => flow.answer('when', NOT_SURE)} />
+        </li>
       </ul>
 
       {picking ? (
@@ -135,8 +148,53 @@ export function WhenScreen({ flow }: IntakeProps) {
           </BigButton>
         </div>
       ) : null}
-
-      <NotSureButton pressed={!picking && selected === NOT_SURE} onClick={() => flow.answer('when', NOT_SURE)} />
     </Screen>
+  )
+}
+
+/** "Know your bus? Tap it." / "Know your line? Tap it.": one row of chips, scrolling sideways when a stop has many. */
+function RideChipRow({ flow }: IntakeProps) {
+  const labelId = useId()
+  const chips = rideChips(flow.state.answers)
+  if (!chips) return null
+  const label = chips.kind === 'route' ? t('when.know_bus') : t('when.know_line')
+  return (
+    <div className={styles.rideRow} role="group" aria-labelledby={labelId}>
+      <p id={labelId} className={styles.rideLabel}>
+        {label}
+      </p>
+      <ul role="list" className={styles.rideChips}>
+        {chips.kind === 'route'
+          ? chips.values.map((r) => (
+              <li key={r}>
+                <button
+                  type="button"
+                  className={styles.rideChip}
+                  aria-pressed={chips.selected === r}
+                  aria-label={t('wb_08_bus.route', { route: r })}
+                  onClick={() => flow.setExtra({ route: chips.selected === r ? null : r })}
+                >
+                  {r}
+                  <Icon name="check" size={18} strokeWidth={3} className={styles.rideCheck} />
+                </button>
+              </li>
+            ))
+          : chips.values.map((l) => (
+              <li key={l}>
+                <button
+                  type="button"
+                  className={styles.rideChip}
+                  aria-pressed={chips.selected === l}
+                  aria-label={lineName(l)}
+                  onClick={() => flow.setExtra({ line: chips.selected === l ? null : l })}
+                >
+                  <span className={styles.rideSwatch} style={{ background: lineColor(l) }} aria-hidden="true" />
+                  {lineName(l, false)}
+                  <Icon name="check" size={18} strokeWidth={3} className={styles.rideCheck} />
+                </button>
+              </li>
+            ))}
+      </ul>
+    </div>
   )
 }

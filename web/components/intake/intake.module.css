@@ -1056,3 +1056,116 @@
   min-height: var(--tap);
   padding: var(--sp-2) var(--sp-3);
 }
+
+/* ------------------------------------------- when: "Know your bus? Tap it." (optional, quieter than the times) */
+
+.rideRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+  /* closer to "Just now" than the screen's usual gap: it is part of the same answer, and the SE keeps every choice */
+  margin-bottom: calc(var(--sp-2) - var(--sp-5));
+}
+
+.rideLabel {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-snug);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+}
+
+/* one row; a stop with many routes scrolls sideways inside it (never the page) */
+ul.rideChips {
+  display: flex;
+  gap: var(--sp-2);
+  /* room for the focus ring inside the scroller, given back by the margin */
+  margin: -6px;
+  padding: 6px;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+.rideChips::-webkit-scrollbar {
+  display: none;
+}
+
+.rideChips > li {
+  flex: none;
+}
+
+.rideChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: var(--sp-2) var(--sp-4);
+  border: 2px solid var(--navy-24);
+  border-radius: var(--r-pill);
+  background: var(--white);
+  color: var(--navy);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
+  white-space: nowrap;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+}
+
+.rideSwatch {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--white);
+}
+
+.rideCheck {
+  display: none;
+  flex: none;
+}
+
+.rideChip[aria-pressed='true'] {
+  border-color: var(--navy);
+  background: var(--navy);
+  color: var(--white);
+}
+
+.rideChip[aria-pressed='true'] .rideCheck {
+  display: block;
+  color: var(--orange);
+}
+
+@media (hover: hover) {
+  .rideChip:hover:not([aria-pressed='true']) {
+    border-color: var(--navy);
+    background: var(--navy-04);
+  }
+}
+
+.rideChip:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: var(--r-pill);
+}
+
+@media (forced-colors: active) {
+  .rideChip {
+    border-color: ButtonText;
+  }
+  .rideChip[aria-pressed='true'] {
+    border-width: 4px;
+  }
+  .rideSwatch {
+    forced-color-adjust: none;
+  }
+}
+
+/* "Not sure" as the time grid's last cell, as tall as "Pick a time" beside it */
+.timeGrid .notSure {
+  height: 100%;
+}

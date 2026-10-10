@@ -371,6 +371,9 @@ class PlanRequest(BaseModel):
     taken: Literal["no", "maybe", "yes"] | None = None
     car: Literal["front", "middle", "back"] | None = None
     item_category: Literal["phone", "wallet", "bag", "keys", "laptop", "other"] | None = None
+    # the rider tapped these vehicle_keys themselves on the results screen ("Yes, that's it", one of the others):
+    # at uncertain the plan then treats the session as matched to them, for this plan only (plan.as_picked)
+    picked: bool = False
 
 
 class LostFound(BaseModel):
@@ -408,8 +411,8 @@ class CardEvidence(BaseModel):
 
 
 class Card(BaseModel):
-    kind: Literal["safety", "bag_staff", "meet", "wait_return", "meet_end", "switch_platform", "too_far",
-                  "tell_staff", "keep", "report", "call", "freeze_cards", "phone_lost", "police_property"]
+    kind: Literal["safety", "bag_staff", "meet", "wait_return", "meet_end", "switch_platform", "timetable_return",
+                  "too_far", "tell_staff", "keep", "report", "call", "freeze_cards", "phone_lost", "police_property"]
     step: int
     facts: dict[str, str | int | float]
     fact_sources: dict[str, Literal["db", "static_gtfs", "contacts", "rules"]]
@@ -500,6 +503,63 @@ class Reunion(BaseModel):
     source: Source
 
 
+# 10b. where the timetable says it is, when no live vehicle is named (scheduled.py) ------------------------------
+
+class ScheduledWay(BaseModel):
+    """The soonest way back the timetable allows (scheduled.timetable_way), with the reunion's margins on timetable
+    times. Never certain: an estimate from the timetable."""
+    kind: Literal["wait", "meet_at_end", "walk_ahead"]
+    stop_label: str
+    lat: float                          # the place's public coordinates, for Directions
+    lon: float
+    at: datetime                        # when the timetable has it there (meet_at_end: when the rider is there)
+    walk_s: int
+    leave_by: datetime
+    pulls_out: datetime | None = None   # meet_at_end: when the block's next trip leaves by the timetable
+    toward: str | None = None
+    basis: Literal["timetable"] = "timetable"
+
+
+class ScheduledVehicle(BaseModel):
+    """The trip that fits the rider's clue, placed by its timetable at `at`. Never live: basis is always timetable,
+    lat/lon are the timetable's point on the route (never the rider's), every other place is a public stop."""
+    mode: Literal["bus", "rail", "streetcar"]
+    trip_id: str                        # the trip that passed the rider's stop then (the one they likely rode)
+    route: str                          # its route short name; for rail, the line
+    toward: str | None = None           # where the trip it is on now (or about to run) is heading
+    now_trip_id: str                    # that trip: the same one, or a later trip of its block
+    now_route: str
+    continuing_as: str | None = None    # now_route, when it differs from route (the block changes route)
+    state: Literal["on_trip", "layover", "not_started", "ended"]
+    lat: float                          # the timetable's point at `at`
+    lon: float
+    next_stop_label: str | None = None
+    next_stop_time: datetime | None = None
+    ended_at: datetime | None = None    # state ended: when and where the block's last trip ends by the timetable
+    ended_stop_label: str | None = None
+    your_stop_label: str                # the rider's stop (station for a train) and its public coordinates
+    your_stop_lat: float
+    your_stop_lon: float
+    passed_at: datetime                 # when the timetable has this trip there
+    back_at_your_stop: datetime | None = None   # a later trip of the block within 400 m of your stop, 2 min to 3 h on
+    back_stop_label: str | None = None
+    back_stop_lat: float | None = None
+    back_stop_lon: float | None = None
+    back_toward: str | None = None
+    route_shape: list[list[int]] | None = None  # buses: the now trip's shape, [lon*1e5, lat*1e5]; rail draws its lines
+    block_vehicle_now: BlockVehicle | None = None   # a bus reporting a trip of this block now: probably the same bus
+    basis: Literal["timetable"] = "timetable"
+    at: datetime                        # the moment it is placed at (now, or as_of)
+    way: ScheduledWay | None = None     # the timetable's way back for the rider (the plan's place, else their stop)
+
+
+class ScheduledNow(BaseModel):
+    """GET /api/sessions/{id}/scheduled: the plan's `scheduled` again, for a refresh every 30 s."""
+    scheduled: list[ScheduledVehicle] = Field(max_length=2)
+    computed_at: datetime
+    source: Source
+
+
 class Plan(BaseModel):
     generated_at: datetime
     lost_found: LostFound
@@ -508,6 +568,8 @@ class Plan(BaseModel):
     report: Report
     source: Source
     reunion: Reunion | None = None      # the reunion planner's answer for the same vehicles (None without a meet ask)
+    # where the timetable says the rider's bus or train is, when the match names no live vehicle (empty otherwise)
+    scheduled: list[ScheduledVehicle] = Field(default_factory=list, max_length=2)
 
 
 # 6. parse (typed or spoken where-and-when clues; taps never call it) ----------------

@@ -93,12 +93,17 @@ test('airplane mode: the installed app opens and runs the recorded example to th
   await page.goto('/?mode=offline&set=hero-rail')
   await expect(page.getByRole('button', { name: /I lost something/ })).toBeVisible()
   await page.getByRole('button', { name: /I lost something/ }).click()
+  await page.getByRole('button', { name: 'Train', exact: true }).click()
   await page.getByRole('group', { name: 'From the recorded ride' }).getByRole('button').first().click()
   await page.getByRole('button', { name: 'Pick a time' }).click()
   await page.getByLabel('About what time?').fill('15:24')
   await page.getByRole('button', { name: 'Use 3:24 PM' }).click()
 
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Red Line train, train run 407', { timeout: 15_000 })
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your train', { timeout: 15_000 })
+
+  await expect(page.getByText('Red Line toward Airport', { exact: true }).first()).toBeVisible()
+
+  await expect(page.getByText('Train run 407', { exact: true }).first()).toBeVisible()
   await expect(page.getByText(/Replaying Fri Oct 9/).first()).toBeVisible()
   // the map runs on the bundled outlines (no tiles offline), and the recorded /now frames keep advancing
   await expect(page.locator('canvas').first()).toBeVisible({ timeout: 10_000 })

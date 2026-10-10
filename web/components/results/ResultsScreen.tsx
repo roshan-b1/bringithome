@@ -16,7 +16,7 @@ import { t } from '@/lib/copy'
 // POST /api/sessions (or the resume GET after a reload), and the intake rebuilt from the tap answers for the one
 // re-run (refine.ts pins its time back to the session's own window, so the rebuild's clock doesn't matter). The
 // plan reads the vehicles from the session itself, which after a re-run is the re-run's, so "See your plan" only
-// advances.
+// advances. A vehicle the rider taps themselves goes on as their pick (flow.setPick with picked).
 //
 // Back never returns to the "Looking" step (done): that screen POSTs on arrival, so going back through it would
 // create a second session. Back and "Change my answers" go to the last question the rider saw.
@@ -47,8 +47,23 @@ export function ResultsScreen({ flow }: ScreenComponentProps) {
     )
   }
 
-  return <Results session={flow.session} intake={intake} onSession={flow.setSession} onContinue={(keys) => {
+  return (
+    <Results
+      session={flow.session}
+      intake={intake}
+      onSession={flow.setSession}
+      onContinue={(keys) => {
         flow.setPick(keys)
         flow.advance()
-      }} onEdit={back} onBack={back} />
+      }}
+      // the rider's own tap (a closest fit, a one-train answer, a tie option the re-run couldn't name): planned as
+      // the match, sent as picked (lib/riderPick.ts)
+      onPick={(key) => {
+        flow.setPick([key], { picked: true })
+        flow.advance()
+      }}
+      onEdit={back}
+      onBack={back}
+    />
+  )
 }

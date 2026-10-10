@@ -406,6 +406,40 @@ def test_uncertain_leaves_the_bus_number_blank_lists_the_candidates_and_offers_n
     assert "label" not in card_of(p, "keep")["facts"] and "label" not in card_of(p, "tell_staff")["facts"]
 
 
+def test_a_riders_own_pick_at_uncertain_gets_the_meet_and_the_reunion(api, tmp_path):
+    """picked: the rider tapped bus 1401 among the closest fits, so this plan treats the session as matched to it.
+    Without picked the same keys name nothing (above); a key that is not a candidate is still 400."""
+    c = api(bus_rows(), tripupdates=live_bus(tmp_path))
+    cands = [bus_cand("2412", "1412", at(15, 44), 0.31, "low"), bus_cand("1401", "L1401", at(15, 45), 0.22, "low")]
+    sid = save(c, "uncertain", cands, bus_taps(), level="low")
+    user = {"place_id": "stop:300004"}
+
+    unpicked, _ = plan(c, sid, ["bus:1401"], user)
+    assert unpicked["meet"] is None and unpicked["reunion"] is None
+    assert "bus_number" not in unpicked["report"]["form_fields"]
+
+    r = c.post(f"/api/sessions/{sid}/plan", json={"vehicle_keys": ["bus:1401"], "user": user, "picked": True})
+    assert r.status_code == 200, r.text
+    p = check(r.json())
+    assert p["meet"]["possible"] is True and p["meet"]["vehicle_keys"] == ["bus:1401"]
+    assert p["meet"]["place_id"] == "stop:300004" and kinds(p)[0] == "meet"
+    assert p["report"]["form_fields"]["bus_number"] == "L1401" and "candidates_note" not in p["report"]
+    assert card_of(p, "keep")["facts"]["label"] == "L1401"
+    assert p["reunion"]["options"] and p["reunion"]["options"][0]["vehicle_keys"] == ["bus:1401"]
+
+    re = c.post(f"/api/sessions/{sid}/reunion", json={"vehicle_keys": ["bus:1401"], "user": user, "picked": True})
+    assert re.status_code == 200, re.text
+    assert re.json()["options"] and re.json()["options"][0]["vehicle_keys"] == ["bus:1401"]
+    plain = c.post(f"/api/sessions/{sid}/reunion", json={"vehicle_keys": ["bus:1401"], "user": user})
+    assert plain.status_code == 200 and plain.json()["options"] == []
+
+    for path in ("plan", "reunion"):
+        bad = c.post(f"/api/sessions/{sid}/{path}", json={"vehicle_keys": ["bus:9999"], "user": user, "picked": True})
+        assert bad.status_code == 400, (path, bad.text)
+    stored = c.get(f"/api/sessions/{sid}").json()
+    assert stored["match"]["status"] == "uncertain"                     # the session keeps its own status
+
+
 def test_not_reporting_plans_from_the_clue_and_the_timetable(api):
     c = api([])
     sched = [{"trip_id": "b49", "route": "49", "headsign": "NORTH AVE STATION", "scheduled_at": at(15, 42).isoformat(),

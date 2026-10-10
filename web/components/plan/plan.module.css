@@ -1086,3 +1086,65 @@
   border-radius: var(--r-md);
   background: var(--navy-04);
 }
+
+/* the one line under the plan's map that says how to read the route */
+.mapLegend {
+  margin: var(--sp-1) 0 0;
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-snug);
+}
+
+/* "Your best plan", short: two or three action lines, the place and the time in bold */
+.shortSteps {
+  display: grid;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: short;
+}
+
+.shortStep {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: var(--sp-2);
+  align-items: start;
+  font-size: var(--fs-base);
+  line-height: var(--lh-snug);
+}
+
+.shortStep p {
+  margin: 0;
+}
+
+.shortStep strong {
+  font-weight: var(--fw-heavy);
+}
+
+.safeLine {
+  margin: var(--sp-3) 0 0;
+  font-weight: var(--fw-semibold);
+}
+
+.moreList {
+  display: grid;
+  gap: var(--sp-1);
+  margin: var(--sp-2) 0 0;
+  padding: 0 0 0 var(--sp-4);
+}
+
+.otherLine {
+  margin: 0;
+  font-size: var(--fs-base);
+}
+
+/* the timetable's way back: never certain */
+.timetableWay {
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.timetableWay p {
+  margin: 0;
+}

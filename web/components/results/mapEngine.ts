@@ -17,6 +17,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import type { Feature, FeatureCollection } from 'geojson'
 import type { Line, Replay, VehicleKey } from '@/contracts/api'
 import { boundsOf, circleRing, fleetPosition, indexFleet, othersOpacity, replaySpanS, trackPosition, trailUpTo, type LonLat, type Track } from './replayMath'
+import { sliceLine, type LatLon, type RoutePin } from '../plan/wayRoute'
 import styles from './mapMarkers.module.css'
 
 // MapLibre 6 finds its worker next to its own module through import.meta.url, which a bundled chunk doesn't have.
@@ -40,7 +41,16 @@ export interface Highlight {
   key: VehicleKey
   /** the marker's chip ("1631", "Red 407") */
   chip: string
-  tone: 'match' | 'candidate'
+  /** scheduled: where the timetable says it is (a hollow, dashed dot that never reads as live) */
+  tone: 'match' | 'candidate' | 'scheduled'
+}
+
+/** The plan's recommended way drawn as a route (components/plan/wayRoute.ts): pins with short times, the rider's
+ *  walk to where they set off, and the train ride along its line. Public places only, never the rider's. */
+export interface EngineRoute {
+  pins: RoutePin[]
+  walkTo: LatLon | null
+  ride: { from: LatLon; to: LatLon; line: Line | null } | null
 }
 
 export interface EngineInit {
@@ -81,6 +91,8 @@ export interface Engine {
   setRider: (fix: RiderPoint | null) => void
   /** the plan's best way back, a public stop or station (never the rider); null removes it */
   setTarget: (target: TargetPoint | null) => void
+  /** the plan's recommended way as a route (pins, the walk, the ride); null removes it */
+  setRoute: (route: EngineRoute | null) => void
   /** fit the rider and the named vehicle(s): only ever on the rider's tap (tiles for the rider's area are fetched
    *  only when they ask to see themselves) */
   fitRider: () => void
@@ -289,6 +301,22 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
     source: 'bih-circle',
     paint: { 'line-color': ORANGE, 'line-width': 2, 'line-dasharray': [2, 1.5], 'line-opacity': 0.8 },
   })
+  // the plan's train ride: along the line between where the rider boards and where they get off, under the walk
+  map.addSource('bih-ride', { type: 'geojson', data: emptyFC() })
+  map.addLayer({
+    id: 'bih-ride-casing',
+    type: 'line',
+    source: 'bih-ride',
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': '#ffffff', 'line-width': 11, 'line-opacity': 0.95 },
+  })
+  map.addLayer({
+    id: 'bih-ride',
+    type: 'line',
+    source: 'bih-ride',
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': ['coalesce', ['get', 'color'], NAVY], 'line-width': 7, 'line-opacity': 0.95 },
+  })
   // the plan's walking line: a straight dashed line from the rider's blue dot to the meet pin (never a route: we
   // only know the two points), drawn under the dots
   map.addSource('bih-walk', { type: 'geojson', data: emptyFC() })
@@ -333,7 +361,7 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
   // --------------------------------------------------------------------------------------------- markers
   // stacking, bottom to top: the rider's dot, the stop and its label (text must stay legible when the rider is
   // standing at it), the candidates, the match
-  const Z = { rider: '1', stop: '2', target: '3', candidate: '4', match: '5' } as const
+  const Z = { rider: '1', stop: '2', target: '3', candidate: '4', match: '5', scheduled: '5' } as const
   const stopEl = el(styles.stop!)
   stopEl.append(el(styles.stopRing!), el(styles.stopLabel!, init.text.yourStop))
   const stopMarker = new Marker({ element: stopEl, anchor: 'center' }).setLngLat([focus.lon, focus.lat]).addTo(map)
@@ -349,7 +377,7 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
   const vmarkers = new Map<VehicleKey, VMarker>()
   // the match on top: candidates first in the DOM
   for (const h of [...init.highlights].sort((a, b) => (a.tone === b.tone ? 0 : a.tone === 'match' ? 1 : -1))) {
-    const root = el(`${styles.vehicle} ${h.tone === 'match' ? styles.match : styles.candidate}`)
+    const root = el(`${styles.vehicle} ${h.tone === 'match' ? styles.match : h.tone === 'scheduled' ? styles.scheduled : styles.candidate}`)
     root.append(el(styles.vehicleDot!), el(styles.vehicleChip!, h.chip))
     root.style.visibility = 'hidden'
     const marker = new Marker({ element: root, anchor: 'center' }).setLngLat([focus.lon, focus.lat]).addTo(map)
@@ -362,6 +390,9 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
   let rider: RiderPoint | null = null
   let targetMarker: Marker | null = null
   let target: TargetPoint | null = null
+  let route: EngineRoute | null = null
+  let routeMarkers: Marker[] = []
+  let rideCoords: LonLat[] = []
 
   // ----------------------------------------------------------------------------------------- the replay
   const posAt = (key: VehicleKey, t: number): LonLat | null => {
@@ -434,10 +465,13 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
       if (p) pts.push(p)
     }
     if (target) pts.push([target.lon, target.lat])
+    for (const p of route?.pins ?? []) pts.push([p.lon, p.lat])
+    pts.push(...rideCoords)
+    if (rider && route) pts.push([rider.lon, rider.lat]) // a route is drawn from the rider: show where they start
     const b = boundsOf(pts)
     if (!b) return
     // the pin's words sit beside it: room on the right
-    const padding = target ? { ...FIT_PADDING, right: FIT_PADDING.right + 96 } : FIT_PADDING
+    const padding = target || route?.pins.length ? { ...FIT_PADDING, right: FIT_PADDING.right + 96 } : FIT_PADDING
     map.fitBounds(new LngLatBounds(b[0], b[1]), { padding, maxZoom: 16.5, duration: animate && !reducedMotion ? 1200 : 0 })
   }
 
@@ -521,8 +555,49 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
   const drawWalk = () => {
     const src = map.getSource('bih-walk') as GeoJSONSource | undefined
     if (!src) return
-    if (!rider || !target?.walk) src.setData(emptyFC())
-    else src.setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [[rider.lon, rider.lat], [target.lon, target.lat]] } })
+    const to = route ? route.walkTo : target?.walk ? target : null
+    if (!rider || !to) src.setData(emptyFC())
+    else src.setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [[rider.lon, rider.lat], [to.lon, to.lat]] } })
+  }
+
+  // the ride along the line's own geometry when the bundle has it, else a straight highlighted segment
+  const rideLine = (r: NonNullable<EngineRoute['ride']>): { coords: LonLat[]; color: string | null } => {
+    const f = r.line ? railLines?.features.find((x) => (x.properties as { line?: string } | null)?.line === r.line) : null
+    const color = f ? String((f.properties as { color?: string } | null)?.color ?? '') || null : null
+    if (f && f.geometry.type === 'LineString') {
+      const cut = sliceLine(f.geometry.coordinates as LonLat[], r.from, r.to)
+      if (cut && cut.length > 1) return { coords: cut, color }
+    }
+    return { coords: [[r.from.lon, r.from.lat], [r.to.lon, r.to.lat]], color }
+  }
+
+  const setRoute = (next: EngineRoute | null) => {
+    // where things are, not their words: a pin whose time moves on (~3:53, then ~3:54) never moves the map
+    const where = (r: EngineRoute | null) => JSON.stringify(r ? [r.pins.map((p) => [p.lat, p.lon]), r.ride, r.walkTo] : null)
+    const before = where(route)
+    route = next && (next.pins.length || next.ride || next.walkTo) ? next : null
+    if (destroyed) return
+    for (const m of routeMarkers) m.remove()
+    routeMarkers = []
+    rideCoords = []
+    const src = map.getSource('bih-ride') as GeoJSONSource | undefined
+    if (route?.ride) {
+      const r = rideLine(route.ride)
+      rideCoords = r.coords
+      src?.setData({ type: 'Feature', properties: r.color ? { color: r.color } : {}, geometry: { type: 'LineString', coordinates: r.coords } })
+    } else src?.setData(emptyFC())
+    for (const p of route?.pins ?? []) {
+      const root = el(`${styles.pin} ${styles[`pin_${p.kind}`] ?? ''}`)
+      const label = el(styles.pinLabel!)
+      for (const line of p.lines) label.append(el(styles.pinLine!, line))
+      root.append(el(styles.pinDot!), label)
+      const m = new Marker({ element: root, anchor: 'center' }).setLngLat([p.lon, p.lat]).addTo(map)
+      m.getElement().style.zIndex = Z.target
+      routeMarkers.push(m)
+    }
+    drawWalk()
+    // a new route takes the view once, after the replay; the same route again never moves the map
+    if (phase === 'done' && where(route) !== before) fitAll(true)
   }
 
   const setRider = (fix: RiderPoint | null) => {
@@ -579,6 +654,7 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
       if (p) pts.push(p)
     }
     if (target) pts.push([target.lon, target.lat])
+    for (const p of route?.pins ?? []) pts.push([p.lon, p.lat])
     if (pts.length === 1) pts.push([focus.lon, focus.lat])
     const b = boundsOf(pts)!
     map.fitBounds(new LngLatBounds(b[0], b[1]), { padding: FIT_PADDING, maxZoom: 16.5, duration: reducedMotion ? 0 : 900 })
@@ -599,6 +675,7 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
     setNow,
     setRider,
     setTarget,
+    setRoute,
     fitRider,
     destroy: () => {
       destroyed = true

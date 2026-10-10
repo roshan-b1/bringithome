@@ -21,9 +21,17 @@ async function clean(page: Page) {
 
 const progress = (page: Page) => page.getByText(/^Question \d of \d$/)
 
-test('two taps from "Where did you get off?" to the match (recorded set): a bus stop says bus', async ({ page }) => {
-  await page.goto(`${H}?screen=off&mode=mock&set=backup-bus49&near=gsu`)
-  await expect(progress(page)).toHaveText('Question 1 of 2')
+test('three taps from "Bus or train?" to the match (recorded set): Bus, the stop, the time', async ({ page }) => {
+  await page.goto(`${H}?screen=ride&mode=mock&set=backup-bus49&near=gsu`)
+  await expect(page.getByRole('heading', { level: 1, name: 'Bus or train?' })).toBeVisible()
+  await expect(progress(page)).toHaveText('Question 1 of 3')
+  await expect(page.getByRole('button', { name: 'Lost it somewhere else?' })).toBeVisible()
+  for (const name of ['Bus', 'Train', 'Not sure']) expect((await page.getByRole('button', { name, exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(56)
+  await clean(page)
+  await page.getByRole('button', { name: 'Bus', exact: true }).click() // 1
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Where did you get off?' })).toBeFocused()
+  await expect(progress(page)).toHaveText('Question 2 of 3')
   // the front door to TellMe sits on top, and the way out to the somewhere-else path at the bottom
   await expect(page.getByRole('button', { name: /Say it in one sentence/ })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Lost it somewhere else?' })).toBeVisible()
@@ -35,22 +43,22 @@ test('two taps from "Where did you get off?" to the match (recorded set): a bus 
   const first = near.first()
   expect((await first.boundingBox())!.height).toBeGreaterThanOrEqual(56)
   await clean(page)
-  await first.click() // 1
+  await first.click() // 2
 
   await expect(page.getByRole('heading', { level: 1, name: 'About when did you get off?' })).toBeFocused()
-  await expect(progress(page)).toHaveText('Question 2 of 2')
+  await expect(progress(page)).toHaveText('Question 3 of 3')
   const now = page.getByRole('button', { name: /Just now/ })
   expect((await now.boundingBox())!.height).toBeGreaterThanOrEqual(56)
   for (const name of ['10 to 30 min ago', 'Pick a time', 'Not sure']) expect((await page.getByRole('button', { name, exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(56)
   await clean(page)
-  await page.getByRole('button', { name: '10 to 30 min ago' }).click() // 2
+  await page.getByRole('button', { name: '10 to 30 min ago' }).click() // 3
 
   await expect(page.getByRole('heading', { name: 'Thanks. Looking for your bus or train now.' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Reached: results' })).toBeVisible({ timeout: 10_000 })
   await expect(page.getByText('"status": "matched"')).toBeVisible()
   const answers = await page.locator('pre').innerText()
   expect(answers).toContain('"mode": "bus"')
-  expect(answers).toContain('"mode_by": "place"')
+  expect(answers).toContain('"mode_by": "ride"')
 
   // done is a hand-off, not a stop on the way back: Back from results is the last question, with its answer kept
   await page.getByRole('button', { name: 'Back' }).click()
@@ -65,16 +73,18 @@ test('"Just now" is the under-10-minutes button', async ({ page }) => {
   await expect(page.getByText('"button": "under_10"')).toBeVisible()
 })
 
-test('"Not sure" where they got off asks bus or train, then when; a missing stop offers the search again', async ({ page }) => {
-  await page.goto(`${H}?screen=off&mode=mock&set=backup-bus49&near=gsu`)
-  await expect(progress(page)).toHaveText('Question 1 of 2')
+test('"Not sure" twice asks bus or train again after the place, then when; a missing stop offers the search again', async ({ page }) => {
+  await page.goto(`${H}?screen=ride&mode=mock&set=backup-bus49&near=gsu`)
+  await page.getByRole('button', { name: 'Not sure', exact: true }).click()
+  await expect(progress(page)).toHaveText('Question 2 of 3')
   await page.getByRole('button', { name: 'Not sure', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Bus or train?' })).toBeFocused()
-  await expect(progress(page)).toHaveText('Question 2 of 3')
+  await expect(progress(page)).toHaveText('Question 3 of 4')
   await expect(page.getByRole('button', { name: /Not on MARTA/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Lost it somewhere else?' })).toHaveCount(0) // only on the first question
   await clean(page)
   await page.getByRole('button', { name: 'Not sure', exact: true }).click()
-  await expect(progress(page)).toHaveText('Question 3 of 3')
+  await expect(progress(page)).toHaveText('Question 4 of 4')
   await page.getByRole('button', { name: 'Not sure', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'We need a stop to find the exact one' })).toBeVisible()
   // no session without a stop, so the first steps come from the bundled copy and contacts, never a dead end
@@ -87,7 +97,7 @@ test('"Not sure" where they got off asks bus or train, then when; a missing stop
   await expect(page.getByRole('heading', { level: 1, name: 'Where did you get off?' })).toBeVisible()
 })
 
-test('an ambiguous place asks bus or train, with the place in the lead', async ({ page }) => {
+test('"Not sure" on the first question, then a place that serves both: bus or train again, with the place in the lead', async ({ page }) => {
   await page.goto(`${H}?screen=mode&mode=mock&set=backup-bus49`)
   await expect(page.getByText(/More than one kind of ride stops at Georgia State Station/)).toBeVisible()
   await page.getByRole('button', { name: 'Train', exact: true }).click()
@@ -208,9 +218,113 @@ test('Lost it somewhere else: Skip the item, and the plan is the call cards alon
   await expect(page.getByText(/Mark your phone as lost/)).toHaveCount(0)
 })
 
+test('"Know your bus? Tap it.": the stop\'s routes, one tap picks, a second clears; every choice stays on screen', async ({ page }) => {
+  await page.goto(`${H}?screen=when&ride=bus&place=piedmont&mode=mock&set=backup-bus49`)
+  const row = page.getByRole('group', { name: 'Know your bus? Tap it.' })
+  const chips = row.getByRole('button')
+  await expect(chips).toHaveText(['20', '21', '22', '42', '49'])
+  for (const c of await chips.all()) expect((await c.boundingBox())!.height).toBeGreaterThanOrEqual(56)
+  // nothing hidden, even on an iPhone SE: "Just now" first and biggest, "Not sure" still in view
+  for (const b of [page.getByRole('button', { name: /Just now/ }), page.getByRole('button', { name: 'Not sure', exact: true }), page.getByRole('button', { name: 'Pick a time' })])
+    await expect(b).toBeInViewport({ ratio: 1 })
+  const route49 = row.getByRole('button', { name: 'Route 49' })
+  await route49.click()
+  await expect(route49).toHaveAttribute('aria-pressed', 'true')
+  await row.getByRole('button', { name: 'Route 20' }).click() // another chip replaces it
+  await expect(route49).toHaveAttribute('aria-pressed', 'false')
+  await row.getByRole('button', { name: 'Route 20' }).click() // tapped again: cleared
+  await expect(chips.and(page.locator('[aria-pressed="true"]'))).toHaveCount(0)
+  await route49.click()
+  await clean(page)
+  await page.getByRole('button', { name: /Just now/ }).click()
+  await expect(page.getByRole('heading', { name: 'Reached: results' })).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('"route": "49"')).toBeVisible()
+})
+
+test('"Know your line? Tap it." at a station: the lines with their colours; no row where there is nothing to choose', async ({ page }) => {
+  await page.goto(`${H}?screen=when&ride=rail&place=north-ave&mode=mock&set=hero-rail`)
+  const row = page.getByRole('group', { name: 'Know your line? Tap it.' })
+  await expect(row.getByRole('button')).toHaveText(['Red', 'Gold'])
+  await expect(row.getByRole('button', { name: 'Red Line' })).toHaveAttribute('aria-pressed', 'false')
+  await clean(page)
+  // a bus at a place with the one rail line only, or none: no row at all
+  await page.goto(`${H}?screen=when&ride=bus&place=north-ave&mode=mock&set=hero-rail`)
+  await expect(page.getByRole('heading', { level: 1, name: 'About when did you get off?' })).toBeVisible()
+  await expect(page.getByText(/Know your (bus|line)\?/)).toHaveCount(0)
+})
+
+test('a route said in "Say it in one sentence" rides along; a stop with only that route shows no row', async ({ page }) => {
+  // the told stop (Courtland St @ Ellis St) has route 49 alone, so there is nothing to choose; the picked chip for a
+  // stop with several routes is covered in lib/flow.test.ts (rideChips)
+  await page.goto(`${H}?screen=off&mode=mock&set=backup-bus49&near=gsu&parse=bus-49`)
+  await page.getByRole('button', { name: /Say it in one sentence/ }).click()
+  await page.getByRole('textbox', { name: 'Where and when' }).fill('got off the 49 near peachtree center around 1:15')
+  await page.getByRole('button', { name: 'Use this' }).click()
+  await page.getByRole('checkbox', { name: /About 1:15 PM/ }).uncheck() // leave the time to the taps
+  await page.getByRole('button', { name: "Yes, that's right" }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'About when did you get off?' })).toBeVisible()
+  await expect(page.getByText(/Know your (bus|line)\?/)).toHaveCount(0)
+  await page.getByRole('button', { name: /Just now/ }).click()
+  await expect(page.getByRole('heading', { name: 'Reached: results' })).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('"route": "49"')).toBeVisible()
+})
+
+/** The real app on a live-mode path, with the API stood in by route interception; returns the POSTed intakes. */
+async function stubApi(page: Page, set: string): Promise<Record<string, unknown>[]> {
+  const nearby = await (await page.request.get(`/fixtures/${set}/places-nearby.json`)).json()
+  const health = await (await page.request.get(`/fixtures/${set}/health.json`)).json()
+  const session = await (await page.request.get(`/fixtures/${set}/session.json`)).json()
+  const bodies: Record<string, unknown>[] = []
+  await page.route('**/api/**', (route) => {
+    const req = route.request()
+    const path = new URL(req.url()).pathname
+    if (path === '/api/places/nearby') return route.fulfill({ json: nearby })
+    if (path === '/api/health') return route.fulfill({ json: health })
+    if (path === '/api/sessions' && req.method() === 'POST') {
+      bodies.push(req.postDataJSON())
+      return route.fulfill({ json: session })
+    }
+    return route.fulfill({ status: 404, json: { error: 'not_found', message: 'not in this test' } })
+  })
+  return bodies
+}
+
+test('the real app, a bus stop with several routes: Bus, the stop, Route 49, a time; the match is asked with route 49', async ({ page }) => {
+  const bodies = await stubApi(page, 'backup-bus49')
+  await page.goto('/?near=gsu')
+  await page.getByRole('button', { name: /I lost something/ }).click()
+  await page.getByRole('button', { name: 'Bus', exact: true }).click()
+  await page.getByRole('group', { name: 'Near you now' }).getByRole('button', { name: /Georgia State Station - Bay B/ }).click()
+  await page.getByRole('group', { name: 'Know your bus? Tap it.' }).getByRole('button', { name: 'Route 49' }).click()
+  await page.getByRole('button', { name: /Just now/ }).click()
+  await expect.poll(() => bodies.length, { timeout: 10_000 }).toBe(1)
+  const intake = (bodies[0] as { intake: Record<string, unknown> }).intake
+  expect(intake.mode).toBe('bus')
+  expect(intake.route).toBe('49')
+  expect(intake.line).toBeUndefined()
+  expect((intake.anchors as { place_id: string }[])[0]!.place_id).toBe('stop:500211')
+})
+
+test('the real app, a station: Train, Garnett, Red; the match is asked with line RED', async ({ page }) => {
+  const bodies = await stubApi(page, 'hero-rail')
+  await page.goto('/?near=garnett')
+  await page.getByRole('button', { name: /I lost something/ }).click()
+  await page.getByRole('button', { name: 'Train', exact: true }).click()
+  await page.getByRole('group', { name: 'Near you now' }).getByRole('button', { name: /Garnett station/ }).click()
+  const row = page.getByRole('group', { name: 'Know your line? Tap it.' })
+  await expect(row.getByRole('button')).toHaveText(['Red', 'Gold'])
+  await row.getByRole('button', { name: 'Red Line' }).click()
+  await page.getByRole('button', { name: '10 to 30 min ago' }).click()
+  await expect.poll(() => bodies.length, { timeout: 10_000 }).toBe(1)
+  const intake = (bodies[0] as { intake: Record<string, unknown> }).intake
+  expect(intake.mode).toBe('rail')
+  expect(intake.line).toBe('RED')
+  expect(intake.route).toBeUndefined()
+})
+
 test('320 px wide: no sideways scroll on any intake screen', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 })
-  for (const screen of ['mode', 'off&near=gsu', 'when', 'tell', 'done-noplace', 'not_marta&places=Starbucks%20on%2010th', 'elsewhere_what', 'elsewhere_plan&what=wallet']) {
+  for (const screen of ['ride', 'mode', 'off&near=gsu', 'when', 'when&place=piedmont', 'when&ride=rail&place=north-ave', 'tell', 'done-noplace', 'not_marta&places=Starbucks%20on%2010th', 'elsewhere_what', 'elsewhere_plan&what=wallet']) {
     await page.goto(`${H}?screen=${screen}&mode=mock&set=backup-bus49`)
     await page.waitForTimeout(600)
     await clean(page)

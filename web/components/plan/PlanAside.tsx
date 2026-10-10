@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ItemCategory, Match, Source, VehicleKey, VehicleNow } from '@/contracts/api'
 import { MatchMap } from '@/components/results/MatchMap'
-import type { TargetPoint } from '@/components/results/mapEngine'
+import type { EngineRoute, TargetPoint } from '@/components/results/mapEngine'
 import type { RiderLocation } from '@/components/results/useRiderLocation'
 import { useVehicleNow } from '@/components/results/useVehicleNow'
 import { t, tLoose, type CopyId } from '@/lib/copy'
@@ -24,6 +24,7 @@ export function PlanAside({
   source,
   rider,
   target = null,
+  route = null,
   item = null,
   wide = false,
 }: {
@@ -33,6 +34,8 @@ export function PlanAside({
   source: Source
   rider: RiderLocation
   target?: TargetPoint | null
+  /** the recommended way as a route: pins with short times, the walk and the ride (wayRoute.ts) */
+  route?: EngineRoute | null
   /** the item tap, for the vehicle's label */
   item?: ItemCategory | null
   /** the laptop's right pane: the tall map */
@@ -56,12 +59,18 @@ export function PlanAside({
         rider={rider.fix}
         riderStatus={rider.status}
         onShowMe={rider.start}
-        target={target}
+        target={route ? null : target}
+        route={route}
         hereLabel={tLoose(`here.${item ?? 'other'}` as CopyId)}
         skipReplay
-        caption={keys.map((k) => (
-          <NowCaption key={k} vehicleKey={k} onNow={onNow} />
-        ))}
+        caption={
+          <>
+            {keys.map((k) => (
+              <NowCaption key={k} vehicleKey={k} onNow={onNow} />
+            ))}
+            {route ? <RouteLegend route={route} /> : null}
+          </>
+        }
       />
     </section>
   )
@@ -84,6 +93,16 @@ function NowCaption({ vehicleKey, onNow }: { vehicleKey: VehicleKey; onNow: (n: 
   return (
     <p className={styles.mapCaption}>
       <span className={styles.mapCaptionWhere}>{nowCaption(now, (id, slots) => tLoose(id, slots))}</span> <span className={styles.mapCaptionAge}>{updated}</span>
+    </p>
+  )
+}
+
+/** One line under the map that says how to read it: "You are the blue dot, the dashed line is your walk, the bold
+ *  line is your ride. Pins show where to go." */
+export function RouteLegend({ route }: { route: EngineRoute }) {
+  return (
+    <p className={styles.mapLegend}>
+      {t('map.legend', { walk: route.walkTo ? t('map.legend_walk') : null, ride: route.ride ? t('map.legend_ride') : null })}
     </p>
   )
 }

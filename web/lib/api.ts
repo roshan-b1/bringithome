@@ -33,16 +33,19 @@ import type {
   QueryMode,
   Replay,
   Reunion,
+  ScheduledNow,
   SessionResponse,
   Source,
   TrainsNearby,
   VehicleKey,
   VehicleNow,
 } from '../contracts/api.ts'
+import { loadPick, withPicked } from './riderPick.ts'
 
 export const TIMEOUT_MS = 4000
 export const NOW_POLL_MS = 10_000 // decision 8: /now every 10 s while the page is visible
 export const REUNION_FRAME_MS = 20_000 // the plan screen polls /reunion every 20 s; a recorded set has a frame per 20 s
+export const SCHEDULED_FRAME_MS = 30_000 // the timetable point moves every 30 s; a recorded set has a frame per 30 s
 
 // ---------------------------------------------------------------------------------------------- runtime params
 
@@ -520,6 +523,7 @@ export async function planFixtureFile(
  * planFixtureFile (where the rider said they are, else the item they tapped, else plan.json).
  */
 export async function plan(id: string, body: Omit<PlanRequest, 'as_of'>, opts: CallOpts = {}): Promise<ApiResult<Plan>> {
+  body = withPicked(id, body, loadPick()) // the rider's own tap on results: picked (riderPick.ts)
   const as_of = await asOfParam()
   const fixture = () => planFixtureFile(body, fixtureExists)
   return call({ url: `/api/sessions/${encodeURIComponent(id)}/plan`, init: json({ ...body, as_of }) }, fixture, opts, as_of ?? null)
@@ -535,6 +539,7 @@ const reunionFrames = new Map<string, { start: number; last: number }>()
  * they are ("default" when they said nothing), else reunion-<variant>.json, else reunion.json.
  */
 export async function reunion(id: string, body: Omit<PlanRequest, 'as_of'>, opts: CallOpts = {}): Promise<ApiResult<Reunion>> {
+  body = withPicked(id, body, loadPick())
   const as_of = await asOfParam()
   const variant = planVariant(body.user)
   const fixture = async () => {
@@ -547,6 +552,26 @@ export async function reunion(id: string, body: Omit<PlanRequest, 'as_of'>, opts
     return `${dir}/${String(st.last).padStart(3, '0')}.json`
   }
   return call({ url: `/api/sessions/${encodeURIComponent(id)}/reunion`, init: json({ ...body, as_of }) }, fixture, opts, as_of ?? null)
+}
+
+// fixture frames for /scheduled: frame 000 is what the plan carried, then one more per 30 s of visible time
+let scheduledFrames: { start: number; last: number } | null = null
+
+/**
+ * 10b. GET /api/sessions/{id}/scheduled: where the timetable says the rider's bus or train is, for a session whose
+ * match names no live vehicle (the plan's `scheduled` again). Never live. Fixture: scheduled/NNN.json frames, held at
+ * the last one, else scheduled.json.
+ */
+export async function scheduled(id: string, opts: CallOpts = {}): Promise<ApiResult<ScheduledNow>> {
+  const as_of = await asOfParam()
+  const fixture = async () => {
+    if (!(await fixtureExists('scheduled/000.json'))) return 'scheduled.json'
+    const st = (scheduledFrames ??= { start: visibleClock(), last: 0 })
+    const want = 1 + Math.floor((visibleClock() - st.start) / SCHEDULED_FRAME_MS)
+    st.last = want > st.last ? await probe('scheduled', want, st.last) : st.last
+    return `scheduled/${String(st.last).padStart(3, '0')}.json`
+  }
+  return call({ url: `/api/sessions/${encodeURIComponent(id)}/scheduled${qs({ as_of })}` }, fixture, opts, as_of ?? null)
 }
 
 /** "rail:405" -> ["rail", "405"]. */

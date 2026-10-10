@@ -14,7 +14,7 @@ import { Skeleton, Spinner } from '@/components/ui/Spinner'
 import type { IconName } from '@/components/ui/Icon'
 import type { ScreenComponentProps } from '@/components/screens/registry'
 import type { ItemCategory, PlanUser, ReunionKind, SessionResponse, VehicleKey } from '@/contracts/api'
-import type { TargetPoint } from '@/components/results/mapEngine'
+import type { EngineRoute, TargetPoint } from '@/components/results/mapEngine'
 import { useRiderLocation } from '@/components/results/useRiderLocation'
 import { fixtureData, openRecordedExample, placesNearby, runtime } from '@/lib/api'
 import { contact, lostFoundForm } from '@/lib/contacts'
@@ -34,7 +34,10 @@ import { ReportCard } from './ReportCard'
 import { Ways } from './Reunion'
 import { changeSaid, mainOption, reunionBody, walksThere, type PollFix } from './reunionModel'
 import { WhereNow } from './WhereNow'
-import { usePlaceCoords } from './placeCoords'
+import { usePlaceCoords, useStationLookup } from './placeCoords'
+import { ScheduledMap } from './ScheduledMap'
+import { TimetableWay } from './TimetableWay'
+import { wayRoute } from './wayRoute'
 import {
   arrangeCards,
   bagLine,
@@ -378,6 +381,13 @@ function PlanView({
         ? { lat: best.stop_lat, lon: best.stop_lon, label: t('ways.map_target'), place: best.place_label, walk: reunion ? walksThere(best, reunion.rider_location) : false }
         : null
   const wide = useWide()
+  // the recommended way drawn like a route on the map: the walk, the ride along the line, pins with short times
+  const routeOption = !showingMeet && best && !skipKinds(best.kind) ? best : null
+  const station = useStationLookup(Boolean(routeOption))
+  const route: EngineRoute | null = useMemo(
+    () => (routeOption && station ? wayRoute(routeOption, { station, riderOnTrain: reunion?.rider_location === 'on_train' }) : null),
+    [routeOption, station, reunion?.rider_location],
+  )
 
   // a live bus match: the meet and the waits need to know where the rider is
   const nearOffer =
@@ -507,6 +517,7 @@ function PlanView({
             ),
           }
         : null,
+    timetable_return: (card) => ({ title: t('plan.card.best'), tone: 'accent', body: <TimetableWay card={card} /> }),
     call: (card) =>
       result ? { body: <CallCard card={card} script={result.data.report.call_script} item={itemWords} emailHref={emailHref} nowMs={Date.parse(result.data.generated_at)} /> } : null,
   }
@@ -591,8 +602,12 @@ function PlanView({
     setView('cleared')
   }
 
+  // not in the live feed: the plan runs on the timetable, and says so first
+  const timetableMode = result?.data.scheduled?.[0]?.mode ?? null
   const lead =
-    match.status === 'not_reporting'
+    match.status === 'not_reporting' && timetableMode
+      ? t(timetableMode === 'rail' ? 'plan.lead_timetable_rail' : 'plan.lead_timetable_bus')
+      : match.status === 'not_reporting'
       ? t('res_notreporting')
       : match.status === 'uncertain' || match.status === 'no_match'
         ? t('res_05_nomatch')
@@ -601,14 +616,19 @@ function PlanView({
           : t('plan.lead')
   // the live map: the right pane on a laptop, the top of the plan on a phone (a match with no named vehicle keeps
   // the clue panel on a laptop and has no map on a phone)
+  // with no live vehicle named, the map shows where the timetable says it is (a hollow dot that never claims live)
+  const scheduledNow = !named && result?.data.scheduled?.length ? result.data.scheduled : null
   const planMap = named ? (
-    <PlanAside sessionId={sessionId} match={match} keys={keys} source={flow.session?.source ?? 'live'} rider={rider} target={target} item={tappedItem} wide={wide} />
+    <PlanAside sessionId={sessionId} match={match} keys={keys} source={flow.session?.source ?? 'live'} rider={rider} target={target} route={route} item={tappedItem} wide={wide} />
+  ) : scheduledNow ? (
+    <ScheduledMap sessionId={sessionId} initial={scheduledNow} item={tappedItem} rider={rider} wide={wide} enabled={view === 'plan'} />
   ) : null
   const aside = wide && planMap ? planMap : undefined
 
   // the three parts: the theft safety card (above the map), "Your best plan", and "Didn't find it?" for the rest
   const sections = planSections(cards)
-  const hasWay = (showingMeet && !watch.withdrawn) || Boolean(best && !skipKinds(best.kind))
+  // the timetable's way back counts as a way to try: the backup steps wait behind "Didn't find it?" as for a live one
+  const hasWay = (showingMeet && !watch.withdrawn) || Boolean(best && !skipKinds(best.kind)) || sections.way?.kind === 'timetable_return'
   // collapsed while there is a way back to try, open when there isn't; the rider's own tap wins, per session
   const backupOpen = answers.backup ?? !hasWay
   const wayOverride = sections.way ? (slots[sections.way.kind]?.(sections.way) ?? null) : null
