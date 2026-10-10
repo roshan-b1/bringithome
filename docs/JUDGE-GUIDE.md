@@ -602,6 +602,7 @@ you want, and the recorded example works offline.
 | Walking ahead to a bus works | **0.8%** of moments |
 | End-of-line bus meet failures | **1.7%** |
 | Train backtest | **5,137** calls; recommended (no early slot) **0 missed**, median error **37 s** |
+| Full planner backtest | trains: recommended median error **36 s**, top option truly soonest **96.8%** (docs/BACKTEST.md) |
 | Daytime hand-check | median error **42 s**, **20 of 21** inside the window |
 | Live check today | Red 402: predicted East Point **~8:57**, passed **~8:57:30**, predicted **~22 min** ahead |
 | Margins | train **2 min + 30 s** pad; bus **5 min** and bus at most **10 min** away |
