@@ -1,5 +1,16 @@
 # bring it home: "how it works" voiceover (Devpost video)
 
+## The short version (use this): about 25 seconds, said right after the demo
+
+> Every bus and train position from MARTA's live feeds is recorded on our Vultr server into Tiger Data, so two taps
+> find the exact train you were on. Gemini turns a spoken sentence into your stop and time, but every decision comes
+> from real transit data. Our planner, tested on recorded rides, picks the fastest way back about 97% of the time.
+> Find My shows where it was. bring it home shows where it is.
+
+For about 20 seconds, drop the Gemini sentence.
+
+## The long version (about 85 seconds), if there is room
+
 Plays right after the product demo. About 85 seconds at a calm pace (about 230 words). Every number here is from
 docs/BACKTEST.md (data recorded during the hackathon) or this morning's live test.
 
