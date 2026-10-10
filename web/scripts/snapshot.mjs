@@ -36,11 +36,11 @@ const SETS = {
     label: 'Recorded example: a bag left on a Red Line train, Fri Oct 9',
     as_of: '2026-10-09T15:27:00-04:00',
     taps: [
-      'what: bag',
-      'mode: rail (Train)',
       'off: Garnett station (alias:garnett, stop_ids 907843, 908600)',
+      'mode: rail, read from the station (not asked)',
       'when: picked 15:24 (3:24 PM), window 5',
-      'line RED and direction S (Red Line, To Airport: the results question, or said in Type it instead)',
+      'plan, What did you lose: bag (item_category, the wording only; the recorded match was made with item bag)',
+      'line RED and direction S (Red Line, To Airport: the results question, or said in Say it in one sentence)',
       'plan, Where are you now: On another train, Gold Line run 310 (user.on_vehicle rail:310)',
       'plan, Which part of the train: middle',
       'or plan, Where are you now: At a station, Five Points (user.place_id station:510015, at_station)',
@@ -57,7 +57,7 @@ const SETS = {
       direction: 'S',
       anchors: [{ role: 'alight', place_id: 'alias:garnett', stop_ids: ['907843', '908600'], at: '2026-10-09T15:24:00-04:00', time_kind: 'picked', window_min: 5 }],
     },
-    // the four taps alone (no line, no direction, a picked time's 15 min): the matcher asks "which way?"
+    // the two taps alone (no line, no direction, a picked time's 15 min): the matcher asks "which way?"
     variants: {
       uncertain: {
         item: { category: 'bag' },
@@ -80,11 +80,11 @@ const SETS = {
     label: 'Recorded example: a bag left on a route 49 bus, Fri Oct 9',
     as_of: '2026-10-09T13:30:00-04:00',
     taps: [
-      'what: bag',
-      'mode: bus',
       'off: Piedmont Ave SE @ Gilmer St SE (stop:210555)',
+      'mode: bus, read from the stop (not asked)',
       'when: picked 13:18 (1:18 PM), window 10',
-      'route 49 (said in Type it instead, or the results question)',
+      'plan, What did you lose: bag (item_category, the wording only; the recorded match was made with item bag)',
+      'route 49 (said in Say it in one sentence, or the results question)',
     ],
     nearby: { near: 'gsu', mode: 'bus' },
     search: { q: 'peachtree center', mode: 'bus', route: '49' },
@@ -105,11 +105,11 @@ const SETS = {
     label: 'Recorded example: route 20 not sharing its location, Fri Oct 9',
     as_of: '2026-10-09T13:25:00-04:00',
     taps: [
-      'what: wallet',
-      'mode: bus',
       'off: Piedmont Ave SE @ Gilmer St SE (stop:210555)',
+      'mode: bus, read from the stop (not asked)',
       'when: picked 13:17 (1:17 PM), window 5',
-      'route 20 (said in Type it instead)',
+      'plan, What did you lose: wallet (item_category, the wording only; the recorded match was made with item wallet)',
+      'route 20 (said in Say it in one sentence)',
     ],
     nearby: { near: 'gsu', mode: 'bus' },
     search: { q: 'piedmont gilmer', mode: 'bus' },
@@ -133,11 +133,11 @@ const SETS = {
     label: 'Recorded example: a bag left on a Red Line train at night, Fri Oct 9',
     as_of: '2026-10-09T21:20:00-04:00',
     taps: [
-      'what: bag',
-      'mode: rail (Train)',
       'off: West End station (alias:west end, stop_ids 908704, 908705)',
+      'mode: rail, read from the station (not asked)',
       'when: picked 21:16 (9:16 PM), window 5',
-      'line RED and direction S (Red Line, To Airport: the results question, or said in Type it instead)',
+      'plan, What did you lose: bag (item_category, the wording only; the recorded match was made with item bag)',
+      'line RED and direction S (Red Line, To Airport: the results question, or said in Say it in one sentence)',
     ],
     nearby: { near: 'west end', mode: 'rail' },
     search: { q: 'west end', mode: 'rail' },

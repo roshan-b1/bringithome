@@ -18,10 +18,12 @@ import styles from './intake.module.css'
 // out is asked by tap afterwards, so a wrong read never costs more than the taps it would have taken anyway.
 
 const RIDE_ICON: Record<NonNullable<Proposal['mode']>, IconName> = { bus: 'bus', rail: 'train', streetcar: 'streetcar' }
+const ITEM_ICON: Record<NonNullable<Proposal['item']>, IconName> = { phone: 'phone', wallet: 'wallet', bag: 'bag', keys: 'key', laptop: 'laptop', other: 'bag' }
 
 export function TellConfirm({ flow, proposal: p, onAgain }: IntakeProps & { proposal: Proposal; onAgain: () => void }) {
   const choices = p.anchor?.choices ?? []
   const single = choices.length === 1
+  const [keepItem, setKeepItem] = useState(true)
   const [keepRide, setKeepRide] = useState(true)
   const [keepWhen, setKeepWhen] = useState(true)
   const [placeId, setPlaceId] = useState<string | null>(single ? choices[0]!.place_id : null) // 'none' = none of these
@@ -33,6 +35,7 @@ export function TellConfirm({ flow, proposal: p, onAgain }: IntakeProps & { prop
 
   const yes = () => {
     const tap: TellTap = {}
+    if (p.item && keepItem) tap.item = p.item
     if (ride && keepRide) {
       if (p.mode) tap.mode = p.mode
       if (p.route) tap.route = p.route
@@ -68,6 +71,13 @@ export function TellConfirm({ flow, proposal: p, onAgain }: IntakeProps & { prop
       }
     >
       <div className={styles.facts}>
+        {p.item ? (
+          <div className={styles.fact}>
+            <p className={styles.factEyebrow}>{t('tell.what')}</p>
+            <Check checked={keepItem} onChange={setKeepItem} icon={ITEM_ICON[p.item]} label={t(`wb_01_what.${p.item}`)} />
+          </div>
+        ) : null}
+
         {ride ? (
           <div className={styles.fact}>
             <p className={styles.factEyebrow}>{t('tell.ride')}</p>

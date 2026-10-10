@@ -11,6 +11,7 @@ import { LiveRegion } from '@/components/ui/LiveRegion'
 import { SafetyFooter } from '@/components/ui/SafetyFooter'
 import { Screen } from '@/components/ui/Screen'
 import { Skeleton, Spinner } from '@/components/ui/Spinner'
+import type { IconName } from '@/components/ui/Icon'
 import type { ScreenComponentProps } from '@/components/screens/registry'
 import type { ItemCategory, PlanUser, ReunionKind, SessionResponse, VehicleKey } from '@/contracts/api'
 import type { TargetPoint } from '@/components/results/mapEngine'
@@ -178,9 +179,12 @@ function PlanView({
   const line = bagLine(match, keys)
   const tie = keys.length > 1
 
-  // the flow's own taps this screen reads: the item (for [[ITEM]]) and "I walk slowly" (decision 9)
+  // the flow's own taps this screen reads: the item (asked here, "What did you lose?": for [[ITEM]] and the item's own
+  // steps, sent as item_category) and "I walk slowly" (decision 9)
   const flowAnswers = flow.state.answers as { what?: unknown; walk?: unknown }
-  const category = ITEMS.includes(flowAnswers.what as ItemCategory) ? (flowAnswers.what as ItemCategory) : 'other'
+  const tappedItem = ITEMS.includes(flowAnswers.what as ItemCategory) ? (flowAnswers.what as ItemCategory) : null
+  const category = tappedItem ?? 'other'
+  const itemAnswer: ItemCategory | 'not_sure' | undefined = tappedItem ?? (flowAnswers.what === 'not_sure' ? 'not_sure' : undefined)
   const flowWalk: Walk | null = flowAnswers.walk === 'slow' || flowAnswers.walk === 'normal' ? flowAnswers.walk : null
   const walk: Walk = flowWalk ?? 'normal'
 
@@ -236,8 +240,11 @@ function PlanView({
   // "Not sure" on taken is a tap the screen keeps, never a value sent: PlanRequest.taken is no, maybe or yes only
   const taken = answers.taken && answers.taken !== 'unsure' ? answers.taken : null
   const body = useMemo<PlanBody | null>(
-    () => (loaded ? { vehicle_keys: keys, user, ...(taken ? { taken } : {}), ...(car ? { car } : {}) } : null),
-    [loaded, keys, user, taken, car],
+    () =>
+      loaded
+        ? { vehicle_keys: keys, user, ...(taken ? { taken } : {}), ...(car ? { car } : {}), ...(tappedItem ? { item_category: tappedItem } : {}) }
+        : null,
+    [loaded, keys, user, taken, car, tappedItem],
   )
   const plan = usePlanRequest(sessionId, body)
   const result = plan.result
@@ -654,6 +661,7 @@ function PlanView({
       }
     >
       <TakenAsk taken={answers.taken} onTaken={(v) => update({ taken: v })} />
+      <ItemAsk item={itemAnswer} onItem={(v) => flow.setExtra({ what: v ?? null })} />
 
       {plan.error && !plan.loading && plan.error.error === 'not_found' ? (
         // the session is gone (cleared in another tab, or past retention): the same request can only 404 again
@@ -723,6 +731,37 @@ function TakenAsk({ taken, onTaken }: { taken: Taken | undefined; onTaken: (v: T
           { value: 'unsure', label: t('not_sure'), quiet: true },
         ]}
         onChoose={onTaken}
+      />
+    </section>
+  )
+}
+
+// ------------------------------------------------------------------------------------- the item, up top too
+
+const ITEM_ICON: Record<ItemCategory, IconName> = { phone: 'phone', wallet: 'wallet', bag: 'bag', keys: 'key', laptop: 'laptop', other: 'question' }
+
+/**
+ * "What did you lose?", optional. It is not asked before the match because it never changes the match; here it adds
+ * the item's own steps (a wallet: freeze cards first; a phone: lock or erase it), sent as item_category for this plan.
+ * Unanswered, the plan is worded for any item (the unattended bag line is always in it).
+ */
+function ItemAsk({ item, onItem }: { item: ItemCategory | 'not_sure' | undefined; onItem: (v: ItemCategory | 'not_sure' | undefined) => void }) {
+  if (item)
+    return (
+      <Answered onChange={() => onItem(undefined)} changeLabel={t('answer.change')}>
+        {t('wb_01_what')} <strong>{item === 'not_sure' ? t('not_sure') : t(`wb_01_what.${item}`)}</strong>
+      </Answered>
+    )
+  return (
+    <section className={styles.askPanel}>
+      <QuickChoice<ItemCategory | 'not_sure'>
+        headingLevel={2}
+        question={t('wb_01_what')}
+        hint={t('plan.item_hint')}
+        layout="tiles"
+        // optional, so no "Not sure": leaving it is the same answer, and the plan is already worded for any item
+        options={ITEMS.map((v) => ({ value: v, label: t(`plan.item.${v}`), icon: ITEM_ICON[v] }))}
+        onChoose={onItem}
       />
     </section>
   )

@@ -35,14 +35,13 @@ function whenText(a: Answers): string | null {
 }
 
 export function ClueAside({ answers: a }: { answers: Answers }) {
-  const rows: { key: string; label: string; icon: IconName; value: string | null }[] = [
-    { key: 'what', label: t('aside.what'), icon: (typeof a.what === 'string' && ITEM_ICON[a.what]) || 'bag', value: whatText(a) },
-    { key: 'ride', label: t('aside.ride'), icon: a.mode === 'rail' ? 'train' : a.mode === 'streetcar' ? 'streetcar' : a.mode === 'not_marta' ? 'home' : 'bus', value: rideText(a) },
-  ]
-  if (a.mode !== 'not_marta') {
-    rows.push({ key: 'stop', label: t('aside.stop'), icon: 'pin', value: a.off === undefined ? null : isPlace(a.off) ? a.off.label : t('not_sure') })
-    rows.push({ key: 'when', label: t('aside.when'), icon: 'clock', value: whenText(a) })
-  }
+  // in the order asked: where, then the ride (read from the place, or asked), then when. The item is asked on the
+  // plan, so it shows only once TellMe read it.
+  const rows: { key: string; label: string; icon: IconName; value: string | null }[] = []
+  if (a.what !== undefined) rows.push({ key: 'what', label: t('aside.what'), icon: (typeof a.what === 'string' && ITEM_ICON[a.what]) || 'bag', value: whatText(a) })
+  if (a.mode !== 'not_marta') rows.push({ key: 'stop', label: t('aside.stop'), icon: 'pin', value: a.off === undefined ? null : isPlace(a.off) ? a.off.label : t('not_sure') })
+  rows.push({ key: 'ride', label: t('aside.ride'), icon: a.mode === 'rail' ? 'train' : a.mode === 'streetcar' ? 'streetcar' : a.mode === 'not_marta' ? 'home' : 'bus', value: rideText(a) })
+  if (a.mode !== 'not_marta') rows.push({ key: 'when', label: t('aside.when'), icon: 'clock', value: whenText(a) })
   return (
     <div className={styles.panel}>
       <div className={styles.head}>

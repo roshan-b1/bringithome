@@ -5,11 +5,11 @@
  "recorded_at": "2026-10-10T04:11:11-04:00",
  "git_sha": "dev",
  "taps": [
-  "what: bag",
-  "mode: rail (Train)",
   "off: West End station (alias:west end, stop_ids 908704, 908705)",
+  "mode: rail, read from the station (not asked)",
   "when: picked 21:16 (9:16 PM), window 5",
-  "line RED and direction S (Red Line, To Airport: the results question, or said in Type it instead)"
+  "plan, What did you lose: bag (item_category, the wording only; the recorded match was made with item bag)",
+  "line RED and direction S (Red Line, To Airport: the results question, or said in Say it in one sentence)"
  ],
  "plan_frame": 0
 }

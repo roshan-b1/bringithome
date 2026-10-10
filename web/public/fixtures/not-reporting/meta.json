@@ -5,11 +5,11 @@
  "recorded_at": "2026-10-10T04:11:03-04:00",
  "git_sha": "dev",
  "taps": [
-  "what: wallet",
-  "mode: bus",
   "off: Piedmont Ave SE @ Gilmer St SE (stop:210555)",
+  "mode: bus, read from the stop (not asked)",
   "when: picked 13:17 (1:17 PM), window 5",
-  "route 20 (said in Type it instead)"
+  "plan, What did you lose: wallet (item_category, the wording only; the recorded match was made with item wallet)",
+  "route 20 (said in Say it in one sentence)"
  ],
  "plan_frame": 0
 }

@@ -366,9 +366,11 @@ class PlanRequest(BaseModel):
     user: PlanUser = Field(default_factory=PlanUser)
     as_of: datetime | None = None
     # the plan screen's optional taps, for this plan only (the stored session keeps its own answers):
-    # taken turns on the safety card and its order, car is the platform hint
+    # taken turns on the safety card and its order, car is the platform hint, item_category the item's own
+    # steps (wallet: freeze cards first; phone: phone_lost). The match never depends on any of them.
     taken: Literal["no", "maybe", "yes"] | None = None
     car: Literal["front", "middle", "back"] | None = None
+    item_category: Literal["phone", "wallet", "bag", "keys", "laptop", "other"] | None = None
 
 
 class LostFound(BaseModel):

@@ -31,7 +31,7 @@ test('slots fill by name; optional phrases drop when their slot is missing', () 
     t('plan_body_1', { vehicle: 'Red Line train', train_run: '405', stop: 'North Ave station', time: '3:47 PM', role: 'got off at' }),
     'Keep this: Red Line train, train run 405, got off at North Ave station around 3:47 PM.',
   )
-  assert.equal(t('progress', { n: 3, m: 9 }), 'Question 3 of about 9')
+  assert.equal(t('progress', { n: 1, m: 2 }), 'Question 1 of 2')
   assert.equal(t('not_sure'), 'Not sure')
 })
 

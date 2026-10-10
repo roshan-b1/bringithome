@@ -33,7 +33,7 @@ export function QuickChoice<V extends string>({
   selected?: V | null
   busy?: V | null
   onChoose: (v: V) => void
-  layout?: 'grid' | 'stack'
+  layout?: 'grid' | 'stack' | 'tiles'
   headingLevel?: 2 | 3
 }) {
   const id = useId()
@@ -51,7 +51,7 @@ export function QuickChoice<V extends string>({
           {hint}
         </p>
       ) : null}
-      <div className={layout === 'grid' ? styles.quickGrid : styles.quickStack}>
+      <div className={layout === 'grid' ? styles.quickGrid : layout === 'tiles' ? styles.quickTiles : styles.quickStack}>
         {options.map((o) => (
           <button
             key={o.value}

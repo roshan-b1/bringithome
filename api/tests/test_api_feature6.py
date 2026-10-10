@@ -329,6 +329,27 @@ def test_wallet_or_theft_puts_safety_bag_staff_and_freeze_cards_first(api, item,
         assert card_of(p, "freeze_cards")["facts"]["lost_found_claim"].startswith("in person with a valid photo ID")
 
 
+@pytest.mark.parametrize("override,order", [
+    (None, ["bag_staff", "tell_staff", "keep", "report", "call"]),                       # "other": safe for any item
+    ("wallet", ["bag_staff", "freeze_cards", "tell_staff", "keep", "report", "call"]),
+    ("phone", ["bag_staff", "tell_staff", "keep", "report", "call", "phone_lost"]),
+    ("bag", ["bag_staff", "tell_staff", "keep", "report", "call"])])
+def test_the_plan_screens_item_tap_overrides_the_sessions_item_for_this_plan_only(api, override, order):
+    """The item is asked on the plan screen, after the match: the session holds the neutral "other", and the
+    request's item_category adds that item's own steps. The reunion takes the same body and ignores it."""
+    c = api([])
+    sid = save(c, "matched", [bus_cand("2331", "1631", at(15, 45))], bus_taps(item={"category": "other"}),
+               level="medium")
+    body = {"vehicle_keys": []} if override is None else {"vehicle_keys": [], "item_category": override}
+    r = c.post(f"/api/sessions/{sid}/plan", json=body)
+    assert r.status_code == 200, r.text
+    assert kinds(check(r.json())) == order
+    assert c.post(f"/api/sessions/{sid}/reunion", json=body).status_code == 200
+    assert kinds(plan(c, sid)[0]) == ["bag_staff", "tell_staff", "keep", "report", "call"]   # stored item kept
+    bad = c.post(f"/api/sessions/{sid}/plan", json={"item_category": "umbrella"})
+    assert bad.status_code in (400, 422)
+
+
 def test_a_wallet_taken_with_a_meet_still_puts_freeze_cards_before_the_meet(api, tmp_path):
     c, sid, _ = bus_session(api, tmp_path, item={"category": "wallet"}, taken="yes")
     p, _ = plan(c, sid, ["bus:1401"], {"place_id": "stop:300004"})

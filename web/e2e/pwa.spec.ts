@@ -93,8 +93,6 @@ test('airplane mode: the installed app opens and runs the recorded example to th
   await page.goto('/?mode=offline&set=hero-rail')
   await expect(page.getByRole('button', { name: /I lost something/ })).toBeVisible()
   await page.getByRole('button', { name: /I lost something/ }).click()
-  await page.getByRole('button', { name: 'Bag or backpack' }).click()
-  await page.getByRole('button', { name: 'Train', exact: true }).click()
   await page.getByRole('group', { name: 'From the recorded ride' }).getByRole('button').first().click()
   await page.getByRole('button', { name: 'Pick a time' }).click()
   await page.getByLabel('About what time?').fill('15:24')

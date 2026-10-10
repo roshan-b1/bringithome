@@ -40,12 +40,41 @@ export function NotSureButton({ onClick, pressed, label }: { onClick: () => void
   )
 }
 
-/** "Type it instead" (TellMe), low in the thumb zone; outlined so it never reads as "Not sure". */
+/** "Type it instead" (TellMe) as a plain button (the done screen's way back in). */
 export function TypeInstead({ flow }: IntakeProps) {
   return (
     <BigButton variant="secondary" size="md" icon="mic" onClick={() => flow.goTo('tell')}>
       {t('intake.type_instead')}
     </BigButton>
+  )
+}
+
+/**
+ * The front door to TellMe at the top of "Where did you get off?": one card with a mic, clearly tappable but quieter
+ * than the nearby list under it (outlined, no fill), with an example sentence so it reads at a glance.
+ */
+export function SayItCard({ flow }: IntakeProps) {
+  return (
+    <button type="button" className={styles.sayCard} onClick={() => flow.goTo('tell')}>
+      <span className={styles.sayIcon} aria-hidden="true">
+        <Icon name="mic" size={24} />
+      </span>
+      <span className={styles.sayText}>
+        <span className={styles.sayTitle}>{t('off.say_title')}</span>
+        <span className={styles.sayExample}>{t('off.say_example')}</span>
+      </span>
+      <Icon name="next" size={20} className={styles.sayNext} />
+    </button>
+  )
+}
+
+/** "Lost it somewhere else?": a small link to the somewhere-else path, under everything else on off. */
+export function SomewhereElse({ flow }: IntakeProps) {
+  return (
+    <button type="button" className={styles.elseLink} onClick={flow.notOnMarta}>
+      <Icon name="home" size={20} />
+      <span>{t('off.somewhere_else')}</span>
+    </button>
   )
 }
 
@@ -64,7 +93,7 @@ export function distanceText(m: number): string {
   return m < 1000 ? t('wb_05_off.away', { distance: Math.round(m) }) : t('off.away_km', { km: (m / 1000).toFixed(1) })
 }
 
-// The Atlanta Streetcar's route in the schedule feed: shown as "Streetcar", never as its feed id
+// The Atlanta Streetcar's route in the schedule feed: shown as "Streetcar", never as its feed id (flow.ts reads it too)
 const STREETCAR_ROUTE = 'ATLSC'
 
 /** "Route 49", "Routes 49, 55", "Routes 3, 10, 20, 42 and 2 more"; the streetcar by name. */

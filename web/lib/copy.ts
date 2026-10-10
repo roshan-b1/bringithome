@@ -24,7 +24,7 @@ export const COPY = {
   'home.step_3': 'You get a calm plan, one step at a time',
   'home.steps_label': 'How it works',
   data_credit: "data from MARTA's public feeds",
-  progress: 'Question {n} of about {m}',
+  progress: 'Question {n} of {m}',
   not_sure: 'Not sure',
   back: 'Back',
   continue: 'Continue',
@@ -277,10 +277,24 @@ export const COPY = {
 
   // Bus or train? (the team's wording for question 2; wb_04_mode stays the long form)
   'mode.title': 'Bus or train?',
+  'mode.lead': 'More than one kind of ride stops at {place}.',
 
   // Where did you get off?
   // "sent once": the results and live maps show the rider's own dot later, but on the phone only; this lookup is
   // the one time a position leaves it (plus "Which train are you on now?" on the plan)
+  'off.say_title': 'Say it in one sentence',
+  'off.say_example': 'Like "I left my backpack on the Red Line, got off at West End 5 min ago"',
+  'off.somewhere_else': 'Lost it somewhere else?',
+  'when.just_now': 'Just now',
+  'when.just_now_hint': 'In the last 10 minutes',
+  'when.earlier': 'Earlier',
+  'plan.item_hint': 'Optional. It adds the steps for that item.',
+  'plan.item.phone': 'Phone',
+  'plan.item.wallet': 'Wallet or ID',
+  'plan.item.bag': 'Bag',
+  'plan.item.keys': 'Keys',
+  'plan.item.laptop': 'Laptop',
+  'plan.item.other': 'Other',
   'off.locating': 'Finding stops near you. Your location is sent once for this and never stored.',
   'off.near_heading': 'Near you now',
   'off.recorded_heading': 'From the recorded ride',
@@ -316,13 +330,13 @@ export const COPY = {
 
   // TellMe
   'tell.title': 'Tell us where and when',
-  'tell.lead_item': "You'll pick what you lost on the next screen.",
-  'tell.lead_off': 'Where you got off, and about when.',
+  'tell.lead': 'What you lost, where you got off, and about when.',
   'tell.example': 'Like: got off the 49 near Peachtree Center around 1:15',
   'tell.listening': 'Listening. Say where and when.',
   'tell.reading': 'Reading that',
   'tell.confirm_title': 'Is this right?',
   'tell.confirm_lead': 'Nothing is used until you tap yes.',
+  'tell.what': 'What you lost',
   'tell.ride': 'What you rode',
   'tell.where_off': 'Where you got off',
   'tell.where_on': 'Where you got on',

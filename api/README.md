@@ -239,7 +239,7 @@ addition to 6.2's Meet so the /now check can tell the platforms apart.
 
 ## The reunion planner (`reunion.py`, `railturn.py`, `busturn.py`)
 
-`POST /api/sessions/{id}/reunion` with the `/plan` body (`{vehicle_keys, user, as_of?, taken?, car?}`) returns every
+`POST /api/sessions/{id}/reunion` with the `/plan` body (`{vehicle_keys, user, as_of?, taken?, car?, item_category?}`) returns every
 way the rider can get back to the item, soonest first, and nothing else: no cards, no wording, no Gemini, so the
 phone can poll it every 20 s with a live fix (about 60 ms a call on Oct 9's archive once the rail timetable is
 built; the app builds it in the background at startup). The plan carries the same object as `reunion`.
@@ -295,8 +295,10 @@ Every kind of the session's mode is in `options` or in `not_offered` with a reas
   `reunion_wait`), `meet_at_end` a `meet_end` card (`reunion_end`), both with a `directions` action whose value is
   the stop's `"lat,lon"`, and `switch_platform` a `switch_platform` card (`reunion_switch`). They add `confidence`,
   `usually` and `assumed` to the option's facts. `tell_staff` and the report steps always stay.
-- **Taps for this plan only.** `taken` (no, maybe, yes) and `car` (front, middle, back) in the body override the
-  session's answers for that plan or reunion: the safety card and its order, and the platform hint.
+- **Taps for this plan only.** `taken` (no, maybe, yes), `car` (front, middle, back) and `item_category` (phone,
+  wallet, bag, keys, laptop, other) in the body override the session's answers for that plan or reunion: the safety
+  card and its order, the platform hint, and the item's own steps (wallet: `freeze_cards`, first; phone:
+  `phone_lost`). The web app asks the item on the plan screen and sends `other` in the intake; the reunion ignores it.
 - **Privacy and limits.** Same as `/plan`: the user block is used for that one answer, never logged, stored or
   echoed; an option carries its place's own public coordinates, never the rider's. Like `/plan`, it has no rate
   limit of its own.

@@ -99,6 +99,9 @@ export function PlanHarness() {
   const [error, setError] = useState<unknown>(null)
   const [walk, setWalk] = useState<'normal' | 'slow' | undefined>(undefined)
   const [item, setItem] = useState<ItemCategory>('bag')
+  // the plan's own "What did you lose?" tap: null = cleared (Change), undefined = the case's item
+  const [what, setWhat] = useState<ItemCategory | 'not_sure' | null | undefined>(undefined)
+  const shownWhat = what === undefined ? item : (what ?? undefined)
   const [pick, setPick] = useState<VehicleKey[] | null>(null)
 
   useEffect(() => {
@@ -125,7 +128,7 @@ export function PlanHarness() {
     if (!session) return null
     const noop = () => {}
     return {
-      state: { step: 'plan', answers: { what: item, ...(walk ? { walk } : {}) } as FlowSession['state']['answers'], history: [] },
+      state: { step: 'plan', answers: { ...(shownWhat ? { what: shownWhat } : {}), ...(walk ? { walk } : {}) } as FlowSession['state']['answers'], history: [] },
       ready: true,
       sessionId: session.data.session_id,
       session,
@@ -138,7 +141,9 @@ export function PlanHarness() {
       goTo: noop,
       setExtra: (x) => {
         if (x.walk) setWalk(x.walk)
+        if (x.what !== undefined) setWhat(x.what)
       },
+      notOnMarta: noop,
       setSession: noop,
       retryResume: noop,
       clearNow: async () => window.location.reload(),
@@ -146,7 +151,7 @@ export function PlanHarness() {
       pick: null,
       setPick: () => {},
     }
-  }, [session, walk, item])
+  }, [session, walk, shownWhat])
 
   if (error) return <Screen title="dev/plan">{<ErrorState error={error} onRetry={() => window.location.reload()} />}</Screen>
   if (!flow) return <Screen title="dev/plan">{<Spinner showLabel label="Creating a session" />}</Screen>

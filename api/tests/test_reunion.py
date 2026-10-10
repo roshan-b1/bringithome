@@ -1185,6 +1185,25 @@ def test_the_plan_screens_taken_and_car_taps_override_the_session_for_this_plan_
     assert "taken" not in session["intake"]                          # the stored session is untouched
 
 
+def test_the_plan_screens_item_tap_overrides_the_sessions_item_for_this_plan_only(tmp_path, feed, index):
+    rows = red_world(tmp_path, RED_405_OUT, GOLD_310_OUT)
+    store = MemoryStore(Schedule(feed), rows=rows)
+    session = rail_session(("405", "RED", "To Airport"))
+    stored = session["intake"]["item"]["category"]
+    wallet = P.build_plan(store, index, session, {"vehicle_keys": ["rail:405"], "item_category": "wallet"}, t=T0,
+                          as_of=False, data_dir=tmp_path)
+    kinds = [c["kind"] for c in wallet["cards"]]
+    assert kinds[:2] == ["bag_staff", "freeze_cards"]                 # wallet: freeze cards first
+    assert session["intake"]["item"]["category"] == stored            # the stored session is untouched
+    plain = P.build_plan(store, index, {**session, "intake": {**session["intake"], "item": {"category": "other"}}},
+                         {"vehicle_keys": ["rail:405"]}, t=T0, as_of=False, data_dir=tmp_path)
+    assert plain["cards"][0]["kind"] == "bag_staff" and plain["cards"][0]["facts"]["tracks_01"] in (1, True)
+    assert "freeze_cards" not in [c["kind"] for c in plain["cards"]]
+    body = P.build_reunion(store, index, session, {"vehicle_keys": ["rail:405"], "item_category": "phone"}, t=T0,
+                           as_of=False, data_dir=tmp_path)
+    assert body["options"]                                             # accepted and ignored by the reunion
+
+
 def test_a_session_that_names_no_vehicle_gets_no_reunion(tmp_path, feed, index):
     session = rail_session(("405", "RED", "To Airport"), status_="uncertain")
     body = P.build_reunion(MemoryStore(Schedule(feed), rows=[]), index, session, {}, t=T0, as_of=False,

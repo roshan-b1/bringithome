@@ -398,6 +398,8 @@ export interface PlanRequest {
   // "Not sure" is sent as no field at all, or the API answers 400
   taken?: PlanTaken | null
   car?: PlanCar | null
+  // "What did you lose?", asked on the plan screen (never before the match): the item's own steps only
+  item_category?: ItemCategory | null
 }
 
 export interface LostFound {

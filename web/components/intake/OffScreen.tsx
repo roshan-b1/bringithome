@@ -1,6 +1,6 @@
 'use client'
 
-import type { Place, QueryMode } from '@/contracts/api'
+import type { Place } from '@/contracts/api'
 import { BigButton } from '@/components/ui/BigButton'
 import { SourceChip } from '@/components/ui/Chip'
 import { ChoiceList } from '@/components/ui/ChoiceList'
@@ -8,21 +8,22 @@ import { LiveRegion } from '@/components/ui/LiveRegion'
 import { Screen } from '@/components/ui/Screen'
 import { fixtureData } from '@/lib/api'
 import { t } from '@/lib/copy'
-import { isPlace, NOT_SURE, placeTap, rideMode } from '@/lib/flow'
-import { backOf, IntakeBanner, Note, NotSureButton, PlaceSub, placeIcon, TypeInstead, type IntakeProps } from './parts'
+import { isPlace, NOT_SURE, placeTap } from '@/lib/flow'
+import { backOf, IntakeBanner, Note, NotSureButton, PlaceSub, placeIcon, SayItCard, SomewhereElse, type IntakeProps } from './parts'
 import { PlaceSearch } from './PlaceSearch'
 import { useNearby } from './useNearby'
 import styles from './intake.module.css'
 
-// Question 3: where did you get off? The three nearest stops or stations to where the rider is now (most notice
-// soon after getting off), then a search, then "Type it instead". With location denied or unavailable, the search
-// comes first and nothing else waits on GPS. Stations for a train, stops for a bus, both when not sure.
+// Question 1: where did you get off? "Say it in one sentence" (TellMe) on top, then the nearest stops and stations
+// to where the rider is now (most notice soon after getting off), each with its bus or train icon and its routes or
+// lines, then a search, "Not sure" and "Lost it somewhere else?". Both kinds are listed (mode "any"): the place
+// tapped says bus or train (flow.inferRide), so that question is asked only when the place can't. With location
+// denied or unavailable, the search comes first and nothing else waits on GPS.
 
-const QUERY_MODE: Record<ReturnType<typeof rideMode>, QueryMode> = { bus: 'bus', rail: 'rail', streetcar: 'streetcar', unknown: 'any' }
+const mode = 'any' as const
 
 export function OffScreen({ flow }: IntakeProps) {
   const a = flow.state.answers
-  const mode = QUERY_MODE[rideMode(a)]
   const { state, retry } = useNearby(mode)
   const chosen = isPlace(a.off) ? a.off : null
   const pick = (p: Place) => flow.answer('off', placeTap(p))
@@ -53,6 +54,8 @@ export function OffScreen({ flow }: IntakeProps) {
       chip={<SourceChip />}
       banner={<IntakeBanner />}
     >
+      <SayItCard flow={flow} />
+
       {showChosen ? (
         <section className={styles.section} aria-label={t('off.your_answer')}>
           <h2 className={styles.sectionHeading}>{t('off.your_answer')}</h2>
@@ -135,7 +138,7 @@ export function OffScreen({ flow }: IntakeProps) {
       {searchFirst ? null : search}
 
       <NotSureButton pressed={a.off === NOT_SURE} onClick={() => flow.answer('off', NOT_SURE)} />
-      <TypeInstead flow={flow} />
+      <SomewhereElse flow={flow} />
     </Screen>
   )
 }

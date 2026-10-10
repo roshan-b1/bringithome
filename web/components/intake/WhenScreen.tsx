@@ -12,13 +12,13 @@ import { clock, nyParts, resolvePickedTime, sameNyDay } from '@/lib/time'
 import { backOf, IntakeBanner, NotSureButton, type IntakeProps } from './parts'
 import styles from './intake.module.css'
 
-// Question 4: about when did you get off? The five time buttons (decision 6: each resolves against the server
-// clock when the intake is built, so a phone set to the wrong time can't skew the match), "Pick a time" with the
-// phone's own time picker read as New York time, and "Not sure". The last tap before the match.
-// Two columns of tiles rather than a list of rows: all six and "Not sure" then fit on an iPhone SE without
-// scrolling, even under the Replaying banner, and read in time order left to right, top to bottom.
+// The last question: about when did you get off? "Just now" (the under-10-minutes button) first and biggest, since
+// most riders notice soon after, then the other time buttons (decision 6: each resolves against the server clock
+// when the intake is built, so a phone set to the wrong time can't skew the match), "Pick a time" with the phone's
+// own time picker read as New York time, and "Not sure". The last tap before the match.
+// The smaller buttons sit in two columns, so everything fits on an iPhone SE without scrolling, in time order.
 
-const BUTTONS: readonly TimeButton[] = ['under_10', '10_30', '30_60', '1_2h', 'over_2h']
+const BUTTONS: readonly TimeButton[] = ['10_30', '30_60', '1_2h', 'over_2h']
 type Choice = TimeButton | 'pick'
 
 /** Now on the New York wall clock as "HH:MM", rounded down to 5 minutes (what the picker opens on). */
@@ -69,7 +69,20 @@ export function WhenScreen({ flow }: IntakeProps) {
 
   return (
     <Screen stepKey="when" title={t('wb_06_when')} progress={flow.progress} onBack={backOf(flow)} chip={<SourceChip />} banner={<IntakeBanner />}>
-      <ul role="list" className={styles.timeGrid} aria-label={t('wb_06_when')}>
+      <button
+        type="button"
+        className={styles.nowTile}
+        aria-pressed={!picking && selected === 'under_10'}
+        onClick={() => flow.answer('when', { kind: 'relative', button: 'under_10' })}
+      >
+        <Icon name="clock" size={28} />
+        <span className={styles.nowText}>
+          <span className={styles.nowLabel}>{t('when.just_now')}</span>
+          <span className={styles.nowHint}>{t('when.just_now_hint')}</span>
+        </span>
+        <Icon name="next" size={24} />
+      </button>
+      <ul role="list" className={`${styles.timeGrid} ${styles.timeGridSmall}`} aria-label={t('when.earlier')}>
         {BUTTONS.map((b) => (
           <li key={b}>
             <button

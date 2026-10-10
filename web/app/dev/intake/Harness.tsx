@@ -48,25 +48,25 @@ function patchParse(which: string | null): void {
 }
 
 function seed(q: URLSearchParams): FlowState {
-  const screen = q.get('screen') ?? 'what'
-  const what = q.get('what') ?? 'bag'
+  const screen = q.get('screen') ?? 'off'
+  const what = q.get('what') ?? 'none'
   const ride = (q.get('ride') ?? 'bus') as AnswerMap['mode']
   const place = PLACES[q.get('place') ?? 'gsu-bay-b'] ?? PLACES['gsu-bay-b']!
-  const a: Answers = what === 'none' ? {} : { what: what as AnswerMap['what'] }
+  const a: Answers = what === 'none' ? {} : { what: what as Answers['what'] }
   const at = (step: Step, extra: Answers, history: Step[]): FlowState => ({ step, answers: { ...a, ...extra }, history })
   switch (screen) {
-    case 'mode': return at('mode', {}, ['home', 'what'])
-    case 'off': return at('off', { mode: ride }, ['home', 'what', 'mode'])
-    case 'when': return at('when', { mode: ride, off: place }, ['home', 'what', 'mode', 'off'])
-    case 'tell': return what === 'none' ? at('tell', {}, ['home', 'what']) : at('tell', { mode: ride }, ['home', 'what', 'mode', 'off'])
-    case 'done': return at('done', { mode: ride, off: place, when: { kind: 'relative', button: '10_30' } }, ['home', 'what', 'mode', 'off', 'when'])
-    case 'done-noplace': return at('done', { mode: ride, off: 'not_sure', when: 'not_sure' }, ['home', 'what', 'mode', 'off', 'when'])
+    case 'mode': return at('mode', { off: place }, ['home', 'off'])
+    case 'off': return at('off', {}, ['home'])
+    case 'when': return at('when', { mode: ride, mode_by: 'place', off: place }, ['home', 'off'])
+    case 'tell': return at('tell', {}, ['home', 'off'])
+    case 'done': return at('done', { mode: ride, off: place, when: { kind: 'relative', button: '10_30' } }, ['home', 'off', 'when'])
+    case 'done-noplace': return at('done', { mode: ride, off: 'not_sure', when: 'not_sure' }, ['home', 'off', 'mode', 'when'])
     case 'not_marta':
     case 'elsewhere_plan': {
       const places = q.get('places')?.split('|').filter(Boolean)
-      return at(screen, { mode: 'not_marta', ...(places ? { places } : {}) }, screen === 'not_marta' ? ['home', 'what', 'mode'] : ['home', 'what', 'mode', 'not_marta'])
+      return at(screen, { mode: 'not_marta', ...(places ? { places } : {}) }, screen === 'not_marta' ? ['home', 'off'] : ['home', 'off', 'not_marta'])
     }
-    default: return at('what', {}, ['home'])
+    default: return at('off', {}, ['home'])
   }
 }
 
@@ -94,6 +94,7 @@ function useLocalFlow(initial: FlowState): FlowSession {
     back: useCallback(() => setState((s) => flow.back(s)), []),
     goTo: useCallback((step: Step) => setState((s) => flow.goTo(s, step)), []),
     setExtra: useCallback((x: Extra) => setState((s) => flow.setExtra(s, x)), []),
+    notOnMarta: useCallback(() => setState((s) => flow.notOnMarta(s)), []),
     setSession: useCallback((r: ApiResult<SessionResponse>) => setSessionResult(r), []),
     retryResume: () => {},
     clearNow: async () => restart(),

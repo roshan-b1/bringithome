@@ -32,6 +32,8 @@ export interface FlowSession {
   back: () => void
   goTo: (step: Step) => void
   setExtra: (extra: flow.Extra) => void
+  /** "Lost it somewhere else?" on off: the somewhere-else path */
+  notOnMarta: () => void
   /** store the match after POST /api/sessions; the id is persisted, the body is not */
   setSession: (result: ApiResult<SessionResponse>) => void
   /** retry the resume GET after resumeError */
@@ -107,6 +109,7 @@ export function useFlowSession(): FlowSession {
   const back = useCallback(() => setState((s) => flow.back(s)), [])
   const goTo = useCallback((step: Step) => setState((s) => flow.goTo(s, step)), [])
   const setExtra = useCallback((extra: flow.Extra) => setState((s) => flow.setExtra(s, extra)), [])
+  const notOnMarta = useCallback(() => setState((s) => flow.notOnMarta(s)), [])
   // A new session replaces the one held (the results question's re-run): the first one no longer describes what
   // the rider sees, and "Clear now" deletes only the current id, so it is deleted here (best effort; retention
   // covers a failure). A session that arrives also ends any resume error.
@@ -137,6 +140,6 @@ export function useFlowSession(): FlowSession {
 
   return {
     state, ready, sessionId, session, resumeError, expired, progress, pick, setPick,
-    answer, advance, back, goTo, setExtra, setSession, retryResume, clearNow, restart,
+    answer, advance, back, goTo, setExtra, notOnMarta, setSession, retryResume, clearNow, restart,
   }
 }

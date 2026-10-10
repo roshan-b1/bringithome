@@ -46,9 +46,11 @@ reunion.resolve_user decides once where the rider stands (a chosen place, a trus
 where they got off), and both use it. walk_ahead and shared_track ARE the meet's verdict, and a possible
 meet is the reunion's rank 1, so the meet card and the top option can never disagree.
 
-The request may override two of the session's taps for this plan only (the stored session keeps its own):
-taken (no, maybe, yes) turns the safety card and its order on or off, and car (front, middle, back) is the
-platform hint on the meet and the reunion's train options.
+The request may override three of the session's taps for this plan only (the stored session keeps its own):
+taken (no, maybe, yes) turns the safety card and its order on or off, car (front, middle, back) is the
+platform hint on the meet and the reunion's train options, and item_category (asked on the plan screen, not
+before the match) adds the item's own steps (wallet: freeze_cards, first; phone: phone_lost). The reunion
+accepts the same body and has no use for item_category. bag_staff is in every plan whatever the item.
 
 Privacy (decision 16): the rider's location in the request's user block goes to meet.plan_meet and the
 reunion planner for this one call and is never stored, logged or returned. A plan carries places, times
@@ -431,8 +433,11 @@ def rider_now(user: PlanUser, intake: Mapping) -> PlanUser:
 
 
 def with_taps(session: Mapping, request: PlanRequest) -> Mapping:
-    """The session as this plan sees it: the request's taken and car taps, when sent, over the stored ones."""
-    over = {k: v for k, v in (("taken", request.taken), ("car", request.car)) if v is not None}
+    """The session as this plan sees it: the request's taken, car and item_category taps, when sent, over the
+    stored ones (item_category replaces intake.item.category)."""
+    over: dict = {k: v for k, v in (("taken", request.taken), ("car", request.car)) if v is not None}
+    if request.item_category is not None:
+        over["item"] = {**(session["intake"].get("item") or {}), "category": request.item_category}
     return {**session, "intake": {**session["intake"], **over}} if over else session
 
 

@@ -19,36 +19,38 @@ async function clean(page: Page) {
   expect(lint(await page.locator('body').innerText())).toEqual([])
 }
 
-const progress = (page: Page) => page.getByText(/^Question \d of about \d$/)
+const progress = (page: Page) => page.getByText(/^Question \d of \d$/)
 
-test('four taps from "What did you lose?" to the match (recorded set)', async ({ page }) => {
-  await page.goto(`${H}?screen=what&what=none&mode=mock&set=backup-bus49&near=gsu`)
-  await expect(progress(page)).toHaveText('Question 1 of about 4')
-  await clean(page)
-  await page.getByRole('button', { name: 'Bag or backpack' }).click() // 1
-
-  await expect(page.getByRole('heading', { level: 1, name: 'Bus or train?' })).toBeFocused()
-  await expect(progress(page)).toHaveText('Question 2 of about 4')
-  await clean(page)
-  await page.getByRole('button', { name: 'Bus', exact: true }).click() // 2
-
-  await expect(progress(page)).toHaveText('Question 3 of about 4')
+test('two taps from "Where did you get off?" to the match (recorded set): a bus stop says bus', async ({ page }) => {
+  await page.goto(`${H}?screen=off&mode=mock&set=backup-bus49&near=gsu`)
+  await expect(progress(page)).toHaveText('Question 1 of 2')
+  // the front door to TellMe sits on top, and the way out to the somewhere-else path at the bottom
+  await expect(page.getByRole('button', { name: /Say it in one sentence/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Lost it somewhere else?' })).toBeVisible()
   // a recorded set says where its places come from, and shows no distance measured from somewhere else
   const near = page.getByRole('group', { name: 'From the recorded ride' }).getByRole('button')
   await expect(near).toHaveCount(3)
   await expect(near.first()).not.toContainText(/\d+ m away/)
+  await expect(near.first()).toContainText(/Routes 49, 55/)
   const first = near.first()
   expect((await first.boundingBox())!.height).toBeGreaterThanOrEqual(56)
   await clean(page)
-  await first.click() // 3
+  await first.click() // 1
 
-  await expect(progress(page)).toHaveText('Question 4 of about 4')
+  await expect(page.getByRole('heading', { level: 1, name: 'About when did you get off?' })).toBeFocused()
+  await expect(progress(page)).toHaveText('Question 2 of 2')
+  const now = page.getByRole('button', { name: /Just now/ })
+  expect((await now.boundingBox())!.height).toBeGreaterThanOrEqual(56)
+  for (const name of ['10 to 30 min ago', 'Pick a time', 'Not sure']) expect((await page.getByRole('button', { name, exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(56)
   await clean(page)
-  await page.getByRole('button', { name: '10 to 30 min ago' }).click() // 4
+  await page.getByRole('button', { name: '10 to 30 min ago' }).click() // 2
 
   await expect(page.getByRole('heading', { name: 'Thanks. Looking for your bus or train now.' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Reached: results' })).toBeVisible({ timeout: 10_000 })
   await expect(page.getByText('"status": "matched"')).toBeVisible()
+  const answers = await page.locator('pre').innerText()
+  expect(answers).toContain('"mode": "bus"')
+  expect(answers).toContain('"mode_by": "place"')
 
   // done is a hand-off, not a stop on the way back: Back from results is the last question, with its answer kept
   await page.getByRole('button', { name: 'Back' }).click()
@@ -56,12 +58,24 @@ test('four taps from "What did you lose?" to the match (recorded set)', async ({
   await expect(page.getByRole('button', { name: '10 to 30 min ago' })).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('"Not sure" is on every question, and a missing stop offers the search again', async ({ page }) => {
-  await page.goto(`${H}?screen=what&what=none&mode=mock&set=backup-bus49&near=gsu`)
-  for (let i = 0; i < 4; i++) {
-    await expect(progress(page)).toHaveText(`Question ${i + 1} of about 4`)
-    await page.getByRole('button', { name: 'Not sure', exact: true }).click()
-  }
+test('"Just now" is the under-10-minutes button', async ({ page }) => {
+  await page.goto(`${H}?screen=when&mode=mock&set=backup-bus49`)
+  await page.getByRole('button', { name: /Just now/ }).click()
+  await expect(page.getByRole('heading', { name: 'Reached: results' })).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('"button": "under_10"')).toBeVisible()
+})
+
+test('"Not sure" where they got off asks bus or train, then when; a missing stop offers the search again', async ({ page }) => {
+  await page.goto(`${H}?screen=off&mode=mock&set=backup-bus49&near=gsu`)
+  await expect(progress(page)).toHaveText('Question 1 of 2')
+  await page.getByRole('button', { name: 'Not sure', exact: true }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Bus or train?' })).toBeFocused()
+  await expect(progress(page)).toHaveText('Question 2 of 3')
+  await expect(page.getByRole('button', { name: /Not on MARTA/ })).toHaveCount(0)
+  await clean(page)
+  await page.getByRole('button', { name: 'Not sure', exact: true }).click()
+  await expect(progress(page)).toHaveText('Question 3 of 3')
+  await page.getByRole('button', { name: 'Not sure', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'We need a stop to find the exact one' })).toBeVisible()
   // no session without a stop, so the first steps come from the bundled copy and contacts, never a dead end
   await expect(page.getByRole('heading', { name: 'Tell staff' })).toBeVisible()
@@ -71,6 +85,13 @@ test('"Not sure" is on every question, and a missing stop offers the search agai
   await clean(page)
   await page.getByRole('button', { name: 'Add the stop' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Where did you get off?' })).toBeVisible()
+})
+
+test('an ambiguous place asks bus or train, with the place in the lead', async ({ page }) => {
+  await page.goto(`${H}?screen=mode&mode=mock&set=backup-bus49`)
+  await expect(page.getByText(/More than one kind of ride stops at Georgia State Station/)).toBeVisible()
+  await page.getByRole('button', { name: 'Train', exact: true }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'About when did you get off?' })).toBeVisible()
 })
 
 test('location unavailable: the search comes first and still finds the stop', async ({ page }) => {
@@ -96,10 +117,10 @@ test('Pick a time reads the phone picker as New York time and answers with it', 
   await expect(page.getByText('"hhmm": "13:15"')).toBeVisible()
 })
 
-test('TellMe from the first question: read, confirmed by tap, then only "what" is left', async ({ page }) => {
+test('TellMe from the first question: read, confirmed by tap, then straight to the match', async ({ page }) => {
   // parse-samples.json: the API's own rule parser on this clue at the set's as_of
-  await page.goto(`${H}?screen=what&what=none&mode=mock&set=backup-bus49&parse=bus-49`)
-  await page.getByRole('button', { name: 'Type it instead' }).click()
+  await page.goto(`${H}?screen=off&mode=mock&set=backup-bus49&near=gsu&parse=bus-49`)
+  await page.getByRole('button', { name: /Say it in one sentence/ }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Tell us where and when' })).toBeFocused()
   await page.getByRole('textbox', { name: 'Where and when' }).fill('got off the 49 near peachtree center around 1:15')
   await page.getByRole('button', { name: 'Use this' }).click()
@@ -111,8 +132,6 @@ test('TellMe from the first question: read, confirmed by tap, then only "what" i
   await clean(page)
   await page.getByRole('button', { name: "Yes, that's right" }).click()
 
-  await expect(progress(page)).toHaveText('Question 1 of about 1')
-  await page.getByRole('button', { name: 'Bag or backpack' }).click()
   await expect(page.getByRole('heading', { name: 'Reached: results' })).toBeVisible({ timeout: 10_000 })
   const answers = await page.locator('pre').innerText()
   expect(answers).toContain('"route": "49"')
@@ -136,7 +155,7 @@ test('TellMe falls back to the taps when /api/parse is missing', async ({ page }
   // the set's parse.json answers 404, exactly like a server without the route
   await page.route('**/fixtures/*/parse.json', (route) => route.fulfill({ status: 404, json: { error: 'not_found', message: 'no parse' } }))
   await page.goto(`${H}?screen=off&mode=mock&set=backup-bus49&near=gsu`)
-  await page.getByRole('button', { name: 'Type it instead' }).click()
+  await page.getByRole('button', { name: /Say it in one sentence/ }).click()
   await page.getByRole('textbox', { name: 'Where and when' }).fill('bus near gsu')
   await page.getByRole('button', { name: 'Use this' }).click()
   await expect(page.getByText("Typing it isn't working right now. Let's answer by tapping instead.")).toBeVisible()
@@ -145,9 +164,9 @@ test('TellMe falls back to the taps when /api/parse is missing', async ({ page }
   await expect(page.getByRole('heading', { level: 1, name: 'Where did you get off?' })).toBeVisible()
 })
 
-test('Not on MARTA: places typed or tapped, most recent first, become call cards with the safety footer', async ({ page }) => {
-  await page.goto(`${H}?screen=mode&what=wallet&mode=mock&set=backup-bus49`)
-  await page.getByRole('button', { name: /Not on MARTA/ }).click()
+test('Lost it somewhere else: places typed or tapped, most recent first, become call cards with the safety footer', async ({ page }) => {
+  await page.goto(`${H}?screen=off&what=wallet&mode=mock&set=backup-bus49&near=gsu`)
+  await page.getByRole('button', { name: 'Lost it somewhere else?' }).click()
   await page.getByRole('textbox', { name: 'Place name' }).fill('Starbucks on 10th')
   await page.getByRole('button', { name: 'Add', exact: true }).click()
   await page.getByRole('button', { name: 'The store' }).click()
@@ -163,7 +182,7 @@ test('Not on MARTA: places typed or tapped, most recent first, become call cards
 
 test('320 px wide: no sideways scroll on any intake screen', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 })
-  for (const screen of ['what', 'mode', 'off&near=gsu', 'when', 'tell', 'done-noplace', 'not_marta&places=Starbucks%20on%2010th', 'elsewhere_plan']) {
+  for (const screen of ['mode', 'off&near=gsu', 'when', 'tell', 'done-noplace', 'not_marta&places=Starbucks%20on%2010th', 'elsewhere_plan']) {
     await page.goto(`${H}?screen=${screen}&mode=mock&set=backup-bus49`)
     await page.waitForTimeout(600)
     await clean(page)
@@ -190,7 +209,7 @@ test.describe('live API (dev proxy)', () => {
   })
 
   test('the running server\'s /api/parse answer (a 404 before the parse route ships) never strands the rider', async ({ page }) => {
-    await page.goto(`${H}?screen=tell&what=none`)
+    await page.goto(`${H}?screen=tell`)
     await page.getByRole('textbox', { name: 'Where and when' }).fill('got off the 49 near peachtree center around 1:15')
     await page.getByRole('button', { name: 'Use this' }).click()
     await expect(page.getByRole('heading', { level: 1, name: 'Is this right?' }).or(page.getByRole('button', { name: 'Answer by tapping' }))).toBeVisible({

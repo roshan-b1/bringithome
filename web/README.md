@@ -5,15 +5,25 @@ The rider's app at bringit.casa. Next.js 16.4 (App Router, TypeScript strict, CS
 Node server. One page (`app/page.tsx`) runs the whole flow as a client state machine:
 
 ```
-home -> what -> mode -> off -> when -> done (POST /api/sessions) -> results -> plan -> done / Clear now
-                 \-> "Not on MARTA" -> somewhere-else plan            "Type it instead" (TellMe) from what or off
+home -> off -> [mode] -> when -> done (POST /api/sessions) -> results -> plan -> done / Clear now
+         \-> "Lost it somewhere else?" -> somewhere-else plan        "Say it in one sentence" (TellMe) from off
 ```
 
-Four taps before the match ("Question n of about 4"). Route, line and direction are never asked up front: when the
-match comes back tied or uncertain, the results screen asks that one question and re-runs the match. The plan asks
-"Do you think someone took it?", for a train "Where are you now?" (at a station, on another train from
-`/api/trains/nearby`, somewhere else) and on a train way back "Which part of the train?", each only when it changes
-the plan. Step 2 of the plan is "Ways to get it back" (below), kept live while the screen is open.
+Two taps before the match ("Question 1 of 2"): **Where did you get off?** (the nearest stops and stations from one
+GPS fix, `mode: any`, each with its bus or train icon and its routes or lines; the search; "Not sure"; and on top a
+"Say it in one sentence" card that opens TellMe) and **About when?** ("Just now", the under-10-minutes bucket, first
+and biggest; the other buckets, "Pick a time" and "Not sure" smaller). Bus or train is read from the place
+(`inferRide` in `lib/flow.ts`): a station with lines and no routes is a train, a stop with routes and no lines a bus;
+only a place that serves both, a streetcar stop or "Not sure" asks "Bus or train?" as a follow-up ("Question 2 of 3").
+TellMe's confirmed facts (item, ride, line or route, place, time) skip what they answer. Route, line and direction
+are never asked up front: when the match comes back tied or uncertain, the results screen asks that one question and
+re-runs the match. The intake sends the neutral item `other`: **What did you lose?** is an optional tap on the plan
+(it never changes the match), sent as `item_category` in the plan and reunion bodies for the item's own steps (wallet:
+freeze cards first; phone: lock or erase it). Unanswered, the plan is worded for any item, and the unattended-bag
+card is always in it. The plan also asks "Do you think someone took it?", for a train "Where are you now?" (at a
+station, on another train from `/api/trains/nearby`, somewhere else) and on a train way back "Which part of the
+train?", each only when it changes the plan. Step 2 of the plan is "Ways to get it back" (below), kept live while the
+screen is open.
 
 ## Run, build, serve
 
@@ -75,7 +85,7 @@ Every file is checked against the contract by `contracts/fixtures.test.ts` (and 
 
 | Set | Recorded clue | What it shows |
 |---|---|---|
-| `hero-rail` | bag, Red Line S, Garnett (907843, 908600), picked 3:24 PM W 5, as of 3:27 PM Oct 9 | matched Red 407 (medium). `plan.json` before "Where are you now?" (rider assumed at Garnett): **ride the 3:34 PM train to Lakewood-Ft McPherson and wait on the other platform, about 3:53 PM (3:48 to 4:01)**; 407 really came back north through Lakewood at 3:52 PM. Waiting at Garnett (about 3:59) is the other way. Leave by 3:33 PM; the 3:34 PM train stays the best way through all 18 frames. `plan-at_station.json` for a rider who says they are at Five Points: the same Lakewood switch on the 3:32 PM train, then Oakland City from frame 009 (3:30 PM), once that train can no longer be boarded in time (the frames the e2e announcement check uses). `plan-on_vehicle.json` for a rider on Gold run 310: meet at East Point 3:34 PM (shared track, live). `session-uncertain.json` is the four taps alone ("Which way was it going?") |
+| `hero-rail` | bag, Red Line S, Garnett (907843, 908600), picked 3:24 PM W 5, as of 3:27 PM Oct 9 | matched Red 407 (medium). `plan.json` before "Where are you now?" (rider assumed at Garnett): **ride the 3:34 PM train to Lakewood-Ft McPherson and wait on the other platform, about 3:53 PM (3:48 to 4:01)**; 407 really came back north through Lakewood at 3:52 PM. Waiting at Garnett (about 3:59) is the other way. Leave by 3:33 PM; the 3:34 PM train stays the best way through all 18 frames. `plan-at_station.json` for a rider who says they are at Five Points: the same Lakewood switch on the 3:32 PM train, then Oakland City from frame 009 (3:30 PM), once that train can no longer be boarded in time (the frames the e2e announcement check uses). `plan-on_vehicle.json` for a rider on Gold run 310: meet at East Point 3:34 PM (shared track, live). `session-uncertain.json` is the taps alone ("Which way was it going?") |
 | `backup-bus49` | bag, route 49, stop 210555, picked 1:18 PM W 10, as of 1:30 PM | matched bus 1631 (key `bus:2331`): wait for it at Courtland St NE @ Auburn Ave NE, about 1:55 PM, usually comes back. Frames 003, 007 to 009 and 013 have a fix just past fresh, so every option is the timetable (low) for one to three polls: the screen holds the last answer through that (below) |
 | `not-reporting` | wallet, route 20, stop 210555, picked 1:17 PM W 5, as of 1:25 PM | `not_reporting`: the timetable only; the reunion is `not_matched` for every kind (no section) |
 | `late-rail` | bag, Red Line S, West End (908704, 908705), picked 9:16 PM W 5, as of 9:20 PM Oct 9 | matched Red 402 (high): no way back can be promised, `may_leave_service` ("It may not come back tonight"). On Oct 9 it left the feed at 9:31 PM and never came back |
@@ -114,7 +124,7 @@ Step 2 of the plan, in the meet's place in the route, whichever card the API put
   `models.py` to copy, and lints every sentence.
 - **Live.** While the screen is open and visible, `POST /api/sessions/{id}/reunion` every 20 s
   (`reunionPoll.ts`): paused while hidden (the call in flight is cancelled), at once when it comes back overdue,
-  40, 80 then 160 s after errors. The body is the plan's (vehicles, taps, chosen station or train, `taken`, `car`)
+  40, 80 then 160 s after errors. The body is the plan's (vehicles, taps, chosen station or train, `taken`, `car`, `item_category`)
   plus, while the rider walks, the live fix from the blue dot's watch (`lat`, `lon`, `accuracy_m`, `fix_age_s`, only
   within 100 m and under 30 s, a fresh fix asked for when the watch has gone quiet), in that request's body only;
   never for a recorded moment. "Updated 12 s ago" under the section; a changed best way is said through the
@@ -168,7 +178,8 @@ Motion tokens drop to zero under `prefers-reduced-motion` (the replay jumps to i
   contract, the results and plan models, and the reunion (`reunionModel.test.ts`: sentences, reason and note copy,
   directions links, the poll body; `reunionPoll.test.ts`: interval, hidden, backoff, no storage).
 - e2e (`npm run e2e`; `E2E_BASE_URL=http://localhost:3000` for a running server or the export):
-  `hero.spec.ts` taps the hero path on `?mode=offline&set=hero-rail` through the meet and the report card, lints the
+  `hero.spec.ts` taps the hero path on `?mode=offline&set=hero-rail` (Garnett, Pick a time 3:24 PM, then the plan's
+  item tap) through the meet and the report card, lints the
   rendered text (no dash, no "AI", no banned word), checks no `/api` call and what sessionStorage holds; plus the
   results question, reload and Clear now, and the 503 fallback. `pwa.spec.ts` (export only), `smoke.spec.ts`, and
   `intake.spec.ts` / `plan.spec.ts`, which use the dev harnesses and skip themselves on the export.

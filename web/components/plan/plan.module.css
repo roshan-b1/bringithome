@@ -139,6 +139,26 @@
   gap: var(--sp-2);
 }
 
+ /* three short answers a row, the icon over the word: six items in two rows, so the plan stays near the top */
+.quickTiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-2);
+}
+
+.quickTiles .quickButton {
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-height: 64px;
+  padding: var(--sp-2) var(--sp-1);
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+
+.quickButton svg {
+  flex: none;
+}
+
 .quickStack {
   display: flex;
   flex-direction: column;

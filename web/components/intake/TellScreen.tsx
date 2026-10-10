@@ -14,7 +14,7 @@ import { useSpeech } from './speech'
 import { TellConfirm } from './TellConfirm'
 import styles from './intake.module.css'
 
-// TellMe, "Type it instead" (decision 11): where and when in the rider's own words, typed or spoken, read by
+// TellMe, "Say it in one sentence" (decision 11): what, where and when in the rider's own words, typed or spoken, read by
 // POST /api/parse (Gemini with a rule-based fallback on the server; places and times come only from the API's
 // resolver and time parser), then confirmed by tap on the next view. The words live in this component's memory and
 // in the one POST body, never in sessionStorage. If /api/parse isn't there (404 on an older server, or a fixture set
@@ -29,7 +29,6 @@ type Phase =
 const MAX_CHARS = 600 // ParseRequest's limit
 
 export function TellScreen({ flow }: IntakeProps) {
-  const a = flow.state.answers
   const [text, setText] = useState('')
   const [phase, setPhase] = useState<Phase>({ kind: 'input' })
   const online = useOnline()
@@ -68,7 +67,7 @@ export function TellScreen({ flow }: IntakeProps) {
     <Screen
       stepKey="tell"
       title={t('tell.title')}
-      lead={a.what === undefined ? t('tell.lead_item') : t('tell.lead_off')}
+      lead={t('tell.lead')}
       onBack={backOf(flow)}
       chip={<SourceChip />}
       banner={<IntakeBanner />}

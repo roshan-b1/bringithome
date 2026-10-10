@@ -43,11 +43,9 @@ async function clean(page: Page) {
 }
 
 /** The recorded ride up to the plan (no network). */
-async function toPlan(page: Page, set: string, mode: 'Train' | 'Bus', hhmm: string, use: string) {
+async function toPlan(page: Page, set: string, _mode: 'Train' | 'Bus', hhmm: string, use: string) {
   await page.goto(`/?mode=offline&set=${set}`)
   await page.getByRole('button', { name: /I lost something/ }).click()
-  await page.getByRole('button', { name: 'Bag or backpack' }).click()
-  await page.getByRole('button', { name: mode, exact: true }).click()
   await page.getByRole('group', { name: 'From the recorded ride' }).getByRole('button').first().click()
   await page.getByRole('button', { name: 'Pick a time' }).click()
   await page.getByLabel('About what time?').fill(hhmm)
@@ -257,7 +255,7 @@ test.describe('live updates', () => {
       return route.fulfill({ status: 404, json: { error: 'not_found', message: path } })
     })
     const answers = { what: 'bag', mode: 'bus', off: { place_id: 'stop:210555', label: 'Piedmont Ave SE @ Gilmer St SE', kind: 'stop', stop_ids: ['210555'], routes: ['49'], lines: [] }, when: { kind: 'picked', hhmm: '13:18' } }
-    await page.addInitScript((s) => sessionStorage.setItem('bring-it-home:v1', s), JSON.stringify({ sessionId: 's-live', step: 'plan', answers, history: ['home', 'what', 'mode', 'off', 'when', 'results'] }))
+    await page.addInitScript((s) => sessionStorage.setItem('bring-it-home:v1', s), JSON.stringify({ sessionId: 's-live', step: 'plan', answers, history: ['home', 'off', 'when', 'results'] }))
     await page.goto('/')
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your plan', { timeout: 15_000 })
     const card = waysCard(page)

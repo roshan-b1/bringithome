@@ -1,16 +1,21 @@
-// The lost flow as a pure, typed state machine (ARCHITECTURE.md decision 12), cut to four taps before the match
-// (team change, Oct 9: "it shouldn't ask that many questions"). No React, no storage, no network and no clock: every
+// The lost flow as a pure, typed state machine (ARCHITECTURE.md decision 12), cut to two taps before the match
+// (team change, Oct 10: "as short and clear as possible"). No React, no storage, no network and no clock: every
 // function takes what it needs, so it is unit-tested with node:test and resumable from sessionStorage.
 //
-//   home -> what -> mode -+-> off -> when -> done -> results -> plan
-//                         \-> not_marta -> elsewhere_plan          ("Not on MARTA": the somewhere-else path)
+//   home -> off -> [mode] -> when -> done -> results -> plan
+//            \-> not_marta -> elsewhere_plan          ("Lost it somewhere else?": the somewhere-else path)
 //
-//   tell ("Type it instead", opened from what or off) is a detour: POST /api/parse, then the rider confirms what was
-//   read by tap. Its confirmed facts answer mode, off and when (plus a route or line), and the walk skips them.
+//   mode (bus or train) is INFERRED from the place tapped on off (inferRide): a station with lines and no routes is a
+//   train, a stop with routes and no lines a bus. Only an ambiguous place (both, the streetcar) or "Not sure" asks it.
 //
-// Not asked upfront any more: route, line, direction, how sure, where you are now, the car, "taken". The matcher
-// ranks every vehicle that passed the stop; when it can't separate the top ones (tie_break, separate_by), the results
-// screen asks that one question and re-runs the match with refine(). The plan screen asks the rest for the plan body.
+//   tell ("Say it in one sentence", opened from off) is a detour: POST /api/parse, then the rider confirms what was
+//   read by tap. Its confirmed facts answer off and when (plus the item, the ride, a route or line), and the walk
+//   skips them.
+//
+// Not asked upfront any more: what was lost (the plan screen asks it: it only changes the plan's wording, never the
+// match), route, line, direction, how sure, where you are now, the car, "taken". The matcher ranks every vehicle
+// that passed the stop; when it can't separate the top ones (tie_break, separate_by), the results screen asks that
+// one question and re-runs the match with refine(). The plan screen asks the rest for the plan body.
 //
 // Answers are tap data only (enums, place ids, a confirmed time). GPS never enters, and nothing the rider typed:
 // TellMe's text stays in the screen's memory, and only what the rider confirmed by tap reaches these answers.
@@ -21,9 +26,10 @@ import { resolvePickedTime, toNyIso } from './time.ts'
 
 export type Step = 'home' | QuestionStep | 'done' | 'results' | 'plan' | 'not_marta' | 'elsewhere_plan'
 
-/** The four questions, plus tell: a step answered by one tap that confirms what TellMe read. */
+/** The questions, plus tell: a step answered by one tap that confirms what TellMe read. */
 export type QuestionStep = Asked | 'tell'
-export type Asked = 'what' | 'mode' | 'off' | 'when'
+/** off and when always (unless TellMe answered them); mode only when the place doesn't say bus or train. */
+export type Asked = 'off' | 'mode' | 'when'
 
 export type NotSure = 'not_sure'
 export const NOT_SURE: NotSure = 'not_sure'
@@ -48,6 +54,9 @@ export interface ToldTime {
   picked: boolean // said as a clock time ("around 1:15"), so the anchor is time_kind "picked"
 }
 
+/** "What did you lose?", asked on the plan screen (setExtra), or read by TellMe. */
+export type ItemAnswer = ItemCategory | NotSure
+
 export type WhenAnswer =
   | { kind: 'relative'; button: TimeButton }
   | { kind: 'picked'; hhmm: string } // 24-hour New York wall clock, from the native time input
@@ -59,6 +68,7 @@ export type WhenAnswer =
  * answer by tapping": drop everything TellMe answered and go back to where it was opened.
  */
 export interface TellTap {
+  item?: ItemCategory
   mode?: Ride
   route?: string
   line?: Line
@@ -69,8 +79,7 @@ export interface TellTap {
 
 /** The answer type of each step answered by a tap. */
 export interface AnswerMap {
-  what: ItemCategory | NotSure
-  mode: Ride | 'not_marta' | NotSure
+  mode: Ride | NotSure
   off: PlaceTap | NotSure
   when: WhenAnswer
   tell: TellTap | 'taps'
@@ -86,15 +95,18 @@ export interface Refinement {
 
 export type Told = Asked | 'route' | 'line'
 
-export type Answers = { [K in Asked]?: AnswerMap[K] } & Refinement & {
+export type Answers = { [K in Exclude<Asked, 'mode'>]?: AnswerMap[K] } & Refinement & {
+  mode?: AnswerMap['mode'] | 'not_marta' // not_marta: "Lost it somewhere else?" (notOnMarta), never a tap on mode
+  mode_by?: 'place' // the ride was read from the place tapped on off (inferRide), not asked
+  what?: ItemAnswer // the plan screen's "What did you lose?" (or TellMe's confirmed item); never changes the match
   told?: Told[] // what TellMe answered (confirmed by tap): the walk skips these steps, a new tell replaces them
   role?: 'board' // TellMe's place was where they got on; absent means where they got off (the question's wording)
   walk?: 'normal' | 'slow' // the "I walk slowly or use a mobility aid" toggle (decision 9)
   places?: string[] // somewhere-else path: up to 3 place names, most recent first; they stay on the phone
 }
 
-/** What setExtra may set outside the question order. */
-export type Extra = Pick<Answers, 'walk' | 'places'> & Refinement
+/** What setExtra may set outside the question order (what: null clears the plan's item tap). */
+export type Extra = Pick<Answers, 'walk' | 'places'> & Refinement & { what?: ItemAnswer | null }
 
 export interface FlowState {
   step: Step
@@ -104,8 +116,8 @@ export interface FlowState {
 
 export type RideMode = 'bus' | 'rail' | 'streetcar' | 'unknown'
 
-/** The four questions, in the order they are asked. */
-export const ASKED: readonly Asked[] = ['what', 'mode', 'off', 'when']
+/** The questions, in the order they are asked (mode only when needed). */
+export const ASKED: readonly Asked[] = ['off', 'mode', 'when']
 export const QUESTION_STEPS: readonly QuestionStep[] = [...ASKED, 'tell']
 /** Every step this build has a screen for: a saved step outside it (a tab left open across a redeploy) is stale. */
 export const STEPS: readonly Step[] = ['home', ...QUESTION_STEPS, 'done', 'results', 'plan', 'not_marta', 'elsewhere_plan']
@@ -133,6 +145,44 @@ const isLine = (v: unknown): v is Line => v === 'RED' || v === 'GOLD' || v === '
 const isDir = (v: unknown): v is Dir => v === 'N' || v === 'S' || v === 'E' || v === 'W'
 const isRide = (v: unknown): v is Ride => v === 'bus' || v === 'rail' || v === 'streetcar'
 export const isPlace = (v: AnswerMap['off'] | undefined): v is PlaceTap => typeof v === 'object' && v !== null
+export const ITEM_CATEGORIES: readonly ItemCategory[] = ['phone', 'wallet', 'bag', 'keys', 'laptop', 'other']
+export const isItem = (v: unknown): v is ItemCategory => (ITEM_CATEGORIES as readonly unknown[]).includes(v)
+
+// the Atlanta Streetcar's route id in the schedule feed
+const STREETCAR_ROUTE = 'ATLSC'
+
+/**
+ * Bus or train, read from the place the rider tapped: a rail station (lines, no routes) is a train, a bus stop
+ * (routes, no lines) a bus. null when the place can't say: it serves both, it is a streetcar stop, or it has neither.
+ */
+export function inferRide(p: Pick<PlaceTap, 'routes' | 'lines'>): Ride | null {
+  if (p.routes.includes(STREETCAR_ROUTE)) return null
+  if (p.lines.length > 0 && p.routes.length === 0) return 'rail'
+  if (p.routes.length > 0 && p.lines.length === 0) return 'bus'
+  return null
+}
+
+/** The ride read again from the off answer: set from a telling place, cleared when it came from one that no longer is. */
+function reinfer(a: Answers): Answers {
+  const ride = isPlace(a.off) ? inferRide(a.off) : null
+  const out: Answers = { ...a }
+  if (ride) {
+    out.mode = ride
+    out.mode_by = 'place'
+    const told = toldOf(out).filter((t) => t !== 'mode')
+    if (told.length) out.told = told
+    else delete out.told
+  } else if (out.mode_by === 'place' || out.mode === 'not_marta') {
+    delete out.mode
+    delete out.mode_by
+  }
+  return out
+}
+
+/** True when the bus-or-train question is on the rider's path: the place didn't say, and TellMe didn't either. */
+export function modeAsked(a: Answers): boolean {
+  return a.mode_by !== 'place' && !toldOf(a).includes('mode')
+}
 
 /** Which kind of vehicle the rider lost it on ("Not sure" and an unanswered question are both unknown). */
 export function rideMode(a: Answers): RideMode {
@@ -141,25 +191,25 @@ export function rideMode(a: Answers): RideMode {
 
 const toldOf = (a: Answers): readonly Told[] => a.told ?? []
 
-/** The next question after `step` that TellMe didn't already answer, or done. */
+const onPath = (s: Asked, a: Answers): boolean => !toldOf(a).includes(s) && (s !== 'mode' || modeAsked(a))
+
+/** The next question after `step` that is on the path (not answered by TellMe, mode only when needed), or done. */
 function nextAsked(step: Asked, a: Answers): Step {
-  const told = toldOf(a)
-  for (let i = ASKED.indexOf(step) + 1; i < ASKED.length; i++) if (!told.includes(ASKED[i]!)) return ASKED[i]!
+  for (let i = ASKED.indexOf(step) + 1; i < ASKED.length; i++) if (onPath(ASKED[i]!, a)) return ASKED[i]!
   return 'done'
 }
 
 /** The first question with no answer yet, or done (where tell returns to). */
 function firstUnanswered(a: Answers): Step {
-  return ASKED.find((s) => a[s] === undefined) ?? 'done'
+  return ASKED.find((s) => a[s] === undefined && (s !== 'mode' || modeAsked(a))) ?? 'done'
 }
 
 /** The step after `step`, given the answers so far. */
 export function after(step: Step, a: Answers): Step {
   switch (step) {
-    case 'home': return 'what'
-    case 'what': return nextAsked('what', a)
-    case 'mode': return a.mode === 'not_marta' ? 'not_marta' : nextAsked('mode', a)
-    case 'off': return nextAsked('off', a)
+    case 'home': return 'off'
+    case 'mode': return nextAsked('mode', a)
+    case 'off': return a.mode === 'not_marta' ? 'not_marta' : nextAsked('off', a)
     case 'when': return nextAsked('when', a)
     case 'tell': return firstUnanswered(a)
     case 'done': return 'results'
@@ -173,7 +223,7 @@ export function after(step: Step, a: Answers): Step {
 const same = (x: unknown, y: unknown) => JSON.stringify(x) === JSON.stringify(y)
 
 /** Drop an answer and its TellMe mark. */
-function drop(a: Answers, keys: readonly (Asked | keyof Refinement | 'role')[]): Answers {
+function drop(a: Answers, keys: readonly (Asked | keyof Refinement | 'role' | 'mode_by')[]): Answers {
   const out: Answers = { ...a }
   for (const k of keys) delete out[k]
   const told = toldOf(a).filter((t) => !(keys as readonly string[]).includes(t))
@@ -183,13 +233,12 @@ function drop(a: Answers, keys: readonly (Asked | keyof Refinement | 'role')[]):
 }
 
 /**
- * Changing the ride invalidates what was chosen for it: the stop list came from that mode (a bus stop is not a rail
- * platform), and a route or line belongs to one mode. A first answer clears nothing, so a stop TellMe already
- * confirmed survives the rider then tapping the ride.
+ * Changing the ride invalidates a route or line (each belongs to one mode) and the direction found for it. The place
+ * stays: it is asked first now, and the stop list holds both stops and stations. A first answer clears nothing.
  */
 function clearDependents(a: Answers, step: Asked, prev: unknown, next: unknown): Answers {
   if (prev === undefined || same(prev, next)) return a
-  if (step === 'mode') return drop(a, ['off', 'route', 'line', 'direction', 'direction_id', 'role'])
+  if (step === 'mode') return drop(a, ['route', 'line', 'direction', 'direction_id'])
   return a
 }
 
@@ -223,24 +272,48 @@ export function answer<K extends QuestionStep>(state: FlowState, step: K, value:
   if (state.step !== step) return state
   if (step === 'tell') return applyTell(state, value as AnswerMap['tell'])
   const k = step as Asked
-  const answers: Answers = { ...clearDependents(state.answers, k, state.answers[k], value) }
+  let answers: Answers = { ...clearDependents(state.answers, k, state.answers[k], value) }
   ;(answers as Record<Asked, unknown>)[k] = value
   // answered by tap now, so no longer "told": the walk stops skipping it
   const told = toldOf(answers).filter((t) => t !== k)
   if (told.length) answers.told = told
   else delete answers.told
+  if (k === 'mode') delete answers.mode_by
+  if (k === 'off') answers = reinfer(answers)
   return { step: after(k, answers), answers, history: [...state.history, k] }
 }
 
+/** "Lost it somewhere else?" on off: the somewhere-else path, with Back returning to off. */
+export function notOnMarta(state: FlowState): FlowState {
+  if (state.step !== 'off') return state
+  const answers: Answers = { ...state.answers, mode: 'not_marta' }
+  delete answers.mode_by
+  return { step: 'not_marta', answers, history: [...state.history, 'off'] }
+}
+
 function applyTell(state: FlowState, v: AnswerMap['tell']): FlowState {
-  let a = dropTold(state.answers)
+  let a = reinfer(dropTold(state.answers))
   if (v === 'taps') return back({ ...state, answers: a })
   const told: Told[] = []
+  if (isItem(v.item)) a = { ...a, what: v.item }
   // a ride the rider tapped wins over one that was read (proposeFromParse doesn't offer it either)
   if (isRide(v.mode) && !isRide(a.mode)) {
     a = clearDependents(a, 'mode', a.mode, v.mode)
     a = { ...a, mode: v.mode }
     told.push('mode')
+  }
+  // the place, when it says bus or train, decides the ride (and the walk then never asks it)
+  if (v.place && v.place.stop_ids.length > 0) {
+    const ride = inferRide(v.place)
+    if (ride) {
+      a = { ...a, mode: ride, mode_by: 'place' }
+      const i = told.indexOf('mode')
+      if (i >= 0) told.splice(i, 1)
+    } else if (a.mode_by === 'place') {
+      a = { ...a }
+      delete a.mode
+      delete a.mode_by
+    }
   }
   const mode = rideMode(a)
   const route = cleanRoute(v.route)
@@ -276,6 +349,8 @@ export function back(state: FlowState): FlowState {
 /** Set an answer outside the question order (the walk toggle, the somewhere-else places, a refinement). */
 export function setExtra(state: FlowState, extra: Extra): FlowState {
   const a: Answers = { ...state.answers }
+  if (isItem(extra.what) || extra.what === NOT_SURE) a.what = extra.what
+  else if (extra.what === null) delete a.what
   if (extra.walk === 'normal' || extra.walk === 'slow') a.walk = extra.walk
   if (Array.isArray(extra.places)) a.places = extra.places.slice(0, 3)
   return { ...state, answers: refine(a, extra) }
@@ -319,13 +394,15 @@ const clampWindow = (w: number): number => Math.min(360, Math.max(1, Math.round(
 
 // --------------------------------------------------------------------------------------------------------- progress
 
-/** The questions the rider will see, in order: the four, minus any TellMe already answered. */
+/**
+ * The questions the rider will see, in order: off and when, minus any TellMe already answered, plus bus or train
+ * once the place is known not to say it ("Question 1 of 2", then "Question 2 of 3" only on that follow-up).
+ */
 export function questionPath(a: Answers): Asked[] {
-  const told = toldOf(a)
-  return ASKED.filter((s) => !told.includes(s))
+  return ASKED.filter((s) => onPath(s, a) && (s !== 'mode' || a.off !== undefined))
 }
 
-/** "Question n of about m" for the current step, or null when the step is not one of the four questions. */
+/** "Question n of m" for the current step, or null when the step is not one of the questions. */
 export function progress(state: FlowState): { n: number; m: number } | null {
   if (!isAsked(state.step)) return null
   const path = questionPath(state.answers)
@@ -333,9 +410,9 @@ export function progress(state: FlowState): { n: number; m: number } | null {
   return { n: (i < 0 ? path.length : i) + 1, m: Math.max(path.length, i + 1) }
 }
 
-/** The questions on the rider's actual path (only what and mode once "Not on MARTA" is tapped). */
+/** The questions on the rider's actual path (only off once "Lost it somewhere else?" is tapped). */
 export function activeSteps(a: Answers): Set<Asked> {
-  return new Set(a.mode === 'not_marta' ? (['what', 'mode'] as const) : ASKED)
+  return new Set(a.mode === 'not_marta' ? (['off'] as const) : ASKED)
 }
 
 // ----------------------------------------------------------------------------------------------------- the intake
@@ -372,7 +449,9 @@ export function buildIntake(a: Answers, now: Date): IntakeResult {
   }
   const mode = rideMode(a)
   const intake: Intake = {
-    item: { category: a.what === undefined || a.what === NOT_SURE ? 'other' : a.what },
+    // the item is asked on the plan, after the match: until then the schema's neutral "other" (it never changes the
+    // match; the plan request's item_category overrides it for the plan's wording)
+    item: { category: isItem(a.what) ? a.what : 'other' },
     mode,
     anchors: [anchor],
   }
@@ -394,6 +473,7 @@ export function placeTap(p: Place): PlaceTap {
 
 /** What TellMe shows for confirming, built from POST /api/parse's fields. Nothing here is applied until a tap. */
 export interface Proposal {
+  item?: ItemCategory
   mode?: Ride
   route?: string
   line?: Line
@@ -414,7 +494,9 @@ const clockPhrase = (p: string): boolean => !RELATIVE_PHRASE.test(p) && /\d|\bno
  */
 export function proposeFromParse(f: ParsedFields, a: Answers): Proposal {
   const out: Proposal = {}
-  const tapped = isRide(a.mode) ? a.mode : null
+  // "Something else" says nothing the plan can use, so only a named kind of item is offered
+  if (isItem(f.item_category) && f.item_category !== 'other') out.item = f.item_category
+  const tapped = isRide(a.mode) && a.mode_by !== 'place' ? a.mode : null
   if (!tapped && isRide(f.mode)) out.mode = f.mode
   const ride = tapped ?? out.mode ?? null
   const route = cleanRoute(f.route)
@@ -446,12 +528,11 @@ export function proposeFromParse(f: ParsedFields, a: Answers): Proposal {
 }
 
 /** True when the parse found nothing the rider could confirm. */
-export const proposalEmpty = (p: Proposal): boolean => !p.mode && !p.route && !p.line && !p.anchor && !p.when
+export const proposalEmpty = (p: Proposal): boolean => !p.item && !p.mode && !p.route && !p.line && !p.anchor && !p.when
 
 /** Copy id of each question's heading (lib/copy.ts). */
 export const QUESTION_COPY = {
-  what: 'wb_01_what',
-  mode: 'wb_04_mode',
+  mode: 'mode.title',
   off: 'wb_05_off',
   when: 'wb_06_when',
   tell: 'tell',
