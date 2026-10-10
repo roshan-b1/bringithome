@@ -122,7 +122,7 @@ The item plans in every set were added that way on Oct 10 from the deployed API.
 |---|---|---|
 | `hero-rail` | bag, Red Line S, Garnett (907843, 908600), picked 3:24 PM W 5, as of 3:27 PM Oct 9 | matched Red 407 (medium). `plan.json` before "Where are you now?" (rider assumed at Garnett): **ride the 3:34 PM train to Lakewood-Ft McPherson and wait on the other platform, about 3:53 PM (3:48 to 4:01)**; 407 really came back north through Lakewood at 3:52 PM. Waiting at Garnett (about 3:59) is the other way. Leave by 3:33 PM; the 3:34 PM train stays the best way through all 18 frames. `plan-at_station.json` for a rider who says they are at Five Points: the same Lakewood switch on the 3:32 PM train, then Oakland City from frame 009 (3:30 PM), once that train can no longer be boarded in time (the frames the e2e announcement check uses). `plan-on_vehicle.json` for a rider on Gold run 310: meet at East Point 3:34 PM (shared track, live). `session-uncertain.json` is the taps alone ("Which way was it going?") |
 | `backup-bus49` | bag, route 49, stop 210555, picked 1:18 PM W 10, as of 1:30 PM | matched bus 1631 (key `bus:2331`): wait for it at Courtland St NE @ Auburn Ave NE, about 1:55 PM, usually comes back. Frames 003, 007 to 009 and 013 have a fix just past fresh, so every option is the timetable (low) for one to three polls: the screen holds the last answer through that (below) |
-| `not-reporting` | wallet, route 20, stop 210555, picked 1:17 PM W 5, as of 1:25 PM | `not_reporting`: the timetable only; the reunion is `not_matched` for every kind (no section) |
+| `not-reporting` | wallet, route 20, stop 210555, picked 1:17 PM W 5, as of 1:25 PM | `not_reporting`: the timetable only; the reunion is `not_matched` for every kind. The plans' `scheduled` (route 20 trip 11782222, at the end of the line at Georgia State until 1:30 PM by the timetable) and their `timetable_return` card (wait at Piedmont Ave SE @ Gilmer St SE, about 2:47 PM), and `scheduled/000..023.json` (one per 30 s), were added by hand on Oct 10 from this branch's `api/backtrack_api/scheduled.py` run on the real schedule zip, before that API was deployed: re-record them with `npm run snapshot` once it is |
 | `late-rail` | bag, Red Line S, West End (908704, 908705), picked 9:16 PM W 5, as of 9:20 PM Oct 9 | matched Red 402 (high): no way back can be promised, `may_leave_service` ("It may not come back tonight"). On Oct 9 it left the feed at 9:31 PM and never came back |
 | `mock` | a copy of `hero-rail` | the default set for `?mode=mock` |
 
@@ -134,7 +134,32 @@ item plans are recorded for the default body only; the reunion poll
 reads `reunion/<variant>/`, frame 001 on its first call (frame 000 is what the plan carried) and one more per 20 s of
 visible time, holding the last; `/now` advances one frame per 10 s of visible time, holding the last one.
 
+## When the bus is not live (the timetable plan)
+
+A session whose match names no live vehicle (`not_reporting`, `uncertain`, `no_match`) gets the plan's `scheduled`
+(api README "Where the timetable says it is"). The lead says "We can't see this bus live, so this plan uses its
+timetable." (not_reporting), and the top map (`ScheduledMap`) draws where the timetable says it is now as a hollow,
+dashed dot ("Your bag is probably here", or "Probably about here (timetable)"), the route the trip runs, the rider's
+stop and blue dot, and the timetable's way back as a pin ("Wait here ~2:47"), with "Route 20 toward ..., by its
+timetable. We can't see this bus live, so it may not be exactly here." under it. The point moves every 30 s
+(`GET /api/sessions/{id}/scheduled`, fixture frames `scheduled/NNN.json`). A bus reporting a trip of the same block
+(`block_vehicle_now`, then `/now` live) wins: "This is probably your bus, sharing its location again." Then "Your best
+plan" is the API's `timetable_return` card in two short lines ("Wait at **Piedmont Ave SE @ Gilmer St SE** (1 min
+walk). Leave by **2:43**." / "Your bus should come back **~2:47**. Tell the driver, check your seat."), marked
+"Estimate from the timetable" and "We can't see this bus live, so this is not certain.", with walking directions, and
+the backup steps behind "Didn't find it?".
+
 ## Your best plan (the reunion planner on the plan screen)
+
+Short and simple (Oct 10): two or three action lines with the place and the time in bold (`reunionModel.shortLines`:
+"Take the **3:34** train to **Lakewood-Ft McPherson**." / "Cross to the other platform." / "Your train arrives
+**~3:53**. Get on, check your seat."), the Live/Estimate/Timetable chip and "Leave by" as compact labels, Directions,
+one safety line ("Never hold the doors." or "Never chase a bus."), and everything else folded under "More"
+(`moreLines`). Other ways are one line each ("Wait at **Garnett**, ~3:59"). The top map draws the recommended way as a
+route (`wayRoute.ts`): the dashed walk from the blue dot, the train ride along the line's own geometry from where the
+rider boards to where they get off, and pins with short times ("Board here 3:34", "Get off here ~3:42", "Meet it here
+~3:53", "It waits here until ~2:05"), with a one-line legend under the map. The paragraphs below describe the
+earlier, longer layout; the data and the rules are the same.
 
 The one way-back card under the map, whichever card the API put there (`meet`, `wait_return`, `meet_end`,
 `switch_platform` or `too_far`). It renders `Reunion` (`components/plan/Reunion.tsx`, words from `reunionModel.ts`,

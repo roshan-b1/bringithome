@@ -171,23 +171,12 @@ interface Detail {
   whereAsked: boolean
 }
 
-/** A short line with its **bold** place and time; "~" is said as "about" to a screen reader. */
+/** A short line with its **bold** place and time. An estimated time ("~3:53") stays whole on one line. */
 export function Bold({ line }: { line: string }) {
   return (
     <>
       {boldParts(line).map((seg, i) => {
-        const tilde = seg.text.startsWith('~')
-        const body = (
-          <>
-            {tilde ? (
-              <>
-                <span aria-hidden="true">~</span>
-                <span className="sr-only">{t('ways.about_sr')}</span>
-              </>
-            ) : null}
-            <NoBreak text={tilde ? seg.text.slice(1) : seg.text} />
-          </>
-        )
+        const body = seg.text.startsWith('~') ? <span className={styles.nowrap}>{seg.text}</span> : <NoBreak text={seg.text} />
         return seg.bold ? <strong key={i}>{body}</strong> : <span key={i}>{body}</span>
       })}
     </>
@@ -219,6 +208,7 @@ function MainWay({
         </p>
         <BasisChip basis={o.basis} />
       </div>
+      <LeaveBy option={o} reunion={reunion} receivedAt={receivedAt} />
       <ol className={styles.shortSteps} aria-label={t('steps.label')}>
         {lines.map((l, i) => (
           <li key={i} className={styles.shortStep}>
@@ -231,7 +221,6 @@ function MainWay({
           </li>
         ))}
       </ol>
-      <LeaveBy option={o} reunion={reunion} receivedAt={receivedAt} />
       {walksThere(o, reunion.rider_location) ? <Directions option={o} apple={apple} /> : null}
       <p className={styles.safeLine}>{safetyLine(o)}</p>
       {more.length ? (

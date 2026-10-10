@@ -721,7 +721,6 @@ export const COPY = {
   'short.train_waits': 'The train waits there until **{departs}**. Get on, check your seat.',
   'short.safe_bus': 'Never chase a bus.',
   'ways.more': 'More',
-  'ways.about_sr': 'about ',
   'more.window': 'It may come between {from} and {to}.',
   // the other ways, one line each
   'other.wait': 'Wait at **{stop}**, {time}',
@@ -737,9 +736,10 @@ export const COPY = {
   'pin.wait': 'Wait here {time}',
   'pin.waits': 'It waits here until {time}',
   'pin.comes_back': 'Comes back here {time}',
-  'map.legend': 'You are the blue dot[{walk}][{ride}]. Pins show where to go.',
-  'map.legend_walk': ', the dashed line is your walk',
-  'map.legend_ride': ', the bold line is your ride',
+  'map.legend': '[{you} ][{ride} ]Pins show where to go.',
+  'map.legend_you': 'You are the blue dot.',
+  'map.legend_you_walk': 'You are the blue dot, the dashed line is your walk.',
+  'map.legend_ride': 'The bold line is your ride.',
   'map.mirror_pin': '{label}: {place}.',
 
   // no live vehicle: where the timetable says it is (scheduled.py), drawn as a hollow dot that never claims live

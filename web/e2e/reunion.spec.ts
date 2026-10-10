@@ -82,7 +82,7 @@ for (const size of SIZES) {
       await expect(steps.nth(0)).toHaveText('1Take the 3:34 train to Lakewood-Ft McPherson.')
       await expect(steps.nth(0).locator('strong')).toHaveText(['3:34', 'Lakewood-Ft McPherson'])
       await expect(steps.nth(1)).toHaveText('2Cross to the other platform.')
-      await expect(steps.nth(2)).toHaveText(/^3Your train arrives ~(about )?3:53\. Get on, check your seat\.$/)
+      await expect(steps.nth(2)).toHaveText(/^3Your train arrives ~3:53\. Get on, check your seat\.$/)
       await expect(best.getByText('Never hold the doors.', { exact: true })).toBeVisible()
       // everything else is folded under "More", in short lines
       const fold = best.locator('details', { hasText: 'More' })
@@ -98,7 +98,7 @@ for (const size of SIZES) {
       await expect(card.getByRole('list', { name: 'Other ways' })).toBeHidden()
       await openOthers(page)
       const others = card.getByRole('list', { name: 'Other ways' })
-      await expect(others.getByRole('listitem').first()).toContainText(/Wait at Garnett, ~(about )?3:59/)
+      await expect(others.getByRole('listitem').first()).toContainText(/Wait at Garnett, ~3:59/)
       const href = await others.getByRole('link', { name: 'Walking directions' }).getAttribute('href')
       if (size.phone) expect(href).toMatch(/^https:\/\/maps\.apple\.com\/\?daddr=33\.\d{6},-84\.\d{6}&dirflg=w$/)
       else expect(href).toMatch(/^https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=33\.\d{6},-84\.\d{6}&travelmode=walking$/)
@@ -171,7 +171,8 @@ test.describe('the plan as a route, and the timetable when the bus is not live',
     await expect(map.getByText('Board here 3:34', { exact: true })).toBeAttached()
     await expect(map.getByText('Get off here ~3:42', { exact: true })).toBeAttached()
     await expect(map.getByText('Meet it here ~3:53', { exact: true })).toBeAttached()
-    await expect(map.getByText('You are the blue dot, the dashed line is your walk, the bold line is your ride. Pins show where to go.')).toBeVisible()
+    // a recorded set has no blue dot, so the legend says only what the map shows
+    await expect(map.getByText('The bold line is your ride. Pins show where to go.', { exact: true })).toBeVisible()
     await clean(page)
     await page.screenshot({ path: info.outputPath('route-hero-390.png') })
   })
@@ -191,7 +192,7 @@ test.describe('the plan as a route, and the timetable when the bus is not live',
     const steps = card.getByRole('list', { name: 'Your best plan, step by step' }).locator(':scope > li')
     await expect(steps).toHaveCount(2)
     await expect(steps.nth(0)).toHaveText('1Wait at Piedmont Ave SE @ Gilmer St SE (1 min walk). Leave by 2:43.')
-    await expect(steps.nth(1)).toHaveText(/^2Your bus should come back ~(about )?2:47\. Tell the driver, check your seat\.$/)
+    await expect(steps.nth(1)).toHaveText(/^2Your bus should come back ~2:47\. Tell the driver, check your seat\.$/)
     await expect(card.getByText("We can't see this bus live, so this is not certain.")).toBeVisible()
     await expect(card.getByRole('link', { name: 'Walking directions' })).toHaveAttribute('href', /33\.752543,-84\.384156/)
     // then everything else, behind "Didn't find it?"

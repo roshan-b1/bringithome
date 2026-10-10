@@ -68,7 +68,7 @@ export function PlanAside({
             {keys.map((k) => (
               <NowCaption key={k} vehicleKey={k} onNow={onNow} />
             ))}
-            {route ? <RouteLegend route={route} /> : null}
+            {route ? <RouteLegend route={route} rider={rider.fix !== null} /> : null}
           </>
         }
       />
@@ -97,12 +97,9 @@ function NowCaption({ vehicleKey, onNow }: { vehicleKey: VehicleKey; onNow: (n: 
   )
 }
 
-/** One line under the map that says how to read it: "You are the blue dot, the dashed line is your walk, the bold
- *  line is your ride. Pins show where to go." */
-export function RouteLegend({ route }: { route: EngineRoute }) {
-  return (
-    <p className={styles.mapLegend}>
-      {t('map.legend', { walk: route.walkTo ? t('map.legend_walk') : null, ride: route.ride ? t('map.legend_ride') : null })}
-    </p>
-  )
+/** One line under the map that says how to read it: "You are the blue dot, the dashed line is your walk. The bold
+ *  line is your ride. Pins show where to go." Only what the map shows: no blue dot, no word about it. */
+export function RouteLegend({ route, rider }: { route: EngineRoute; rider: boolean }) {
+  const you = rider ? (route.walkTo ? t('map.legend_you_walk') : t('map.legend_you')) : null
+  return <p className={styles.mapLegend}>{t('map.legend', { you, ride: route.ride ? t('map.legend_ride') : null })}</p>
 }
