@@ -1,15 +1,13 @@
 # bring it home: "how it works" voiceover (Devpost video)
 
-## The short version (use this): about 35 seconds, said right after the demo
+## The short version (use this): about 30 seconds, plain words, said right after the demo
 
-> MARTA's real-time APIs give us every bus and train position. Our recorders run around the clock on a Vultr server,
-> which also hosts our API, and save each update into Tiger Data, where TimescaleDB keeps the history in time order
-> and PostGIS measures distance. So two taps find the exact train you were on. Gemini turns a spoken sentence into
-> your stop and time, but every decision comes from real data. To test the planner, we replayed our recordings: at
-> thousands of past moments we asked it for the fastest way back, then checked what the train really did. On
-> trains, its first pick was right about 97% of the time.
+> Every few seconds, we save where every MARTA bus and train is. That runs nonstop on a Vultr server and builds up in
+> a Tiger Data database, a live history of the whole system. So when you tap where and when you got off, we find the
+> exact train you were on. Gemini lets you just say what happened. To make sure the plan works, we replayed real
+> trips and checked what the train actually did. Our first pick was right about 97 times out of 100.
 
-For about 28 seconds, drop the Gemini sentence.
+(The 97 is the train figure, from the replay test in docs/BACKTEST.md.)
 
 ## The long version (about 85 seconds), if there is room
 
