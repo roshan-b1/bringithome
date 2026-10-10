@@ -42,3 +42,64 @@ floor, the switch and end-of-line floors, and the ranking order) and ran the reu
 against each. All 14 were caught (a test failed every time). The boarding rule added on Oct 10 (a calm minute to
 board your own next train, and a fix inside the station counting as at the station) was checked the same way: both
 mutations were caught.
+
+## Saturday Oct 10 and Friday night (measured during the hackathon)
+
+The same measurements and the same backtest, repeated on two windows recorded during the event, using the planner
+code as of Saturday morning (after the Friday fixes and the calmer boarding rule). Window A: Saturday Oct 10
+(Saturday service), first trains and buses about 5 AM to about 10:30 AM. Window B: Friday Oct 9 from 8:30 PM to the
+end of service (about 2:30 AM). Windows near any recorder gap are excluded, as before.
+
+### Trains
+
+What MARTA did:
+- Dead-end termini: the train shows it is heading back 36 s after arriving (median, n=73) on Saturday and 33 s on
+  Friday night (n=64); it starts out 7.0 min after arriving on Saturday (n=70) and 7.6 min on Friday night.
+  Friday's daytime figures were 34 s and 7.5 min.
+- Saturday Green turns at King Memorial (a Saturday-only end of the line): 155 s to head back (n=10).
+- Not back within 45 min: 2 of 96 arrivals on Saturday morning; 9 of 112 on Friday night, all trains leaving for
+  the night.
+- Saturday departures at the ends of the line matched the timetable 74 of 74 times.
+- Some Saturday trains dropped out of the realtime feed for 20 to 80 min while running, and Indian Creek turns are
+  invisible for about 12 min.
+
+The planner backtest (every train every 5 min, four riders, scored against the same train's next real arrival):
+
+| | Saturday morning | Friday night |
+|---|---|---|
+| Planner calls | 2,422 | 1,913 |
+| Recommended options scored | 1,907 | 316 (all live) |
+| Median error / p90 | 65 s / 403 s | 28 s / 110 s |
+| Recommended options missed | 157 (8.2%) | 1 (0.3%) |
+| Top-ranked option was truly the soonest | **840 of 856 (98.1%)** | **436 of 447 (97.5%)** |
+
+155 of the 157 Saturday misses came from two patterns, both fixed on Oct 10 the same morning:
+- A late train reaching the end of the line after its scheduled departure sometimes turns at once instead of
+  waiting for the next slot (86 misses). Its window now opens from its arrival.
+- Indian Creek's layover constant (604 s) was far too long; Saturday measured 189 s and Friday night 251 s
+  (69 misses). It is now 250 s.
+
+### Buses
+
+What MARTA did (Saturday morning, then Friday night):
+- Buses sit at the end of the line a median 12.1 and 11.9 min (n=556, 586); the delay model that predicts when a
+  bus pulls out was off by a median 70 s and 74 s (Friday daytime 76 s). No constant needed to change.
+- A bus comes back as scheduled 89.7% and 89.9% of the time (Friday 91.7%).
+- Meeting the bus at the end of the line with the 2 min buffer failed 2.5% and 1.2% (Friday 1.7%).
+- Walking ahead to a later stop is possible in under 1% of moments, as on Friday.
+
+The planner backtest (every route 49 bus plus 8 random buses every 10 min, four riders):
+
+| | Saturday morning | Friday night |
+|---|---|---|
+| Planner calls | 935 | 1,289 |
+| Recommended options scored | 780 | 773 |
+| Median error / p90 | 95 s / 318 s | 78 s / 329 s |
+| Recommended missed (strict / counting a bus still at the terminal) | 7.2% / 5.3% | 4.7% / 3.6% |
+| Top-ranked option truly the soonest / within 60 s of it | 50.2% / 85.5% | 53.1% / 87.6% |
+
+For buses the options are often within a minute of each other (waiting at the end of the line versus a stop just
+after it), which is why the exact top-pick share is lower than for trains while the within-a-minute share is high.
+Known data issues: buses on a block's last trip after midnight often go dark before the end of the line; a few
+buses report a trip id that does not match where they are; Saturday morning dropped some scheduled trips; and
+route 49 was barely in the feed on Saturday morning (6 of 27 trips).
