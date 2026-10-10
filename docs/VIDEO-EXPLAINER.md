@@ -1,14 +1,15 @@
 # bring it home: "how it works" voiceover (Devpost video)
 
-## The short version (use this): about 25 seconds, said right after the demo
+## The short version (use this): about 35 seconds, said right after the demo
 
-> Every bus and train position from MARTA's real-time APIs is recorded on our Vultr server into Tiger Data, so two
-> taps find the exact train you were on. Gemini turns a spoken sentence into your stop and time, but every decision
-> comes from real transit data. We replayed our recordings through the planner: on trains, its first pick was truly
-> the fastest way back about 97% of the time.
-> Find My shows where it was. bring it home shows where it is.
+> MARTA's real-time APIs give us every bus and train position. Our recorders run around the clock on a Vultr server,
+> which also hosts our API, and save each update into Tiger Data, where TimescaleDB keeps the history in time order
+> and PostGIS measures distance. So two taps find the exact train you were on. Gemini turns a spoken sentence into
+> your stop and time, but every decision comes from real data. To test the planner, we replayed our recordings: at
+> thousands of past moments we asked it for the fastest way back, then checked what the train really did. On
+> trains, its first pick was right about 97% of the time.
 
-For about 20 seconds, drop the Gemini sentence.
+For about 28 seconds, drop the Gemini sentence.
 
 ## The long version (about 85 seconds), if there is room
 
