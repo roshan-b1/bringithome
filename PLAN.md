@@ -3,6 +3,16 @@
 Working name. Alternatives: Retrace, Breadcrumb, Rewind. Pick one in 5 minutes, then stop.
 **Event:** Hacklanta '26 · Oct 9–11, 2026 · Georgia State University, Student Center East Ballroom · 36 hours · team of 2
 
+> **Changes after kickoff (Oct 9, team decisions). These override anything below.**
+> - **Cut:** breathing and calm-mode exercises (the orb, the calm audio clips, "Skip, I'm fine"), and Find My
+>   screenshot upload (`POST /api/findmy`, the `read_findmy` stage tool, FindMyUpload, wb_13, the stale-dot buttons and
+>   the screenshot hero beat). Riders won't do either. Gemini now has two uses: `/parse` and the report wording.
+> - **Product name:** "bring it home" (lowercase, as in the logo), domain bringit.casa. Navy `#14213D`, orange
+>   `#EF5B2B`. Internal code names stay `backtrack_*`.
+> - **Gemini over REST** with hard deadlines (4 s text), model `gemini-3.5-flash-lite` (measured 0.65 to 0.73 s);
+>   no `google-genai` dependency.
+> - **Migration 007** gives `vehicle_passes` an `as_of` horizon; 005 and 006 stay reserved.
+
 > **v3 = v2 (friend's plan) + our merge.** Everything verified in v2 is kept. Changes are listed right below
 > so you can review them fast.
 

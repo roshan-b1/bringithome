@@ -389,7 +389,7 @@ class Meet(BaseModel):
 
 
 class CardAction(BaseModel):
-    type: Literal["copy", "tel", "mailto", "link", "airtag_share", "ics"]
+    type: Literal["copy", "tel", "mailto", "link", "ics"]
     label_id: str
     value: str
 
@@ -449,3 +449,37 @@ class Plan(BaseModel):
     cards: list[Card]
     report: Report
     source: Source
+
+
+# 6. parse (typed or spoken where-and-when clues; taps never call it) ----------------
+
+class ParseRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=600)
+    as_of: datetime | None = None
+
+
+class ParsedAnchor(BaseModel):
+    place_phrase: str                   # verbatim from the rider's words
+    choices: list[Place] = Field(max_length=3)   # from the deterministic resolver, never from the model
+    time_phrase: str                    # verbatim, or "" when no time was said
+    at: datetime | None = None          # from the rule-based time parser
+    day_label: str | None = None        # "today" / "yesterday" / "Thursday"
+    window_min: int = Field(ge=1, le=360)
+
+
+class ParsedFields(BaseModel):
+    item_category: Literal["phone", "wallet", "bag", "keys", "laptop", "other"] | None = None
+    mode: Literal["bus", "rail", "streetcar"] | None = None
+    route: str | None = None            # must exist in gtfs_routes
+    line: Line | None = None
+    direction_words: str | None = None  # verbatim
+    car: Literal["front", "middle", "back"] | None = None
+    taken: Literal["no", "maybe", "yes"] | None = None
+    alight: ParsedAnchor | None = None
+    board: ParsedAnchor | None = None
+
+
+class ParseResponse(BaseModel):
+    fields: ParsedFields
+    dropped: list[str]                  # field names that failed the verbatim / substring / table checks
+    source: Literal["gemini", "rules", "cache"]

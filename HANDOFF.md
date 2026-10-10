@@ -3,6 +3,16 @@
 Paste this (or attach it) as the first message in a new Claude Code session opened in the `backtrack` repo.
 PLAN.md and CLAUDE.md in the repo are the source of truth; this is the short history of how we got there.
 
+> **Changes after kickoff (Oct 9, team decisions). These override anything below.**
+> - **Cut:** breathing and calm-mode exercises (the orb, the calm audio clips, "Skip, I'm fine"), and Find My
+>   screenshot upload (`POST /api/findmy`, the `read_findmy` stage tool, FindMyUpload, wb_13, the stale-dot buttons and
+>   the screenshot hero beat). Riders won't do either. Gemini now has two uses: `/parse` and the report wording.
+> - **Product name:** "bring it home" (lowercase, as in the logo), domain bringit.casa. Navy `#14213D`, orange
+>   `#EF5B2B`. Internal code names stay `backtrack_*`.
+> - **Gemini over REST** with hard deadlines (4 s text), model `gemini-3.5-flash-lite` (measured 0.65 to 0.73 s);
+>   no `google-genai` dependency.
+> - **Migration 007** gives `vehicle_passes` an `as_of` horizon; 005 and 006 stay reserved.
+
 ## The idea
 - Origin story: at ATL we got on a Red Line train, panicked it was the wrong line, jumped to the Gold Line, and left a
   backpack on the Red train. Find My kept saying "Airport". A friend worked out the Red train was behind us on the same

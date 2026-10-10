@@ -4,6 +4,16 @@ Hacklanta '26, team of 2. Written Thursday night, Oct 8, 2026. **Planning only: 
 
 Sources of truth: `PLAN.md`, `CLAUDE.md` and `PREP-REPORT.md` (the verified feed, rail, GTFS, contact, event and tool facts). This record merges the lead architect's draft ("One Box, Fixtures First"), three red-team reviews (operations, matching correctness, people and schedule), three judge lenses (build risk, stage and track, correctness) and the four original proposals.
 
+> **Changes after kickoff (Oct 9, team decisions). These override anything below.**
+> - **Cut:** breathing and calm-mode exercises (the orb, the calm audio clips, "Skip, I'm fine"), and Find My
+>   screenshot upload (`POST /api/findmy`, the `read_findmy` stage tool, FindMyUpload, wb_13, the stale-dot buttons and
+>   the screenshot hero beat). Riders won't do either. Gemini now has two uses: `/parse` and the report wording.
+> - **Product name:** "bring it home" (lowercase, as in the logo), domain bringit.casa. Navy `#14213D`, orange
+>   `#EF5B2B`. Internal code names stay `backtrack_*`.
+> - **Gemini over REST** with hard deadlines (4 s text), model `gemini-3.5-flash-lite` (measured 0.65 to 0.73 s);
+>   no `google-genai` dependency.
+> - **Migration 007** gives `vehicle_passes` an `as_of` horizon; 005 and 006 stay reserved.
+
 Conventions:
 - H0 = Fri Oct 9, 8:30 PM ET. All times are Eastern.
 - A = Person A (data and backend). B = Person B (frontend, voice and pitch).
