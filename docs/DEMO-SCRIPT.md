@@ -101,7 +101,7 @@ at Five Points about 10:54, ready for 11:12. Plan: **rehearsal on the 9:12 or 9:
 
 ### 4.1 The match
 
-Four taps: Bag or backpack, Train, West End station, the minute the train left (Pick a time, for example 10:17).
+Two taps: West End station (train is worked out from the station), then when (Just now, or Pick a time, for example 10:17).
 Within a few minutes of 10:17, trains pass West End both ways (Red north about 10:19, Gold north about 10:12, Gold south
 10:09 and 10:24), so expect **one follow-up question on the results screen**:
 
@@ -146,6 +146,11 @@ Why the planner picks this, in its own rules (ARCHITECTURE.md 7.9):
    one headway, and the next update plans with the next train. The strict 2.5 min margin is kept for the bag train.
 6. **Confidence** is "usual" (daytime, measured terminus, schedule in effect), so it can be the main card. After 7 PM
    it would not be.
+
+**Checked live this morning (Sat Oct 10).** The same scenario at 8:35 AM: rider off a Red to Airport at West End.
+The app matched Red 402 (high) and said: board at 8:40, ride to East Point, other platform, about 8:57 (8:52 to
+9:05). Red 402 reached Airport about 8:46, showed heading north at 8:48 and passed East Point northbound at about
+8:57:30. Predicted 37 min ahead from live data, right on time.
 
 ### 4.3 How it changes during the take (all of this is real, expect it)
 
@@ -197,7 +202,7 @@ the team member who owns the recorders before riding; shoot the backup (section 
 **The bag**: B's own, zipped, nothing valuable or sensitive in it, ideally with a visible tag. It stays in B's hand or
 on B's lap for the whole take, including at the Airport.
 
-**Dry run** (rehearsal train, no pressure on camera): do the four taps at West End for real, check the match and the
+**Dry run** (rehearsal train, no pressure on camera): do the two taps at West End for real, check the match and the
 plan appear, then Done and Clear now. Note how long the taps take (aim for under 60 s after the doors close).
 
 ---
@@ -235,7 +240,7 @@ plan appear, then Done and Clear now. Note how long the taps take (aim for under
 | 10:16 | A | Stand up before West End, step off normally at **10:17** | | |
 | 10:17 | B, phone B | Film A on the platform through the window as the train pulls out | B (quietly): "And the bag rides on." | **Key shot: bag leaves, owner on the platform** |
 | 10:17 | A, phone A | Glance at the clock, note the minute the train left | "My bag just left without me. Let's bring it home." | Screen recording |
-| 10:17:30 | A | **The four taps** (section 8.1) | "Four taps. What, train, where I got off, and when." | Screen recording |
+| 10:17:30 | A | **The two taps** (section 8.1) | "Two taps. Where I got off, and when." | Screen recording |
 | 10:18:30 | A | Results question if asked: To Airport, then Red | | |
 | 10:19 | A | Results screen | "It found the exact train, and here it is live, heading to the Airport." | Live map on screen |
 | 10:19:30 | A | See your plan, answer the plan's questions (8.2) | "Now the smart part. It knows where this train turns around and when it usually heads back. So: take the next train to East Point, cross to the other side, and it comes back to me around 10:42." | **Key shot: Ways to get it back** |
@@ -259,22 +264,23 @@ Never re-stage the arrival as if it were live. A re-shot handover on the platfor
 
 ## 8. Exactly what to tap
 
-### 8.1 The four taps (Phone A, on the West End platform)
+### 8.1 The two taps (Phone A, on the West End platform)
 
 1. **I lost something**
-2. Question 1 "What did you lose?": **Bag or backpack**
-3. Question 2 "Bus or train?": **Train**
-4. Question 3 "Where did you get off?": **Use my location**, then **West End station** under "Near you now". (No
-   signal for location: type "West End" in "Stop, street or station" and tap the station.)
-5. Question 4 "About when did you get off?": **Pick a time**, enter the minute the train left (10:17), tap
-   **Use 10:17 AM**. ("Under 10 min ago" also works but is less sharp.)
-6. If asked "Which way was it going?": **To Airport**. If asked "Which one were you on?": the **Red Line train**.
+2. Question 1 "Where did you get off?": **West End station** from the list near you (it shows a train icon and
+   Red and Gold). The app knows it is a train from the station. (No location: type "West End" in the search and tap
+   the station.) Alternative for a second take: tap **Say it in one sentence** at the top and say "I left my
+   backpack on the Red line, got off at West End just now", then confirm the rows.
+3. Question 2 "About when did you get off?": **Just now** (the big button). For a sharper match, **Pick a time** and
+   enter the minute the train left (10:17).
+4. If asked "Which way was it going?": **To Airport**. If asked "Which one were you on?": the **Red Line train**.
    Never "Not sure" on a hero take.
-7. **See your plan**
+5. **See your plan**
 
 ### 8.2 On the plan screen
 
 - "Do you think someone took it?": **No**
+- "What did you lose?": **Bag** (adds the bag steps; the plan works without it)
 - "Where are you now?": **At a station**, then **West End** (from the list near you, or search). Leaving it unanswered
   also works (the app assumes "where you got off" and says so), but answering makes the steps cleaner.
 - "Which part of the train?": **Middle** (B rides in a middle car). The plan then says "Wait near the middle of the
@@ -372,8 +378,8 @@ real data from Friday, recorded from the same API.
 
 Taps:
 
-1. **I lost something**, **Bag or backpack**, **Train**
-2. Under "From the recorded ride": **Garnett station**
+1. **I lost something**
+2. Under "From the recorded ride": **Garnett station** (train is worked out from the station)
 3. **Pick a time**, enter **15:24**, **Use 3:24 PM**
 4. Results: "Red Line train, train run 407", How sure: Medium, the map and "Where it is now" (frames every 10 s)
 5. **See your plan**, "Do you think someone took it?": **No**. Leave "Where are you now?" unanswered.
@@ -408,7 +414,7 @@ Lower thirds: "Live, Sat Oct 10" on live footage; "Recorded example, Fri Oct 9" 
 | Time | Beat | Picture | Voice over or line |
 |---|---|---|---|
 | 0:00 to 0:08 | **Problem** | Doors close, the bag rides away, A on the West End platform | "You step off. Your bag doesn't. Today you fill in a form and hope." |
-| 0:08 to 0:22 | **Match** | The four taps at 2x, "Which way was it going?", then "Likely match: Red Line train, train run NNN" | "Four taps. It checks every train that passed that platform and finds the exact one." |
+| 0:08 to 0:22 | **Match** | The two taps at 2x, "Which way was it going?", then "Likely match: Red Line train, train run NNN" | "Two taps. It checks every train that passed that platform and finds the exact one." |
 | 0:22 to 0:35 | **Live map** | "Where it is now", the dot moving toward the Airport; B's shot of the train | "And it shows where that train is right now." |
 | 0:35 to 1:02 | **The smart plan** | "Ride to East Point, step off and wait on the other platform", the window, A boarding, B at the Airport sign change, the chip flipping Estimate to Live, "At 10:42" | "It knows where the train turns around and how long it waits, measured on real trains. So it plans a way back, with a time window, and never asks you to hurry. When the train turns, the estimate goes live." |
 | 1:02 to 1:15 | **Reunion** | The Red to North Springs pulls into East Point, A waiting back from the edge, bag handed over | "Twenty-five minutes after stepping off. No tracker, no account." |
