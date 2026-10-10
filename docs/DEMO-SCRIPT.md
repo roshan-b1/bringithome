@@ -101,28 +101,40 @@ at Five Points about 10:54, ready for 11:12. Plan: **rehearsal on the 9:12 or 9:
 
 ### 4.1 The match
 
-Two taps: West End station (train is worked out from the station), then when (Just now, or Pick a time, for example 10:17).
+**Train**, then **Say it in one sentence**: "got off at west end from the red line just now", then **Yes, that's
+right**. The sentence names the place, the line and the time, so it goes straight to the match with no question
+screens. (The tap path is the same three questions: Train, West End station, Just now.)
+
 Within a few minutes of 10:17, trains pass West End both ways (Red north about 10:19, Gold north about 10:12, Gold south
-10:09 and 10:24), so expect **one follow-up question on the results screen**:
+10:09 and 10:24). Saying "red line" drops the Golds, but a Red passes each way, so expect one of two screens:
 
-- "Which way was it going?" Tap **To Airport**.
-- Possibly then "Which one were you on? Two fit what you remembered." Tap the **Red Line** one (it is 7 min from the
-  next Gold, so the time alone may not split them).
+- **"Your train"**: the Red Line badge, **toward Airport**, "Passed West End at 10:17 AM", and where it is now. Tap
+  **See your plan**.
+- Or **"Which train were you on?"** with **"Most likely yours"** on top: the Red toward Airport. Tap **Yes, that's
+  it**, and it goes straight to the plan. If the most likely one is the Red toward North Springs, tap **No, show the
+  others** and tap the **Red Line toward Airport** (see 9.2).
 
-Then: **"Likely match: Red Line train, train run NNN"** (a 3 digit run number; Saturday's numbers are not known in
-advance), "How sure: Medium" or "High", and "Where Red Line train is now" with the live dot heading to Airport.
+The train run number (3 digits) is not known in advance on a Saturday.
 
 ### 4.2 The best way (10:12 take, times from the timetable)
 
-"Ways to get it back", Best way now (card title "Ride on and wait for it"):
+The plan screen, top to bottom:
 
-> Ride to East Point, step off and wait on the other platform for it coming back.
-> About 10:42 AM, between 10:37 AM and 10:50 AM. [Estimate]
-> Leave by 10:22 AM. Take the 10:24 AM train from West End toward Airport. Step off at East Point around 10:31 AM.
-> Then wait on the platform toward North Springs.
-> Other trains may stop first. We'll say which one is yours once it turns around.
+**The map first.** The Red is labeled **"Your item is here"** (it becomes **"Your bag is here"** once A taps Bag at
+the end), with A's blue dot and the way drawn on the map: the ride bold along the Red and Gold line, and pins **"Board
+here 10:24"** at West End, **"Get off here ~10:31"** at East Point and **"Meet it here ~10:42"** at East Point.
 
-Other ways: **Wait at West End**, on the platform toward North Springs, about 10:49 AM.
+**"Your best plan"**:
+
+> Take the **10:24** train to **East Point**.
+> Cross to the other platform.
+> Your train arrives **~10:42**. Get on, check your seat.
+> [Estimate] Leave by 10:22
+> Never hold the doors.
+
+Under **More**: the window (10:37 to 10:50), how the time is worked out, and "Other trains may stop first. We'll say
+which one is yours once it turns around." Other ways, one line each: **Wait at West End, ~10:49**. Under the steps,
+"Where are you now?" and "Which part of the train?".
 
 Why the planner picks this, in its own rules (ARCHITECTURE.md 7.9):
 
@@ -134,7 +146,9 @@ Why the planner picks this, in its own rules (ARCHITECTURE.md 7.9):
 3. **The window** is 5 min early to 8 min late (measured error of this estimate: signed p10 279 s early, p90 474 s),
    so 10:37 to 10:50. In daytime the measured error is much smaller: median 44 to 72 s, p90 about 5 min. In the Oct 9
    backtest of this planner, recommended train ways with no early departure slot (as here) missed 0 times, median
-   error 37 s.
+   error 37 s. On Saturday morning's replay, after the fixes made that morning, the top pick was truly the soonest
+   about 96% of the time (887 of 920), and Saturday's departures at the ends of the line matched the timetable 74 of
+   74 times.
 4. **Where to wait.** For every station the rider's next train reaches before Airport, it asks: when does the rider
    stand on the other platform (arrival + 60 s to step off + 120 s to change platforms) and is that at least
    2.5 min before the bag train, and before the window opens? East Point: A is ready 10:34, the window opens 10:37.
@@ -156,28 +170,30 @@ The app matched Red 402 (high) and said: board at 8:40, ride to East Point, othe
 
 - **About 10:22 to 10:23 (its Leave by time), while A is still on the West End platform**, the next poll may name a
   later train ("New best way to get it back": the 10:32 Red to Lakewood-Ft McPherson, back about 10:44). A is
-  standing on the platform, so A boards the 10:24 and **tells the app at once** (Change, On another train). The app
-  then plans from A's train. Replayed on Oct 9's recording at Garnett, the same rule held "board the 3:34" until
-  about 3:32 with GPS inside the station, so with the taps done by 10:20 this rarely shows on camera.
-- **After A says "On another train"**: "Stay on your train toward Airport to East Point, about 10:31 AM. Then wait on
-  the platform toward North Springs." Same reunion time.
+  standing on the platform, so A boards the 10:24 and **tells the app at once**: under "Your best plan", "Where are you
+  now?", **On another train** (or **Change**, then On another train, if it was answered). The app then plans from A's
+  train. Replayed on Oct 9's recording at Garnett, the same rule held "board the 3:34" until about 3:32 with GPS inside
+  the station, so with the taps done by 10:20 this rarely shows on camera.
+- **After A says "On another train"**: the steps become "Stay on to **East Point**" and "Cross to the other
+  platform." Same reunion time.
 - **About 30 to 60 s after the Red reaches Airport (about 10:31)** the feed shows the same train heading back (measured
-  median 43 s at Airport for Red). The chip flips **Estimate to Live**, the time reads **"At 10:42 AM."** and the note
-  reads **"It is on its way back now: the train due around 10:42 AM."** Live times after the turn are good to a median
-  of 44 s (p90 115 s). This is the shot to get on screen.
+  median 43 s at Airport for Red; 36 s at dead ends on Saturday morning). The chip flips **Estimate to Live** and the
+  time loses its "~": **"Your train arrives 10:42."** The pin reads "Meet it here 10:42". Live times after the turn are
+  good to a median of 44 s (p90 115 s). This is the shot to get on screen.
 - **If the turn shows while A is still on the Gold before East Point**, the live times can make College Park the
   soonest safe stop (A ready about 10:37, bag there about 10:39 to 10:40). If the app announces "New best way" with
   College Park, stay on one more stop and text B "College Park". Either station ends in the same reunion.
-- **Once A steps off**, tap Change, At a station, East Point (or the station A is at). The app then shows "Stay at East
-  Point and wait on the platform toward North Springs", live, 10:42.
+- **Once A steps off**, tap Change, At a station, East Point (or the station A is at). The plan then reads "Wait on the
+  platform toward North Springs." and "Your train arrives 10:42.", live.
 
 ### 4.4 What it will not say
 
 No "the first train back is yours" (on weekday data the first train back was the bag train only 3.6% of the time),
-no promise after 7 PM before the turn is seen, nothing about hurrying. Saturday itself was never measured: every
-constant comes from Friday Oct 9. If the Saturday feed does not match the timetable, the app falls back to the
-measured Airport layover (354 s for Red) and adds "Its trip back isn't on today's timetable, so this time is less
-certain."
+no promise after 7 PM before the turn is seen, nothing about hurrying. Saturday morning is now measured too (Saturday
+departures at the ends of the line matched the timetable 74 of 74 times), and the planner was fixed that morning for
+what Saturday showed (late trains that turn at once, the Indian Creek layover, King Memorial). If the feed does not
+match the timetable, the app falls back to the measured Airport layover (354 s for Red) and adds "Its trip back isn't
+on today's timetable, so this time is less certain."
 
 ---
 
@@ -202,8 +218,9 @@ the team member who owns the recorders before riding; shoot the backup (section 
 **The bag**: B's own, zipped, nothing valuable or sensitive in it, ideally with a visible tag. It stays in B's hand or
 on B's lap for the whole take, including at the Airport.
 
-**Dry run** (rehearsal train, no pressure on camera): do the two taps at West End for real, check the match and the
-plan appear, then Done and Clear now. Note how long the taps take (aim for under 60 s after the doors close).
+**Dry run** (rehearsal train, no pressure on camera): do the taps at West End for real (section 8.1, sentence and all),
+check the match and the plan appear, then Done and Clear now. Note how long the taps take (aim for under 60 s after
+the doors close). If the speech button mishears in the station noise, type the sentence instead.
 
 ---
 
@@ -240,12 +257,12 @@ plan appear, then Done and Clear now. Note how long the taps take (aim for under
 | 10:16 | A | Stand up before West End, step off normally at **10:17** | | |
 | 10:17 | B, phone B | Film A on the platform through the window as the train pulls out | B (quietly): "And the bag rides on." | **Key shot: bag leaves, owner on the platform** |
 | 10:17 | A, phone A | Glance at the clock, note the minute the train left | "My bag just left without me. Let's bring it home." | Screen recording |
-| 10:17:30 | A | **The two taps** (section 8.1) | "Two taps. Where I got off, and when." | Screen recording |
-| 10:18:30 | A | Results question if asked: To Airport, then Red | | |
-| 10:19 | A | Results screen | "It found the exact train, and here it is live, heading to the Airport." | Live map on screen |
-| 10:19:30 | A | See your plan, answer the plan's questions (8.2) | "Now the smart part. It knows where this train turns around and when it usually heads back. So: take the next train to East Point, cross to the other side, and it comes back to me around 10:42." | **Key shot: Ways to get it back** |
+| 10:17:30 | A | **Train**, then **Say it in one sentence**: "got off at west end from the red line just now", then **Yes, that's right** (section 8.1) | "Train. Then I just say it." | Screen recording |
+| 10:18:30 | A | **Most likely yours**: the Red toward Airport. Tap **Yes, that's it** (or "Your train", then See your plan) | "It found the exact train. Most likely mine? Yes, that's it." | **Key shot: one exact answer** |
+| 10:19 | A | The plan opens on the map: the Red heading to the Airport, labeled "Your item is here" ("Your bag is here" after the Bag tap), the route and pins drawn | "And here it is live, heading to the Airport." | Live map on screen |
+| 10:19:30 | A | Read **Your best plan**; at the end tap **Bag** under "What did you lose?" (8.2) | "Now the smart part. It knows where this train turns around and when it usually heads back. So: take the 10:24 train to East Point, cross to the other platform, and it comes back to me around 10:42." | **Key shot: Your best plan** |
 | 10:22 | A | Leave by passes. A is already on the southbound platform. Ignore a later-train suggestion if one appears (4.3) | | Cut in the edit if it shows |
-| 10:24 | A | Board the **Gold to Airport**. Sit, then tap **Change, On another train, Gold to Airport, next stop Oakland City** | "I tell it I'm on this train, and it plans from here." | Screen recording |
+| 10:24 | A | Board the **Gold to Airport**. Sit, then under "Where are you now?" tap **On another train, Gold to Airport, next stop Oakland City** | "I tell it I'm on this train, and it plans from here." | Screen recording |
 | 10:25 | A | Text B: "East Point, northbound, middle" | | |
 | 10:30 | B, phone B | Red arrives at **Airport**. Film the sign or the announcement as it changes to North Springs. Follow any instruction to exit (8.4) | B: "End of the line. Same train, now heading back to North Springs." | **Key shot: the turnaround** |
 | ~10:31 | A | Watch for **Estimate to Live** on the best way | "It just turned around at the Airport. Now it's live: 10:42." | **Key shot: chip flips to Live** |
@@ -255,7 +272,7 @@ plan appear, then Done and Clear now. Note how long the taps take (aim for under
 | 10:37 | B | The Red leaves Airport. B texts "moving", stands near the door before East Point without blocking it | | B films out the window |
 | **10:42** | B, phone B | Red to North Springs arrives at East Point. Film A waiting on the platform as it pulls in. Step off normally with the bag | | **Key shot: the train comes back** |
 | 10:42 | A, B | Bag handed back on the platform, away from the edge | A: "There it is. Twenty-five minutes after I stepped off. No tracker, no account." | B films; then A holds the app up to B's camera |
-| 10:43 | A | Scroll to "Tell staff now" and "Fill in the lost item form" (do not submit), then Done, Clear now | "If it couldn't come back, the report is already filled in. And when I'm done, Clear now deletes everything." | Screen recording |
+| 10:43 | A | Tap **Didn't find it?**: show "Tell staff now" and the lost item form (do not submit), then Done, Clear now | "If it couldn't come back, the report is already filled in. And when I'm done, Clear now deletes everything." | Screen recording |
 | 10:45 | A, B | Ride back north for the next take (a Red to North Springs from East Point reaches Five Points 12 min later) | | |
 
 Never re-stage the arrival as if it were live. A re-shot handover on the platform after the train has left is fine.
@@ -264,36 +281,45 @@ Never re-stage the arrival as if it were live. A re-shot handover on the platfor
 
 ## 8. Exactly what to tap
 
-### 8.1 The two taps (Phone A, on the West End platform)
+### 8.1 The taps (Phone A, on the West End platform)
 
 1. **I lost something**
-2. Question 1 "Where did you get off?": **West End station** from the list near you (it shows a train icon and
-   Red and Gold). The app knows it is a train from the station. (No location: type "West End" in the search and tap
-   the station.) Alternative for a second take: tap **Say it in one sentence** at the top and say "I left my
-   backpack on the Red line, got off at West End just now", then confirm the rows.
-3. Question 2 "About when did you get off?": **Just now** (the big button). For a sharper match, **Pick a time** and
-   enter the minute the train left (10:17).
-4. If asked "Which way was it going?": **To Airport**. If asked "Which one were you on?": the **Red Line train**.
-   Never "Not sure" on a hero take.
-5. **See your plan**
+2. Question 1 of 3 "Bus or train?": **Train**
+3. Question 2 of 3 "Where did you get off?": tap **Say it in one sentence** at the top. Tap the microphone and say
+   (or type): **"got off at west end from the red line just now"**.
+4. "Is this right?" shows what it read (the Red Line, West End, just now). Tap **Yes, that's right**. The sentence
+   said where and when, so it goes straight to the match. No more questions.
+5. The results screen, one of two:
+   - **"Which train were you on?"** with **"Most likely yours"**: the Red Line badge, toward Airport, the time it passed
+     West End. Tap **Yes, that's it**. It goes straight to the plan.
+   - **"Your train"**: the same Red toward Airport. Tap **See your plan**.
+   - If the most likely one is going the wrong way (toward North Springs), tap **No, show the others** and tap the
+     **Red Line toward Airport**. Never "Not sure" on a hero take.
+6. The plan opens: the live map with the route drawn, then **Your best plan**.
+
+Tap path, if speech fails and typing is awkward: **Train**, **West End station** from the list near you (it shows Red
+and Gold; no location: type "West End" in the search), then **Just now** (the big button), or **Pick a time** and enter
+the minute the train left (10:17) for a sharper match. Optional on that screen: "Know your line? Tap it.", **Red**.
 
 ### 8.2 On the plan screen
 
-- "Do you think someone took it?": **No**
-- "What did you lose?": **Bag** (adds the bag steps; the plan works without it)
-- "Where are you now?": **At a station**, then **West End** (from the list near you, or search). Leaving it unanswered
-  also works (the app assumes "where you got off" and says so), but answering makes the steps cleaner.
+Nothing here is needed for the plan; each tap only sharpens it.
+
+- Under the steps, "Where are you now?": **At a station**, then **West End** (from the list near you, or search).
+  Leaving it unanswered also works (the app assumes "where you got off" and says so), but answering makes the steps
+  cleaner.
 - "Which part of the train?": **Middle** (B rides in a middle car). The plan then says "Wait near the middle of the
   platform, back from the edge."
-- "Saw a car number inside?": **No**, or type the car number B noted (it fills Rail Car Number on the report).
-- On a phone the map is inside the step: **Show it on the map** puts "Meet it here" at East Point beside the train
-  and your blue dot.
+- At the end, "What did you lose?": **Bag**. The map label becomes "Your bag is here" and the bag steps are added.
+- Leave "Think someone took it?" alone (it is a quiet link at the bottom; a tap moves MARTA Police and 911 to the top).
+- The map is already at the top on a phone: the blue dot, the bold ride, and the pins "Board here", "Get off here" and
+  "Meet it here" at East Point.
 
 ### 8.3 On the Gold train
 
-**Change** (next to "You are at West End"), **On another train**, then **Gold to Airport, next stop Oakland City**
-(the list comes from your location once). If the list is empty ("We can't see a train near you right now"), wait for
-the next station and try again.
+Under "Your best plan": **Change** (next to "You are at West End"), **On another train**, then **Gold to Airport, next
+stop Oakland City** (the list comes from your location once). If the list is empty ("We can't see a train near you
+right now"), wait for the next station and try again.
 
 ### 8.4 B at the Airport
 
@@ -308,31 +334,32 @@ back, follow them, take the next **Red to North Springs**, and text A (that is s
 
 ### 9.1 No match yet (the train was not recorded long enough)
 
-- Sign: "We couldn't pin down the exact one yet. That's okay. Here's your plan." with no follow-up question, and no
-  "Ways to get it back" step.
+- Sign: "We couldn't pin down the exact one yet. That's okay. Here's your plan." with no train to pick, and no
+  "Your best plan" step.
 - Why: the recorder reads the rail feed every 20 s and the pass at West End comes from those positions, so it needs a
   poll or two after the train has gone. Taps done in under 40 s can beat it.
 - Do: wait 30 s, tap **Change my answers**, keep the same answers, and go through to the end again. If it still has no
-  match after two tries, film the plan steps that show anyway (tell staff, the report) and finish the story with the
-  recorded example (section 10), labeled as recorded.
+  match after two tries, film the plan steps that show anyway (tell staff, the report, already open since there is
+  no way back) and finish the story with the recorded example (section 10), labeled as recorded.
 - Say: "Not yet. It only names a train when the data backs it up. Let's give it a moment."
 
-### 9.2 Two trains fit (ambiguous or uncertain)
+### 9.2 A few trains fit, and the most likely one is not ours
 
-- Sign: "Which way was it going?" or "Which one were you on? Two fit what you remembered."
-- Do: tap **To Airport**, then the **Red Line** train. This is expected at a station where trains pass every few
-  minutes both ways.
+- Sign: "Which train were you on?" with "Most likely yours" showing the **Red toward North Springs** (or a Gold).
+- Do: tap **No, show the others**, then tap the **Red Line toward Airport** (line badge, direction, the time it passed
+  West End). The app trusts that tap and goes straight to its plan. This is expected at a station where trains pass
+  every few minutes both ways.
 - Avoid "Not sure, plan for both": the plan then keeps only ways that work for both trains and may offer none.
-- Say: "One more tap tells them apart."
+- Say: "Not that one. This one."
 
 ### 9.3 The planner recommends waiting, or a later train
 
-- Sign: Best way is **"Stay at West End and wait on the platform toward North Springs"** (about 10:49), or a later
-  train to **Lakewood-Ft McPherson** (the 10:32 Red, back about 10:44).
+- Sign: "Your best plan" is **"Wait at West End, platform toward North Springs."** (about 10:49), or **"Take the
+  10:32 train to Lakewood-Ft McPherson."** (back about 10:44).
 - Why: the taps finished after the Leave by time, or the 10:24 was under about 2.5 min away (1 min if the app
   assumes you are still on the platform you stepped off onto) when the plan was made. The app never counts on a
   train you would have to hurry for.
-- Do: **follow the Best way as it is now.** For Lakewood: board the 10:32 Red, tap On another train, step off at
+- Do: **follow "Your best plan" as it is now.** For Lakewood: board the 10:32 Red, tap On another train, step off at
   Lakewood-Ft McPherson about 10:36, wait toward North Springs. For West End: cross to the northbound side and wait.
   Text B the station. Both still end in a real reunion.
 - Say: "It picked the next way I can make at an easy pace."
@@ -347,11 +374,11 @@ back, follow them, take the next **Red to North Springs**, and text A (that is s
 
 ### 9.5 The train leaves service at the Airport (or does not come back)
 
-- Likelihood: on the weekday measured, 0 of 136 trains reaching a terminus from 12:30 to 7 PM failed to come back
-  within 45 min. Saturday was never measured, so it can happen.
+- Likelihood: on Friday, 0 of 136 trains reaching a terminus from 12:30 to 7 PM failed to come back within 45 min.
+  On Saturday morning, 2 of 96 arrivals did not come back within 45 min, so it can happen.
 - Sign for B: an "out of service" sign or announcement, staff clearing the train. Sign on Phone A: the train is not
   seen past its departure plus 10 min, then "It hasn't been seen since the end of the line, so it may be out of
-  service. The report is the safe step." and the Tell staff and report steps.
+  service. The report is the safe step." and the Tell staff and report steps, open without tapping "Didn't find it?".
 - Do: B follows staff, takes the next Red to North Springs with the bag, texts A. Film A's screen honestly: this is the
   app being calm and truthful. The bag still reaches A, but **do not narrate it as predicted**: the reunion with the
   next train is B's doing, not the app's.
@@ -379,14 +406,15 @@ real data from Friday, recorded from the same API.
 Taps:
 
 1. **I lost something**
-2. Under "From the recorded ride": **Garnett station** (train is worked out from the station)
-3. **Pick a time**, enter **15:24**, **Use 3:24 PM**
-4. Results: "Red Line train, train run 407", How sure: Medium, the map and "Where it is now" (frames every 10 s)
-5. **See your plan**, "Do you think someone took it?": **No**. Leave "Where are you now?" unanswered.
-6. Ways to get it back: **"Ride to Lakewood-Ft McPherson, step off and wait on the other platform for it coming
-   back."** About 3:53 PM, between 3:48 PM and 4:01 PM, Estimate, Leave by 3:33 PM, "Take the 3:34 PM train from
-   Garnett toward Airport, train run 411." Other way: wait at Garnett, about 3:59 PM. The best way holds through the
-   whole recording.
+2. "Bus or train?": **Train**
+3. Under "From the recorded ride": **Garnett station**
+4. **Pick a time**, enter **15:24**, **Use 3:24 PM**
+5. Results: **"Your train"**, the Red Line toward Airport (train run 407), when it passed Garnett, the map and where
+   it is now (frames every 10 s). Tap **See your plan**.
+6. The map with the route drawn, then **Your best plan**: "Take the **3:34** train to **Lakewood-Ft McPherson**." /
+   "Cross to the other platform." / "Your train arrives **~3:53**. Get on, check your seat." Estimate, Leave by 3:33.
+   Under More: between 3:48 PM and 4:01 PM. Other way: "Wait at **Garnett**, ~3:59". Leave "Where are you now?"
+   unanswered. The best way holds through the whole recording.
 7. To show a live change: "Where are you now?", **At a station**, **Five Points station**. The same Lakewood switch on
    the 3:32 PM train, then after about 3 min the best way changes to **Oakland City** (announced), because the 3:32 PM
    train can no longer be boarded at an easy pace. That change is in the recorded data, not staged.
@@ -397,9 +425,10 @@ Variants:
 
 - "Where are you now?": **On another train**, **Gold to Airport, next stop East Point**: a "Meet it" card at East Point,
   3:34 PM, live (the rider's train and the bag train share the platform).
-- **www.bringit.casa/?mode=offline&set=hero-rail&case=uncertain** shows the "Which way was it going?" question first.
+- **www.bringit.casa/?mode=offline&set=hero-rail&case=uncertain** shows "Which train were you on?" with "Most likely
+  yours" first; "No, show the others" lists each train to tap.
 - **www.bringit.casa/?mode=offline&set=late-rail** (bag on Red 402 at West End, 9:20 PM Friday): "We can't time a way
-  back right now." with "It may not come back tonight..." up front, and the report and tell-staff steps. On Oct 9, 402
+  back right now." with "It may not come back tonight..." up front, and the report and tell-staff steps already open. On Oct 9, 402
   left the feed at 9:31 PM and never came back. Use it for the "report" beat.
 
 ---
@@ -414,11 +443,11 @@ Lower thirds: "Live, Sat Oct 10" on live footage; "Recorded example, Fri Oct 9" 
 | Time | Beat | Picture | Voice over or line |
 |---|---|---|---|
 | 0:00 to 0:08 | **Problem** | Doors close, the bag rides away, A on the West End platform | "You step off. Your bag doesn't. Today you fill in a form and hope." |
-| 0:08 to 0:22 | **Match** | The two taps at 2x, "Which way was it going?", then "Likely match: Red Line train, train run NNN" | "Two taps. It checks every train that passed that platform and finds the exact one." |
-| 0:22 to 0:35 | **Live map** | "Where it is now", the dot moving toward the Airport; B's shot of the train | "And it shows where that train is right now." |
-| 0:35 to 1:02 | **The smart plan** | "Ride to East Point, step off and wait on the other platform", the window, A boarding, B at the Airport sign change, the chip flipping Estimate to Live, "At 10:42" | "It knows where the train turns around and how long it waits, measured on real trains. So it plans a way back, with a time window, and never asks you to hurry. When the train turns, the estimate goes live." |
+| 0:08 to 0:22 | **Match** | Train, the sentence said out loud, "Yes, that's right", then "Most likely yours" and "Yes, that's it" (2x) | "Train. Then I just say it. It checks every train that passed that platform and finds the exact one." |
+| 0:22 to 0:35 | **Live map** | The plan's map: "Your bag is here" moving toward the Airport, the route and pins drawn; B's shot of the train | "And it shows where that train is right now, and where I'll meet it." |
+| 0:35 to 1:02 | **The smart plan** | "Your best plan": "Take the 10:24 train to East Point." / "Cross to the other platform." / "Your train arrives ~10:42.", A boarding, B at the Airport sign change, the chip flipping Estimate to Live, "10:42" | "It knows where the train turns around and how long it waits, measured on real trains. So it plans one calm way back, and never asks you to hurry. When the train turns, the estimate goes live." |
 | 1:02 to 1:15 | **Reunion** | The Red to North Springs pulls into East Point, A waiting back from the edge, bag handed over | "Twenty-five minutes after stepping off. No tracker, no account." |
-| 1:15 to 1:25 | **The report** | The report card filled from the match, "Tell staff now"; a quick cut of late-rail's "It may not come back tonight" (labeled recorded) | "When it can't come back, it says so plainly, and the report is already filled in." |
+| 1:15 to 1:25 | **The report** | "Didn't find it?" opening the report card filled from the match and "Tell staff now"; a quick cut of late-rail's "It may not come back tonight" (labeled recorded) | "When it can't come back, it says so plainly, and the report is already filled in." |
 | 1:25 to 1:30 | **Close** | Clear now, the logo lockup, bringit.casa | "Works on any phone. Nothing stays on it. bring it home, at bringit.casa." |
 
 Lines rules: short and calm. Say "smart" or describe what it does, never "AI". No "catch", "run", "hurry" (except to say
@@ -429,7 +458,8 @@ nobody has to), "chase" or "confront". Say "meet it". If the live run fell back 
 
 ## 12. After each take
 
-- On Phone A: **Done**, then **Clear now** (deletes the session's answers; the server deletes it within 24 h anyway).
+- On Phone A: **Done**, then **Clear now** (deletes the search at once; left alone, it deletes itself 2 hours after
+  its last use).
 - Stop screen recording, check it saved, note the take's real times (doors closed at West End, Live flip, arrival at
   East Point) for the edit and for the team's notes on how Saturday behaved.
 - Nothing was reported to anyone. Nothing was left anywhere.
@@ -447,5 +477,5 @@ nobody has to), "chase" or "confront". Say "meet it". If the live run fell back 
 - Planner rules: `api/backtrack_api/reunion.py` (switch_platform, the station boarding rule, ranking),
   `api/backtrack_api/railturn.py` (A' = 1.055, m_T 90 s, window 5 min early and 8 min late, Airport layovers, dead-end
   termini), ARCHITECTURE.md 7.8 and 7.9, `docs/reunion-measurements.json`.
-- Screen wording: `web/lib/copy.ts` and `web/README.md` ("Ways to get it back"); the backup path from
+- Screen wording: `web/lib/copy.ts` and `web/README.md` ("Your best plan", the results pick, the intake); the backup path from
   `web/e2e/hero.spec.ts` and `web/public/fixtures/hero-rail/`.

@@ -103,3 +103,22 @@ after it), which is why the exact top-pick share is lower than for trains while 
 Known data issues: buses on a block's last trip after midnight often go dark before the end of the line; a few
 buses report a trip id that does not match where they are; Saturday morning dropped some scheduled trips; and
 route 49 was barely in the feed on Saturday morning (6 of 27 trips).
+
+### After the fixes (Saturday morning, same harness, same moments)
+
+The late-train rule was tried at three widths before settling on 4 minutes; each run re-scored the same Saturday
+calls on the changed planner.
+
+| | Before | Late rule 10 min | 3 min | 4 min (shipped) |
+|---|---|---|---|---|
+| Recommended options missed | 157 (8.2%) | 40 (2.1%) | 34 (1.8%) | **26 (1.4%)** |
+| Never came | 41 | 41 | 41 | 41 (2.1%) |
+| Top-ranked option truly the soonest | 840 of 856 (98.1%) | 877 of 910 (96.4%) | 886 of 919 (96.4%) | **887 of 920 (96.4%)** |
+| Recommended within 60 s of the best | 766 of 787 | 787 of 841 | 805 of 850 | 804 of 851 |
+
+The top-pick share moves a little because more calls become checkable once more options are offered; the misses
+are the number that matters to a rider. Of the 26 left: 18 are Blue trains at Indian Creek, whose turn is invisible
+in the feed, 3 are one Red train that turned in under 20 s, and 5 are live options missed by 11 to 49 s. Friday night
+was unchanged: 1 of 316 recommended missed (0.3%), top pick 436 of 455 (96.5%) after the change, moving only through
+low-confidence options. A later change (Oct 10, midday) stopped one rule from marking every option low when the
+rider is already on the platform; it only adds recommendations where the rider is in place before the early window.

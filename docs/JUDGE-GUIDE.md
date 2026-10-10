@@ -8,7 +8,7 @@ Main track: Social Good (Cox Automotive). Backup track: AI/ML. Live at **www.bri
 Ground rules for answering:
 
 - Every number here comes from the repo (ARCHITECTURE.md, api/README.md, docs/reunion-measurements.json,
-  docs/DEMO-SCRIPT.md, the code's docstrings). If a judge asks for a number that isn't here, say "we haven't
+  docs/BACKTEST.md, docs/DEMO-SCRIPT.md, the code's docstrings). If a judge asks for a number that isn't here, say "we haven't
   measured that" instead of guessing.
 - Things marked **(not sure)** are open. Say so if asked.
 - The app's screens never say "AI" (copy rule), and the demo video says "smart" or describes what it does. Talking to
@@ -24,12 +24,13 @@ Ground rules for answering:
 > You step off a MARTA train. Your bag doesn't. Today you fill in a form and hope: Lost and Found answers the phone
 > weekdays 8:30 to 5, and an item can take up to five business days just to reach the office.
 >
-> bring it home finds the exact bus or train you were on from two taps, where you got off and about when. It shows
-> where that vehicle is right now, and plans a calm way to get your stuff back: wait here, ride on and switch
-> platforms, or meet it at the end of the line, with a time window. If it can't come back, it says so plainly and
-> hands you MARTA's report already filled in.
+> bring it home finds the exact bus or train you were on from three quick taps: bus or train, where you got off, and
+> about when. It shows where that vehicle is right now, and gives you one calm plan to get your stuff back, drawn on
+> the map: wait here, ride on and switch platforms, or meet it at the end of the line. If it can't come back, it says
+> so plainly and hands you MARTA's report already filled in.
 >
-> No tracker, no account, works on a borrowed phone. Find My shows where it was. bring it home shows where it is.
+> No tracker, no account, no tracking. Works on a borrowed phone. Find My shows where it was. bring it home shows
+> where it is.
 
 ### 2 minutes
 
@@ -40,13 +41,15 @@ Ground rules for answering:
 2. **The problem (20 s).** The official path is slow: an online form, phone hours Monday to Friday 8:30 AM to 5 PM,
    up to 5 business days for the item to reach the office, kept 30 days. The form asks for the vehicle number, which
    almost nobody knows. Most riders have no tracker, and trackers go stale in tunnels.
-3. **What it does (40 s).** Two taps. We record every MARTA bus and train position all day from MARTA's public
-   feeds, so we can check which vehicles actually passed your stop at that time and pick the one you were on. Then
-   it shows it live on a map and plans every way back, soonest first, labeled Live, Estimate or Timetable.
+3. **What it does (40 s).** Three quick taps, or one sentence. We record every MARTA bus and train position all day
+   from MARTA's public feeds, so we can check which vehicles actually passed your stop at that time and give you one
+   answer: "Your train". Then it shows it live on a map with your best way back drawn on it, labeled Live, Estimate
+   or Timetable.
 4. **Why you can trust it (30 s).** The decisions are plain code on real data, not a chatbot. AI only translates a
    sentence you typed or said into form fields, and rewords the report email. It can't invent a stop, a time or a
-   train. Every way back comes from measuring how real MARTA trains and buses turn around. This morning it predicted
-   a train would come back through East Point about 8:57, and it passed at about 8:57:30.
+   train. Every way back comes from measuring how real MARTA trains and buses turn around, and we replayed Saturday
+   morning and Friday night through the planner to check it. This morning it predicted a train would come back
+   through East Point about 8:57, and it passed at about 8:57:30.
 5. **Close (10 s).** Built for transit riders, people without trackers, people on a borrowed phone. Atlanta today,
    any city with a transit feed tomorrow.
 
@@ -54,35 +57,34 @@ Ground rules for answering:
 
 ## 2. What it does, as the rider sees it
 
+Three quick taps, one exact answer, one plan.
+
 1. **Home.** "Left something on a MARTA bus or train?" Tap **I lost something**.
-2. **Question 1: "Where did you get off?"** The app takes one location fix and lists the nearest stops and stations,
-   each with a bus or train icon and its routes or lines. Or search, or "Not sure". Bus or train is worked out from
-   the place (a rail station means train, a bus stop means bus). Only a place that serves both, a streetcar stop or
-   "Not sure" asks "Bus or train?".
-3. **Question 2: "About when did you get off?"** **Just now** (the last 10 minutes) is the big default. Other buckets,
-   "Pick a time" and "Not sure" are smaller.
-4. **Or say it in one sentence.** A card at the top of question 1, by voice or typing: "I left my backpack on the
-   Red Line, got off at West End 5 min ago". The app reads it, then the rider confirms each piece by tap.
-5. **The match.** "Likely match: Red Line train, train run 402", "How sure: High" (or Medium), and a live map of
-   where it is now. Line and direction are never asked up front. Only when two trains fit does the results screen
-   ask one question with the real candidates: "Which way was it going?" or "Which one were you on? Two fit what you
-   remembered." Then it matches again.
-6. **The plan ("See your plan").** Optional taps that only change the plan, never the match: "What did you lose?",
-   "Do you think someone took it?", for a train "Where are you now?" (at a station, on another train, somewhere
-   else), "Which part of the train?", "Saw a car number inside?", and "I walk slowly or use a mobility aid".
-7. **The plan steps, in order:**
-   - Safety first if someone may have taken it (MARTA Police and 911).
-   - **Tell staff** about the unattended bag now. For a train: if it fell on the tracks, don't go after it.
-   - **Ways to get it back.** The best way now, with a time ("About 10:42 AM, between 10:37 AM and 10:50 AM"), a
-     Live / Estimate / Timetable chip, "Leave by" with a calm countdown, the steps (which train, where to step off,
-     which platform), a walking Directions button, then other ways, then "Why not other ways" in calm sentences.
-   - The vehicle summary (route, vehicle or train run, stop, time).
-   - **The report**: MARTA's own form fields with our values filled in, an Open form link and Copy details.
-   - **Call Lost and Found**: hours, or after hours the next opening and a calendar reminder.
-   - Item extras: wallet means freeze cards first; phone means lock or erase it.
+2. **Question 1 of 3: "Bus or train?"** Four big buttons: **Bus**, **Train**, **Streetcar**, **Not sure**. Under them a
+   small **"Lost it somewhere else?"** link for anything not on MARTA.
+3. **Question 2 of 3: "Where did you get off?"** At the top, a **"Say it in one sentence"** card. Then the nearest
+   stations or stops for that ride only (from one location fix, never stored), each with its lines or routes and its
+   distance in feet or miles. Or search, or "Not sure". After "Not sure" on question 1, both kinds are listed and the
+   place decides it (a rail station means train, a bus stop means bus); only a place that serves both, or a
+   streetcar stop, asks "Bus or train?" again.
+4. **Question 3 of 3: "About when did you get off?"** A big **Just now** (the last 10 minutes; we search 5 minutes
+   either side of 5 minutes ago). Smaller: the other ranges (10 to 30 minutes, 30 to 60, 1 to 2 hours, over 2 hours),
+   **Pick a time**, and "Not sure". Optional, only when the place has more than one to choose from: **"Know your bus?
+   Tap it."** with the stop's routes, or **"Know your line? Tap it."** with the station's lines. Never needed.
+5. **Or say it in one sentence.** By voice or typing: "got off at five points from the blue line just now". Gemini
+   turns it into fields, then our own code checks them against real stops and reads the time (ranges like "5-10
+   minutes ago" work). The rider sees what was read and taps **Yes, that's right**. If the sentence said where and
+   when, it goes straight to the match, with no question screens; anything missing is asked by tap.
+6. **The match: one exact answer.** **"Your train"** (or "Your bus") with its line badge, which way it was going, and
+   the time it passed your stop ("Passed Five Points at 11:32 AM"), plus where it is now. When a few fit (a busy
+   station sees several trains in any 10 minutes), the screen asks **"Which train were you on?"** and leads with
+   **"Most likely yours"**: **Yes, that's it** or **No, show the others**. Every other train or bus is then a big tap
+   (line badge, direction, the time it passed). Whatever the rider picks is trusted, and the plan is for that one.
+7. **The plan.** Map first, then "Your best plan" in two or three short steps, then "Didn't find it?" for everything
+   else. Section 6 walks through it as the rider sees it.
 8. **It stays live.** While the plan is open it re-checks every 20 s. If the best way changes it says "New best way to
    get it back". With no signal the last answer stays, with "Couldn't update just now".
-9. **Done, then Clear now.** Deletes the session. The server deletes it within 24 h anyway.
+9. **Done, then Clear now.** Deletes the search at once. Left alone, it deletes itself 2 hours after its last use.
 
 Also: "Lost it somewhere else?" gives a simple plan with places to call (built on the phone, no server). And "See a
 recorded example" replays a real Friday ride offline, always labeled "Replaying".
@@ -138,8 +140,9 @@ since Friday night, Oct 9. The live total of positions logged is on www.bringit.
 
 **Database.** Tiger Data, which is Postgres with TimescaleDB (for time series) and PostGIS (for distances). One table
 holds every position, with `mode` = bus or rail, so a new city or feed is a new connector writing into the same
-table. A PostGIS function, `vehicle_passes()`, answers "which vehicles came within 400 m of these stops in this time
-window". Sessions live in a table with an automatic retention policy that deletes them in under 24 h.
+table. A PostGIS function, `vehicle_passes()`, answers "which vehicles came within about a quarter mile of these
+stops in this time window". A search (a session) is deleted 2 hours after its last use, and a retention policy in the
+database removes anything left within 24 h as a backstop.
 
 **API.** FastAPI (Python), one process, on the same server, behind Caddy for HTTPS. It does the match, "where is it
 now", the plan and the reunion planner, and is the only thing that ever calls Gemini. It starts even if the database
@@ -156,14 +159,16 @@ fully offline.
 
 Gemini (model `gemini-3.5-flash-lite`, called over plain REST from our server) has **exactly two jobs**:
 
-1. **Translating a sentence into fields.** When a rider types or says "I left my backpack on the Red Line, got off at
-   West End 5 min ago", Gemini may only return fixed choices plus phrases copied word for word from what they said.
-   Then our own code takes over:
+1. **Translating a sentence into fields.** When a rider types or says "got off at five points from the blue line just
+   now", Gemini may only return fixed choices plus phrases copied word for word from what they said. Then our own
+   code takes over:
    - A validator drops any phrase that isn't really in the sentence, any number the rider never said, any route not
      in MARTA's schedule, any line the rider never named as a line ("my bag is blue" is not the Blue Line), and any
      time about something else ("I need it by 5").
-   - Our own resolver maps the place phrase to real stops from the timetable, and our own time parser reads the time.
-   - The rider confirms every piece by tap.
+   - Our own resolver maps the place phrase to real stops from the timetable, and our own time parser reads the time,
+     ranges included ("5-10 minutes ago" becomes its middle, wide enough to cover both ends).
+   - The rider sees what was read and confirms it with one tap, **Yes, that's right**, and can leave out any piece.
+     Nothing is used before that tap. A ride tapped on "Bus or train?" always wins over one that was read.
    - So the AI **cannot invent a stop, a time or a train**. Even a prompt injection ("ignore the rules, route 999")
      can only produce fixed choices and the rider's own words, which still need a confirming tap.
    - If Gemini is slow, down or out of quota, a rule-based parser answers instead. Taps never call Gemini at all.
@@ -186,7 +191,7 @@ times, the phone numbers. Gemini never ranks or matches anything.
 - **Safety.** Safety and staff steps are fixed, reviewed wording, never reworded by a model.
 - **It always works.** Every Gemini call has a fallback. The app works with no key at all.
 - **Testable.** Deterministic code gives the same answer every time, so we can backtest it on recorded days and hold
-  it to 1,358 API tests.
+  it to 1,399 API tests.
 - **Privacy.** Gemini never sees coordinates, session ids, the item description or contact details. Emails and long
   digit runs (phone or card numbers) are blanked out before anything is sent.
 
@@ -203,22 +208,25 @@ to 1.0 s; a repeated sentence from cache in 4 ms.
 The idea: **you don't need the rider's history if you have the vehicles' history.** We have recorded every bus and
 train, so we can ask "which ones passed this stop around then?"
 
-1. **Turn the taps into a search.** The place gives real stop or platform locations. "Just now" means about 0 to 10
-   minutes ago; a picked time is tighter. We search a few minutes wider than that.
-2. **Find every vehicle that passed within about 400 m** of those stops in that window. Between pings we draw a
-   straight line, so a bus that passed the stop between two 30 s reports is still caught. A vehicle sitting still for
-   90 s or more (like a train at the end of the line) counts as stopped there for that whole time.
+1. **Turn the taps into a search.** The ride says bus or train, and the place gives real stop or platform locations.
+   "Just now" searches 5 minutes either side of 5 minutes ago (so the last 10 minutes); each other range searches its
+   own span; a picked clock time searches 10 minutes either side, since people round. The server adds a small pad.
+2. **Find every vehicle that passed within about a quarter mile** of those stops in that window. Between pings we
+   draw a straight line, so a bus that passed the stop between two 30 s reports is still caught. A vehicle sitting
+   still for 90 s or more (like a train at the end of the line) counts as stopped there for that whole time.
 3. **Score each one.** Closer in time and closer in distance is better. To count at all, a vehicle has to come within
-   150 m. Things that don't fit (other route, other direction, other line) add a penalty but **never hide** a
-   vehicle, because riders misremember.
-4. **Count who we couldn't see.** About 43% of night buses don't report their location. Buses that were scheduled but
-   not reporting are added as possible answers, so one lone wrong bus can't look certain.
-5. **Confidence.** The scores become probabilities, including a "none of these" option. **High** means the top one
-   is clearly ahead, **Medium** means likely, **Low** means we don't name one. If our own recorder had a gap in that
-   window, confidence is capped.
-6. **The one follow-up question.** If two fit, the results screen asks the one question that separates them ("Which
-   way was it going?", "Which one were you on?") and matches again. If it's still unclear, it says "We couldn't pin
-   down the exact one yet" and still gives the plan, but **never puts a guessed bus number on MARTA's form**.
+   about 500 feet. Things that don't fit (other route, other direction, other line) add a penalty but **never hide**
+   a vehicle, because riders misremember.
+4. **Count who we couldn't see.** Many buses don't share their location (about 43% of night buses; on Saturday
+   morning only about half of the scheduled bus trips appeared in the feed). Buses that were scheduled but not
+   reporting are added as possible answers, so one lone wrong bus can't look certain.
+5. **Confidence.** The scores become probabilities, including a "none of these" option. If one is clearly ahead, it
+   is "Your train". If several fit, the rider picks, starting from the most likely. If our own recorder had a gap in
+   that window, confidence is capped.
+6. **When a few fit.** The results screen asks "Which train were you on?", leads with "Most likely yours" ("Yes,
+   that's it" or "No, show the others"), and lists every candidate as a tap with its line, direction and time. A tap
+   is the rider saying "that one", and the plan is built for it. If nothing fits, it says "We couldn't pin down the
+   exact one yet" and still gives the plan, but **never puts a guessed bus number on MARTA's form**.
 
 **Track the vehicle, not the trip.** A bus finishes one trip and starts the next on its "block", often under a new
 route number. A train keeps its run number when it turns around. We follow the physical vehicle, which is why the
@@ -227,15 +235,51 @@ plan can say where your bag is going next.
 **A rider's own train is never a candidate**, so when you're on another train, it can't match the one you're on.
 
 Evidence: on Oct 9 a route 49 clue at the venue stop found the one bus that passed it, out of 6 to 10 buses within
-400 m. **(Not sure)** We have no large "right vehicle in X of Y real cases" number yet; don't quote one.
+a quarter mile. **(Not sure)** We have no large "right vehicle in X of Y real cases" number yet; don't quote one.
 
 ---
 
-## 6. How the reunion planner works ("Ways to get it back")
+## 6. The plan: what the rider sees, and how the planner works
+
+### What the rider sees, top to bottom
+
+1. **The live map first.** The matched vehicle is labeled **"Your bag is here"** (or "Your phone is here", from the
+   item tap; "Your item is here" before it), moving every 10 s, with the rider's blue dot. The recommended way is
+   drawn as a route: the walk dashed, the ride bold along the line, and pins with short times, like **"Board here
+   12:17"**, **"Get off here ~12:28"**, **"Meet it here ~12:57"**. One line under it says where the train is now.
+2. **"Your best plan"**: two or three short steps with the place and time in bold, for example:
+   - "Take the **12:17** train to **East Lake**."
+   - "Cross to the other platform."
+   - "Your train arrives **~12:57**. Get on, check your seat."
+
+   Then a **Live** or **Estimate** chip ("~" means estimate), **Leave by**, a **Directions** button (Apple Maps on
+   iPhone and Mac, Google Maps elsewhere, walking, only for a place you walk to), and one safety line: **"Never hold
+   the doors."** (for a bus: "Never chase a bus."). Everything else (the time window, how the time is worked out,
+   notes, what to do as it pulls in) is folded under **More**. Other ways are one line each. For a train, "Where are
+   you now?" and "Which part of the train?" sit under the steps, asked only when they change the plan.
+3. **"Didn't find it?"**: one button that opens everything else: tell staff about the unattended bag now, keep these
+   details, MARTA's report form filled in, call or email Lost and Found, and the item's own steps. It is closed while
+   there is a way back, and open when there isn't.
+4. **"What did you lose?"**: an optional tap at the end. It never changes the match; it adds the item's steps
+   (wallet: freeze your cards; phone: mark it as lost) and the map's label.
+5. **"Think someone took it?"**: a quiet link above the safety footer. A tap moves MARTA Police and 911 to the top of
+   the plan, with an Undo.
+
+Every distance is in feet and miles. Nothing on the plan says to run, hurry or hold doors.
+
+**When the bus isn't sharing its location.** Many buses' trackers are off (on Saturday morning only about half of the
+scheduled trips appeared in the feed). Then the plan says **"We can't see this bus live, so this plan uses its
+timetable."** The map shows a hollow dot, **"Probably about here"** (or "Your bag is probably here"), where the
+timetable puts the bus now, moving every 30 s, and "Your best plan" is the timetable's way back ("Wait at ... Leave by
+..." / "Your bus should come back ~2:47"), marked **Estimate from the timetable** and "not certain". If a bus on the
+same block starts sharing its location again, live takes over: "This is probably your bus, sharing its location
+again."
+
+### How the planner works ("Your best plan")
 
 The rider's real question: what do I do now to get it back fastest? The planner computes **every way back**, keeps
-the ones that work with a safe margin, and ranks them **soonest first**. It's deterministic code (no Gemini),
-about 60 ms a call, so the phone re-asks every 20 s.
+the ones that work with a safe margin, and ranks them **soonest first**. The top one becomes "Your best plan". It's
+deterministic code (no Gemini), about 60 ms a call, so the phone re-asks every 20 s.
 
 **The kinds of ways back:**
 
@@ -251,15 +295,23 @@ about 60 ms a call, so the phone re-asks every 20 s.
 **Every option is labeled** Live (from live predictions or a fresh position), Estimate (it has to turn around or
 lay over first) or Timetable (no fresh data). Estimates show a window. The best way is never a low-confidence one.
 
-**The numbers behind it** (measured from our own recordings of one weekday, Fri Oct 9: 365 train arrivals at ends of
-lines from 33 trains; 187,340 bus positions from 248 buses):
+**The numbers behind it** (first measured from our own recordings of Fri Oct 9: 365 train arrivals at ends of lines
+from 33 trains; 187,340 bus positions from 248 buses. Then measured again on Saturday morning, Oct 10, and Friday
+night, docs/BACKTEST.md):
 
 Trains:
 - At a dead-end terminus (Airport, Doraville, North Springs, H E Holmes, Indian Creek) the feed shows the train
   heading back about **34 s** after it arrives (median), and the train **sits at the platform** (155 of 155 times).
-  It leaves about **7.5 min** after arriving (median).
+  It leaves about **7.5 min** after arriving (median). Saturday morning: 36 s and 7.0 min. Friday night: 33 s and
+  7.6 min. Saturday departures at the ends of the line matched the timetable 74 of 74 times.
+- **Saturday has its own ends of the line.** Green turns at King Memorial on Saturdays only (about 155 s to head
+  back), and Indian Creek's layover is short: 189 s on Saturday, 251 s Friday night. The planner now uses 250 s
+  there (it used 604 s before Saturday's data showed it was far too long).
+- **A late train can turn at once.** A train that reaches the end of the line after its scheduled departure sometimes
+  heads straight back instead of waiting for the next slot. The planner's window now opens from its arrival.
 - At pocket turns (like Bankhead) the train disappears from the feed and reappears heading back after about 260 s.
-  So "vanished" is not "gone".
+  So "vanished" is not "gone". Indian Creek turns are invisible for about 12 min, and some Saturday trains dropped
+  out of the feed for 20 to 80 min while running.
 - Live arrival times to the end of the line run about 5.5% short, so we stretch them by that much.
 - When the trains are running to the timetable (the feed's departure matched it in 168 of 201 cases), we take the
   next scheduled departure at least 90 s after arrival, then the scheduled run back.
@@ -276,20 +328,22 @@ Trains:
   only after the bag train is seen turning.
 
 Buses:
-- A bus **comes back about 9 in 10 times** (91.7% of 2,794 cases came back as scheduled; 5.6% stopped reporting).
-  Error median 113 s. Window 3 min early to 7 min late.
-- Buses sit at the end of the line about 8.7 min (median). Meeting it there is the walk that works: recommended
-  end-of-line meets failed 1.7% of the time.
+- A bus **comes back about 9 in 10 times** (91.7% of 2,794 cases came back as scheduled on Friday; 89.7% Saturday
+  morning; 89.9% Friday night). Error median 113 s. Window 3 min early to 7 min late.
+- Buses sit at the end of the line about 8.7 min (median; about 12 min on Saturday morning and Friday night). Meeting
+  it there is the walk that works: end-of-line meets failed 1.7% of the time (2.5% Saturday morning, 1.2% Friday
+  night).
 - **Walking ahead to a bus almost never works**: truly possible in only 0.8% of moments. Without a strict rule,
   predicted walks failed 14 to 19% of the time. So we require 5 min to spare and the bus at most 10 min away (14
   recommendations, 0 misses).
 - If the bus's block ends after this trip (99.2% of those buses vanished) or its next trip goes elsewhere, the app
   says it isn't coming back soon and points to the report.
 
-**Margins sized for a person, not a train:** walking speed 1.0 m/s (0.7 if you walk slowly), straight line times
-1.3 plus 60 s; 90 s to reach a platform, 120 s to change platforms, 60 s to step off. A train way back needs at least
-2 min of margin plus a 30 s pad (live train times run about 20 s optimistic). Boarding your own next train needs
-"a calm minute": missing it costs one headway, never the item.
+**Margins sized for a person, not a train:** walking speed about 2.2 mph (about 1.6 mph if you walk slowly), straight
+line times 1.3 plus 60 s; 90 s to reach a platform, 120 s to change platforms, 60 s to step off. A train way back
+needs at least 2 min of margin plus a 30 s pad (live train times run about 20 s optimistic). Boarding your own next
+train needs "a calm minute": missing it costs one headway, never the item. A rider already standing on the platform
+always gets a plan, even when a train may come back early.
 
 **What it won't promise:** no "the first train back is yours", nothing after 7 PM before the turn is seen, nothing
 on stale data, nothing that needs hurrying. If nothing can be promised, it says so, puts the most telling reason
@@ -300,50 +354,86 @@ first, and the Tell staff and report steps are always there.
 ## 7. Proof: how we tested it
 
 **Say this when a judge asks "how do you know it works?"**
-> "We tested it four ways. We measured how MARTA really behaves from our own recordings. We replayed Friday's
-> recordings through the real planner and checked every answer against what the train actually did: its first
-> choice was truly the fastest way back about 97% of the time. We checked it live on a real train this morning,
-> and it was on time to the half minute. And the code has over 1,400 automated tests."
+> "We replayed real recordings through the real planner and checked every answer against what the train actually
+> did. On Saturday morning and Friday night, its first choice was truly the soonest way back about 96% of the time.
+> The replay also found our mistakes, and we fixed them the same morning: recommended trains that would have left
+> without you went from 8.2% to 1.4%. We checked it live on a real train this morning, and it was on time to the half
+> minute. And the code has over 1,500 automated tests."
 
 ### Step 1: we measured how MARTA really behaves
 
 Before writing any rule, we measured it from our own recordings, so every constant in the planner is a measured
-number, not a guess (docs/reunion-measurements.json).
-- Trains: 365 arrivals at the end of a line, 33 trains. A train at a dead-end terminus shows it is heading back
-  after about **34 s** (median) and leaves after about **7.5 min**. Before 7 PM, **0 of 136** failed to come back.
-- Buses: 1,096 recorded visits to the end of a line, and 2,794 "does it come back" cases: it came back as scheduled
-  **about 9 in 10** times. Walking ahead to catch a bus at a later stop works in only **0.8%** of moments, so the app
-  almost never suggests it.
+number, not a guess (docs/reunion-measurements.json, docs/BACKTEST.md).
+- Trains: a train at a dead-end terminus shows it is heading back after about **34 s** (median) and leaves after
+  about **7.5 min** (Friday). Saturday morning: 36 s and 7.0 min, and Saturday's departures at the ends of the line
+  matched the timetable **74 of 74** times. Friday before 7 PM, **0 of 136** failed to come back.
+- Buses: a bus comes back as scheduled **about 9 in 10** times (91.7% Friday, 89.7% Saturday morning, 89.9% Friday
+  night). Walking ahead to catch a bus at a later stop works in **under 1%** of moments, so the app almost never
+  suggests it.
 
-### Step 2: we replayed Friday through the real planner (the backtest)
+### Step 2: we replayed Saturday morning and Friday night through the real planner (the headline)
 
 How it works, in plain words: the app has a time machine ("as of"). We pick a past moment, and the planner sees
 only the data that existed at that moment, never the future. We place a pretend rider (at the station they just
-left, further back, at a station ahead, or on a following train), ask the planner for its ways back, then look at
-what the train or bus **actually did** next in the recording. We did this every 5 minutes for every train, and every
-10 minutes for route 49 and 8 random buses: **5,137 train answers and 1,852 bus answers** (docs/BACKTEST.md).
+left, further back, at a station ahead, or on a following train), ask the planner for its plan, then look at what
+the train or bus **actually did** next in the recording. Every train every 5 minutes; every route 49 bus plus 8
+random buses every 10 minutes.
 
-What came out:
-- **The 97% (exactly 96.8%).** In 853 moments where more than one way back could be checked against the recording,
-  we looked at which way **really** reunited the rider soonest. The planner's #1 choice was that way **826 times**:
-  826 / 853 = 96.8%. So its top pick was truly the fastest way back about 97% of the time.
-- **Timing.** Recommended train options were off by **36 s** at the median (p90 120 s). Live times after the
-  train turns around: 33 s median.
-- **Misses.** 2.2% of recommended train options would have missed the train, and all of them came from one
-  timetable quirk (next point). Buses: about 6% would have missed, mostly walks to stops ahead.
-- **Buses meeting at the end of the line** failed 1 of 159.
+Two windows recorded during the hackathon: **Saturday morning, Oct 10** (Saturday service, first trains about 5 AM
+to about 10:30 AM) and **Friday night, Oct 9** (8:30 PM to the end of service, about 2:30 AM).
+
+Trains:
+
+| | Saturday morning | Friday night |
+|---|---|---|
+| Planner answers replayed | 2,422 | 1,913 |
+| Top pick was truly the soonest way back | **887 of 920 (about 96%)** after the fixes | **436 of 447 (97.5%)** before, **96.5%** after |
+| Recommended options that would have missed the train | **26 of about 1,920 (1.4%)** after the fixes, down from 157 (8.2%) | 1 of 316 (0.3%) |
+| Median timing error | 65 s (before the fixes) | 28 s |
+
+- **The 96% in plain words:** in 920 moments on Saturday morning where more than one way back could be checked, we
+  looked at which way **really** got the rider and the bag together soonest. The planner's first choice was that
+  way 887 times.
+- Friday night only moved a little after the fixes (97.5% to 96.5%), and only in options marked not certain, which
+  the app never recommends.
+- Before the fixes Saturday's top pick was truly the soonest 840 of 856 times (98.1%); after, 887 of 920 (96.4%). If
+  asked why it moved, say the fixes offered more options, so more calls became checkable; the number that matters to
+  a rider is the misses: 157 down to 26 (docs/BACKTEST.md, "After the fixes").
+
+Buses:
+- A bus came back as scheduled **about 9 in 10** times.
+- The top pick was truly the soonest **about 50%** of the time, and **within a minute of it about 86%**. Bus options
+  are often a minute apart (waiting at the end of the line, or at the stop just after it), so the exact share is low
+  while the within-a-minute share is high.
 
 ### Step 3: the backtest found our mistakes, and we fixed them
 
-This is a good "what was hardest" answer. The backtest caught two real failure modes:
-- When a scheduled departure falls just inside the minimum turnaround time, trains often take it and come back a
-  whole headway early. Those cases caused every train miss. Fix: the planner now marks them "not certain" and
-  never recommends them until it sees the train turn around.
-- Walking ahead to a later stop of a bus failed far too often. Fix: buses now need a 5 minute margin and the bus
-  at most 10 minutes away, or it isn't offered.
-The numbers above were measured just before these fixes, so the shipped planner should do at least this well.
+This is the best "what was hardest" answer. Each replay caught real failure modes, and each fix came with a test.
 
-### Step 4: hand-checked examples
+From Friday's replay:
+- When a scheduled departure falls just inside the minimum turnaround time, trains often take it and come back a
+  whole headway early. Fix: the planner marks these "not certain" and never recommends them until it sees the train
+  turn.
+- Walking ahead to a later stop of a bus failed far too often. Fix: buses now need a 5 minute margin and the bus at
+  most 10 minutes away, or it isn't offered.
+
+From Saturday morning's replay (155 of the 157 misses came from the first two):
+- **Late trains turn at once.** A train that reaches the end of the line after its scheduled departure sometimes
+  heads straight back (86 misses). Fix: its window now opens from its arrival.
+- **Indian Creek's layover was too long.** Our constant was 604 s; Saturday measured 189 s and Friday night 251 s
+  (69 misses). Fix: 250 s.
+- **King Memorial** is a Saturday-only end of the line for Green. The planner now knows it (about 155 s to head back).
+- **A rider already on the platform always gets a plan**, even when a train may come back early.
+
+After the fixes, Saturday's recommended train misses went from **157 (8.2%) to 26 (1.4%)**.
+
+### Step 4: the first replay, Friday afternoon and evening
+
+The same method on Friday Oct 9: **5,137 train answers and 1,852 bus answers**. The top pick was truly the fastest way
+back **826 of 853** times (96.8%). Recommended train options were off by **36 s** at the median (p90 120 s); live times
+after the train turns around, 33 s. Buses meeting at the end of the line failed 1 of 159.
+
+### Step 5: hand-checked examples
 
 - Red 407 to the Airport: predicted back at Lakewood 3:53:00 PM, actual 3:52:03.
 - Gold 302: predicted Brookhaven 1:30:00 PM, actual 1:29:45.
@@ -352,15 +442,15 @@ The numbers above were measured just before these fixes, so the shipped planner 
 - Honest at night: Red 402 at 9:20 PM got no way back ("It may not come back tonight"). It left the feed at 9:31 PM
   and never came back.
 
-### Step 5: a live test on a real train this morning (Sat Oct 10)
+### Step 6: a live test on a real train this morning (Sat Oct 10)
 
-Rider stepped off a Red to Airport at West End at 8:35 AM. The app matched **Red 402 (High)** and said: board at
-8:40, ride to East Point, other platform, back about **8:57 (8:52 to 9:05)**. Red 402 reached the Airport about
-8:46, headed back north at 8:48 and passed East Point at about **8:57:30**. Predicted about 22 minutes ahead, on time.
+Rider stepped off a Red to Airport at West End at 8:35 AM. The app matched **Red 402** and said: board at 8:40, ride
+to East Point, other platform, back about **8:57 (8:52 to 9:05)**. Red 402 reached the Airport about 8:46, headed back
+north at 8:48 and passed East Point at about **8:57:30**. Predicted about 22 minutes ahead, on time.
 
-### Step 6: automated tests on the code
+### Step 7: automated tests on the code
 
-- **1,358 API tests** (pytest) and **128 web unit tests**, plus **Playwright end-to-end tests** that tap through the
+- **1,399 API tests** (pytest) and **174 web unit tests**, plus **Playwright end-to-end tests** that tap through the
   real app at iPhone 14, iPhone SE and laptop sizes (the hero path, intake, plan, ways back, the installable app).
 - **Mutation testing:** we deliberately broke key safety rules (the 7 PM cutoff, the margins, the ranking order,
   the "comes back" math) to make sure the tests catch it. All 14 broken versions were caught.
@@ -368,8 +458,9 @@ Rider stepped off a Red to Airport at West End at 8:35 AM. The app matched **Red
   privacy, and on real data; every confirmed issue was fixed with a test.
 - The tests also check the screen text: no dashes, no "AI", never "run", "hurry" or "catch".
 
-**Honest limits of the testing:** the measurements cover one weekday (Friday Oct 9, mostly afternoon and evening);
-there are no weekend or early-morning measurements yet, and the bus numbers are mostly weekday evenings.
+**Honest limits of the testing:** the recordings cover Friday Oct 9 (afternoon, evening and night) and Saturday
+morning Oct 10. No Sunday, no weekday morning rush and no Saturday afternoon yet. Windows near a recorder gap are
+left out.
 
 ---
 
@@ -382,7 +473,7 @@ there are no weekend or early-morning measurements yet, and the bus numbers are 
 | API | FastAPI (Python), one process | Same language as the recorders and timetable loader; fast to build and test |
 | Server | Vultr (Ubuntu), Caddy in front | Recorders must run nonstop, which serverless can't do; Caddy gives automatic HTTPS |
 | Recorders | Python under systemd, one service per source | Restart themselves; one crashing never stops the other |
-| Database | Tiger Data: TimescaleDB + PostGIS | Built for time series (positions every 15 to 20 s), PostGIS for "within 400 m", and retention that auto-deletes sessions |
+| Database | Tiger Data: TimescaleDB + PostGIS | Built for time series (positions every 15 to 20 s), PostGIS for "within a quarter mile", and retention that auto-deletes sessions |
 | AI | Gemini 3.5 Flash-Lite over REST | Fast (under 1 s on our calls), free tier, structured JSON output; REST lets us enforce our own hard deadline |
 | Data | MARTA's public bus feed, rail API, static timetable | Real, public, free. Plain text "data from MARTA's public feeds", no logo |
 
@@ -390,14 +481,22 @@ there are no weekend or early-morning measurements yet, and the bus numbers are 
 
 ## 9. Privacy, safety and trust
 
-**Privacy**
-- **No login, no account, no cookies.** Works on a borrowed phone. "Nothing stays on it after you close this page."
-- **Your GPS is used in memory for one answer and never stored or logged.** The server's access logs are off on
-  purpose, because coordinates can travel in requests.
-- **Sessions auto-delete within 24 h**, enforced by the database itself even if the API is down. "Clear now" deletes
-  at once.
+**Privacy (our answer to the Zero Data challenge)**
+
+The line: **"We don't track people to find their stuff. We track the buses and trains."**
+
+- **No accounts, no login, no cookies, no tracking, no analytics.** Works on a borrowed phone. "Nothing stays on it
+  after you close this page."
+- **Your location is used only for your plan, and never stored or logged.** It finds the stops near you and times
+  your walk, then it's dropped. The server's access logs are off on purpose, because coordinates can travel in
+  requests.
+- **A search deletes itself 2 hours after its last use.** A backstop in the database deletes anything left within
+  24 h, even if the API is down. "Clear now" deletes at once.
 - **Item descriptions never leave the phone.** Gemini only ever sees a `[[ITEM]]` placeholder.
-- Only tap answers are stored: no GPS, no typed text, no names, no phone numbers.
+- Only tap answers are stored: no GPS, no typed text, no names, no phone numbers. On the phone, only the browser
+  tab's own storage, gone when the tab closes.
+- The only thing we keep for long is where MARTA's vehicles were, from MARTA's public feeds. None of it is about a
+  person.
 
 **Safety**
 - The app **never tells anyone to run, hurry, hold doors, go on the tracks, chase or confront** anyone. A copy lint
@@ -447,10 +546,13 @@ the item much easier for MARTA to match. Precise reports help the agency too.
 ## 11. Honest limits and what's next
 
 **Limits (say these before a judge finds them)**
-- Every timing rule was measured on **one weekday (Fri Oct 9)**. **Saturday was never measured.** Bus data is mostly
-  Friday evening: no morning peak yet.
+- The timing rules were measured on **Friday Oct 9 (afternoon, evening and night) and Saturday morning Oct 10**. No
+  Sunday, no weekday morning rush and no Saturday afternoon yet.
 - **Evenings are uncertain.** After 7 PM some trains leave service with no warning in the feed, so we don't promise.
-- **Not every bus reports** (about 43% of night buses don't). Then we use the schedule and say so.
+- **Not every bus reports** (about 43% of night buses don't; on Saturday morning only about half of the scheduled
+  trips appeared). Then the plan uses the timetable, marks it as an estimate and says so.
+- For buses, the top pick is truly the soonest only about half the time (within a minute about 86%), because bus
+  options are often a minute apart.
 - Train ids are **run numbers**, reassigned each day, not railcar numbers. We can't verify the physical cars.
 - The static rail timetable is wrong on special-schedule days, so we only trust it when the live feed agrees.
 - The streetcar has no live data, so it's schedule only.
@@ -463,8 +565,8 @@ the item much easier for MARTA to match. Precise reports help the agency too.
 - **Other cities.** Bus positions use GTFS-realtime, a standard transit feed format. A new city is one new
   connector writing into the same table. ("Atlanta today, any city with a transit feed tomorrow.") Rail feeds vary
   by city, like MARTA's, so each needs its own connector.
-- **More measurement days**: weekends, mornings, more evenings, so the evening and weekend rules can be measured
-  instead of cautious.
+- **More measurement days**: Sundays, weekday mornings, more evenings, so the evening and weekend rules can be
+  measured instead of cautious.
 - A real field accuracy number for matching ("right vehicle in X of Y").
 - Show it to MARTA; confirm the form reason and holiday hours with Lost and Found.
 
@@ -475,20 +577,44 @@ the item much easier for MARTA to match. Precise reports help the agency too.
 ### Product
 
 **What does it do, in one line?**
-It finds the exact MARTA bus or train you left something on from two taps, shows where it is now, and plans a calm
-way to get it back, or files a precise report.
+It finds the exact MARTA bus or train you left something on from three quick taps, shows where it is now, and gives
+you one calm plan to get it back, or a precise report.
 
-**Why two taps and not more questions?**
-Stressed people don't fill in forms. Where and when is enough to match; line or direction is asked only when two
-trains really fit, by showing the real candidates.
+**Why ask bus or train first?**
+It's the one thing every rider knows for sure, even stressed. It also makes the next screen short: "Where did you get
+off?" then lists only stations (or only stops) near you, instead of a mix of bus stops and platforms on the same
+corner. "Not sure" is fine; then the place decides it.
+
+**Why three taps and not more questions?**
+Stressed people don't fill in forms. Ride, where and when is enough to match. Line, direction and the item are never
+required: the line is an optional chip, the item is an optional tap at the end, and when a few trains fit we show
+them and let you tap yours.
+
+**Why only one answer?**
+A list of five trains is a puzzle for someone who just lost their bag. If one clearly fits, we say "Your train" and
+nothing else. If a few fit, we still lead with one, "Most likely yours", and everything else is one tap away ("No,
+show the others"). The plan is also one plan: "Your best plan" in two or three steps, the rest under "More".
+
+**How do you know which train I was on?**
+We've recorded every MARTA train and bus all day. Your three taps become a question to that history: which vehicles
+actually passed your platform in those minutes? Each is scored on how close it came in time and distance. If one
+clearly wins, that's "Your train", with its line, direction and the time it passed. If a few are close, we show the
+most likely first and you confirm it or tap another. Your tap is trusted, and the plan is built for the train you
+picked.
+
+**What if the bus isn't sharing its location?**
+That's common: on Saturday morning only about half of the scheduled bus trips showed up in the live feed. The plan
+says "We can't see this bus live, so this plan uses its timetable." The map shows a hollow "Probably about here" dot
+where the timetable puts it, and the way back comes from the timetable, marked as an estimate and "not certain". If
+the bus starts sharing its location again, live takes over.
 
 **What if I don't remember the exact time?**
-"Just now" covers the last 10 minutes, and "Not sure" works everywhere. Mismatches add a penalty instead of
-filtering, and when it can't tell, it says so and asks one question.
+"Just now" covers the last 10 minutes, the other ranges cover the rest, and "Not sure" works everywhere. You can also
+just say it: "5-10 minutes ago" works. Mismatches add a penalty instead of filtering, and when a few fit, you pick.
 
 **What if I'm already on another train?**
-Tell it "On another train" and pick yours from the live list. If the bag train is behind you on shared track, it
-tells you where to step off and wait; it never matches your own train.
+Under the plan, "Where are you now?", tap "On another train" and pick yours from the live list. If the bag train is
+behind you on shared track, it tells you where to step off and wait; it never matches your own train.
 
 **How is this different from Find My or calling Lost and Found?**
 An AirTag has no GPS and only updates when an Apple device hears it, so it freezes in tunnels and on moving
@@ -497,7 +623,8 @@ to arrive; we act in the first minutes and give them the vehicle number.
 
 **Isn't this just a live map of every bus?**
 No. The question is "which one vehicle was I on, minutes ago, and where is it now", not "where are all the buses".
-The map opens on a 400 m circle around your stop, not the city, and trains (not in MARTA's GTFS-realtime feed) are a core part.
+The plan's map shows your one vehicle and your way to meet it, not the city, and trains (not in MARTA's
+GTFS-realtime feed) are a core part.
 
 ### AI
 
@@ -512,8 +639,8 @@ stressed person to the wrong platform. Code on real data is checkable, testable 
 
 **Can the AI make up a stop, time or train?**
 No, by construction. It may only return fixed choices and the rider's own words, our resolver maps places to real
-stops, and the rider confirms each by tap. Reworded text must keep every placeholder and add no numbers, places or
-times, or we use the template.
+stops, and nothing is used until the rider taps "Yes, that's right". Reworded text must keep every placeholder and add
+no numbers, places or times, or we use the template.
 
 **What about prompt injection?**
 The validator throws out anything not literally in the sentence or not in MARTA's schedule, so "ignore the rules,
@@ -521,7 +648,7 @@ route 999" yields nothing usable. And the rider still confirms by tap.
 
 **What if Gemini is down or rate-limited?**
 A rule-based parser and template wording take over; nothing on the critical path waits on Gemini. There's a 4 s hard
-deadline, a circuit breaker and a daily cap.
+deadline, a circuit breaker and a daily cap. The three taps never call Gemini at all.
 
 **Which model, and why?**
 Gemini 3.5 Flash-Lite: it answered our structured calls in 0.65 to 0.73 s on Oct 9 and kept the placeholders intact.
@@ -550,12 +677,23 @@ to show it to them: it hands them better reports.
 ### Accuracy
 
 **How accurate are the ways back?**
-In the Oct 9 backtest (5,137 rail calls), recommended train ways without an early timetable slot missed 0 times, with
-median error 37 s. This morning live: predicted East Point about 8:57, it passed about 8:57:30, predicted about 22 minutes ahead.
+We replayed Saturday morning and Friday night through the real planner. For trains, its first choice was truly the
+soonest way back about 96% of the time (887 of 920 on Saturday morning; 96.5% Friday night). Recommended train options
+that would have missed the train: 26 of about 1,920 (1.4%) on Saturday after our fixes. This morning live: predicted
+East Point about 8:57, it passed about 8:57:30, predicted about 22 minutes ahead.
+
+**And for buses?**
+A bus comes back as scheduled about 9 in 10 times. The top pick is truly the soonest about half the time, but within a
+minute of the soonest about 86%, because bus options are often a minute apart.
+
+**Did the backtest ever catch you out?**
+Yes, and that's the point of it. Saturday's replay found that late trains sometimes turn at once, that our Indian
+Creek layover was far too long, and that King Memorial is a Saturday-only end of the line. We fixed all of them the
+same morning, and recommended train misses went from 157 (8.2%) to 26 (1.4%).
 
 **How accurate is the match itself?**
 On real data it found the one bus that passed the venue stop out of 6 to 10 nearby, and matched this morning's Red
-402 with High confidence. We don't have a large X of Y number yet, and we won't make one up.
+402. We don't have a large X of Y number yet, and we won't make one up.
 
 **Why should I believe a 7:30 PM prediction?**
 You shouldn't, and neither does the app. After 7 PM some trains leave service with no warning, so it never
@@ -563,9 +701,15 @@ recommends a way back before it sees the train turn, and says it may not come ba
 
 ### Privacy
 
+**What about Zero Data?**
+"We don't track people to find their stuff. We track the buses and trains." No accounts, no tracking, no analytics.
+Your location is used only for your plan and never stored or logged. A search deletes itself 2 hours after its last
+use, with a 24 h backstop in the database, and "Clear now" deletes it at once. What you lost and what it looks like
+never leave your phone. The only data we keep is where MARTA's vehicles were.
+
 **What do you store?**
-Only tap answers and the match, deleted within 24 h by the database. Never GPS, typed text, the item description,
-names or phone numbers. No login, no cookies.
+Only tap answers and the match, for 2 hours after the last use (24 h at most). Never GPS, typed text, the item
+description, names or phone numbers. No login, no cookies.
 
 **What does Gemini see?**
 The where-and-when sentence with emails and long numbers blanked, and value-free templates. Never coordinates,
@@ -602,16 +746,17 @@ physical vehicle is what lets us say where your bag goes next.
 
 **How do you test something that depends on live data?**
 Every API function takes "now" as a parameter, so the real engine can run "as of" any recorded moment. That powers
-the backtest, the offline demo, and the tests (1,358 API, over 120 web unit, Playwright end-to-end).
+the backtest, the offline demo, and the tests (1,399 API, 174 web unit, Playwright end-to-end).
 
 **What was hardest?**
 Trains turning around. The obvious answer, "take the first train heading back", is your bag train only 3.6% of the
 time, and some trains quietly leave service at night. We measured how each end of the line behaves, and the backtest
-even caught our own bug (early timetable slots), which we fixed.
+kept catching our own mistakes (early timetable slots on Friday; late trains, Indian Creek and King Memorial on
+Saturday), which we fixed.
 
 **What would you do with more time?**
-Measure weekends, mornings and more evenings, get a real field accuracy number for matching, and add a second city
-through a new connector.
+Measure Sundays, weekday mornings and more evenings, get a real field accuracy number for matching, and add a second
+city through a new connector.
 
 **Why a website and not a native app?**
 It has to work on a borrowed phone in the first minutes, so no install and no login. It's installable as an app if
@@ -623,31 +768,37 @@ you want, and the recorded example works offline.
 
 | What | Number |
 |---|---|
-| Taps before the match | **2** (where you got off, about when). "Just now" = last 10 min |
+| Taps before the match | **3** (bus or train, where you got off, about when). Or one sentence and "Yes, that's right" |
+| "Just now" | the last **10 min**, searched **5 min** either side of 5 min ago |
 | Bus feed polled | every **15 s** (feed updates every 30 s) |
 | Rail API polled | every **20 s** |
 | Recording since | **Thu Oct 8, 11:58 PM ET**; on Vultr since Fri Oct 9 |
-| Match radius | vehicles within **400 m**; must come within **150 m** |
-| Night buses not reporting | about **43%** |
+| Match radius | vehicles within about **a quarter mile**; must come within about **500 feet** |
+| Buses not sharing their location | about **43%** at night; Saturday morning only about **half** of scheduled trips appeared |
 | AI jobs | **2** (sentence to fields; reword email and call script) |
 | Gemini call time | **0.65 to 0.73 s**; hard deadline **4 s**; daily cap **200** |
-| Train turn at dead-end terminus | shows heading back in **34 s** (median); leaves after **7.5 min** (median) |
+| Saturday morning trains, top pick truly soonest | about **96%** (**887 of 920**), after the fixes |
+| Saturday morning, recommended train misses | **157 (8.2%)** before the fixes, **26 of about 1,920 (1.4%)** after |
+| Friday night trains, top pick truly soonest | **97.5%** (436 of 447) before, **96.5%** after |
+| Friday afternoon replay | top pick truly fastest **826 of 853 = 96.8%**; median error **36 s** |
+| Buses, top pick truly soonest | about **50%**; within a minute about **86%** |
+| Today's planner fixes | late trains turn at once; Indian Creek layover **250 s** (was 604 s); King Memorial (Saturday end of line); a rider on the platform always gets a plan |
+| Train turn at dead-end terminus | shows heading back in **34 s** (median); leaves after **7.5 min** (Saturday 36 s, 7.0 min) |
 | Bag train = first train back | only **3.6%** of the time |
 | Live ETA to end of line | about **5.5%** short |
 | Trains leaving service after 7 PM | **8 of 54** (7 to 9 PM), **4 of 64** (9 PM to midnight); **0 of 136** before 7 PM |
-| Bus comes back | about **9 in 10** (91.7%) |
-| Walking ahead to a bus works | **0.8%** of moments |
-| End-of-line bus meet failures | **1.7%** |
-| Train backtest | **5,137** calls; recommended (no early slot) **0 missed**, median error **37 s** |
-| Full planner backtest | **5,137** train + **1,852** bus answers replayed; top pick truly fastest **826 of 853 = 96.8%**; median error **36 s** |
+| Bus comes back | about **9 in 10** (91.7% Fri, 89.7% Sat morning, 89.9% Fri night) |
+| Walking ahead to a bus works | under **1%** of moments (**0.8%** Friday) |
+| End-of-line bus meet failures | **1.7%** Friday (2.5% Sat morning, 1.2% Fri night) |
 | Daytime hand-check | median error **42 s**, **20 of 21** inside the window |
 | Live check today | Red 402: predicted East Point **~8:57**, passed **~8:57:30**, predicted **~22 min** ahead |
 | Margins | train **2 min + 30 s** pad; bus **5 min** and bus at most **10 min** away |
-| Sessions deleted | within **24 h** |
+| Searches deleted | **2 h** after the last use; **24 h** backstop; Clear now at once |
 | Lost and Found | 404-848-3208, **Mon to Fri 8:30 AM to 5 PM**, up to **5 business days**, kept **30 days** |
-| Tests | **1,358** API, **128** web unit, Playwright end-to-end, **14 of 14** broken versions caught |
+| Tests | **1,399** API, **174** web unit, Playwright end-to-end, **14 of 14** broken versions caught |
 
-**Three lines to never forget**
+**Four lines to never forget**
 1. "Find My shows where it was. bring it home shows where it is."
 2. "The AI is the translator. The decisions come from real transit data."
 3. "It won't promise what it can't see. The report and staff are always the next step."
+4. "We don't track people to find their stuff. We track the buses and trains."
