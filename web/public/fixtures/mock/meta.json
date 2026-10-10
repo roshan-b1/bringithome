@@ -1,0 +1,12 @@
+{
+ "set": "mock",
+ "label": "Recorded example, Fri Oct 9",
+ "as_of": "2026-10-09T13:24:00-04:00",
+ "recorded_at": "2026-10-09T22:30:00-04:00",
+ "git_sha": "fbbbe57",
+ "taps": [
+  "what: bag", "now: still_there", "before: bus", "off: stop:210555 (Piedmont Ave SE @ Gilmer St SE)",
+  "when: picked 13:18", "sure: very", "bus_route: 49", "way: auto, Toward North Ave Station", "taken: no"
+ ],
+ "plan_frame": 0
+}

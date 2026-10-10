@@ -1,0 +1,25 @@
+.footer {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border-radius: var(--r-md);
+  background: var(--navy-04);
+  color: var(--navy);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+}
+
+.icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--danger);
+}
+
+.footer a {
+  font-weight: var(--fw-bold);
+  white-space: nowrap;
+  /* tel links are tap targets too: pad them without moving the text */
+  padding: 10px 2px;
+  margin: -10px -2px;
+}

@@ -1,0 +1,10 @@
+# next / playwright output (node_modules, .next and out are ignored at the repo root too)
+/node_modules
+/.next
+/out
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache
+next-env.d.ts
+*.tsbuildinfo

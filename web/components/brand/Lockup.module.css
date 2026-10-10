@@ -1,0 +1,18 @@
+.lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--h) * 0.34);
+  max-width: 100%;
+}
+
+.word {
+  height: var(--h);
+  width: auto; /* the width/height attributes only reserve the aspect ratio */
+}
+
+/* the narrowest phones (320 px): shrink the lockup rather than overflow */
+@media (max-width: 359px) {
+  .lockup {
+    --h: 72px !important;
+  }
+}

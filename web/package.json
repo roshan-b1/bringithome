@@ -1,0 +1,34 @@
+{
+  "name": "bring-it-home-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "node scripts/sync_contacts.mjs && next build",
+    "start:out": "python3 -m http.server -d out 3000",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "node --test \"lib/**/*.test.ts\" \"contracts/**/*.test.ts\"",
+    "lint:copy": "node scripts/copylint.mjs",
+    "e2e": "playwright test",
+    "geo": "python3 scripts/export_geo.py",
+    "sync:contacts": "node scripts/sync_contacts.mjs",
+    "check": "npm run typecheck && npm run test && npm run lint:copy"
+  },
+  "dependencies": {
+    "maplibre-gl": "6.13.0",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "5.9.3"
+  }
+}

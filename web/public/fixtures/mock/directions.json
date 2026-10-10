@@ -1,0 +1,14 @@
+{
+ "ask": false,
+ "options": [
+  {
+   "direction_id": 0,
+   "direction": null,
+   "label": "Toward North Ave Station",
+   "stop_ids": [
+    "210555"
+   ]
+  }
+ ],
+ "source": "as_of"
+}

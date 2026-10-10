@@ -1,0 +1,36 @@
+{
+ "session_id": "1f9a8109-f74b-47cf-b85c-51609aeda7d7",
+ "deletes_by": "2026-10-11T02:28:31.203062Z",
+ "as_of": "2026-10-09T03:40:00-04:00",
+ "record": false,
+ "match": {
+  "status": "no_match",
+  "level": null,
+  "context": {
+   "vehicles_near": 0,
+   "counted": "buses",
+   "radius_m": 400,
+   "place_label": "Piedmont Ave SE @ Gilmer St SE",
+   "window": {
+    "from": "2026-10-09T03:22:00-04:00",
+    "to": "2026-10-09T03:38:00-04:00"
+   }
+  },
+  "candidates": [],
+  "schedule_candidates": [],
+  "coverage": {
+   "unreported_share": 0.0,
+   "recorder_gap": true
+  },
+  "tie_break": null,
+  "separate_by": null,
+  "stats": {
+   "positions_scanned": 0,
+   "vehicles_considered": 0,
+   "query_ms": 24,
+   "sql": "SELECT source, vehicle_id, label, route_short, trip_id, trip_canceled, direction, destination, anchor_idx, piece, dist_m, t_pass, t_in, t_out, gap_s FROM vehicle_passes(%(mode)s, %(lons)s, %(lats)s, %(t_from)s, %(t_to)s, 400, interval '600 seconds', interval '90 seconds', %(until)s)",
+   "engine": "sql"
+  }
+ },
+ "source": "as_of"
+}

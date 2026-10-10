@@ -1,0 +1,48 @@
+{
+ "vehicle_key": "bus:2331",
+ "label": "1631",
+ "route": "49",
+ "destination_label": "North Ave Station",
+ "position": {
+  "lon": -84.38523864746094,
+  "lat": 33.76451110839844,
+  "bearing": 276
+ },
+ "at": "2026-10-09T17:25:42Z",
+ "age_s": 8,
+ "state": "live",
+ "next_stops": [
+  {
+   "place_id": "stop:900690",
+   "label": "Peachtree St @ Pine St NE",
+   "eta": "2026-10-09T17:26:27Z",
+   "source": "schedule"
+  },
+  {
+   "place_id": "stop:600055",
+   "label": "Peachtree St @ Renaissance Pkwy NE",
+   "eta": "2026-10-09T17:27:01Z",
+   "source": "schedule"
+  },
+  {
+   "place_id": "stop:904673",
+   "label": "Peachtree St @ North Ave",
+   "eta": "2026-10-09T17:28:25Z",
+   "source": "schedule"
+  },
+  {
+   "place_id": "stop:500294",
+   "label": "North Ave Station - Bay A",
+   "eta": "2026-10-09T17:30:00Z",
+   "source": "schedule"
+  },
+  {
+   "place_id": "stop:600054",
+   "label": "Peachtree St NE @ North Ave NE",
+   "eta": "2026-10-09T17:47:26Z",
+   "source": "schedule"
+  }
+ ],
+ "trip_status": "scheduled",
+ "source": "as_of"
+}

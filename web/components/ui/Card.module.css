@@ -1,0 +1,98 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-5);
+  border: 2px solid var(--navy-08);
+  border-radius: var(--r-lg);
+  background: var(--white);
+  box-shadow: var(--shadow-1);
+  list-style: none;
+}
+
+.accent {
+  border-color: var(--orange);
+  background: var(--orange-06);
+}
+
+.safety {
+  border-color: #f3c5bf;
+  background: var(--danger-bg);
+}
+
+.warning {
+  border-color: #f0d79a;
+  background: var(--warn-bg);
+}
+
+.quiet {
+  border-color: transparent;
+  background: var(--navy-04);
+  box-shadow: none;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+}
+
+.headText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+/* a stop on the route: navy ring, white centre, like the logo's wheel */
+.stop {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 4px solid var(--navy);
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--navy);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-heavy);
+  font-variant-numeric: tabular-nums;
+}
+
+.accent .stop {
+  border-color: var(--orange);
+}
+
+.eyebrow {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--ink-2);
+  letter-spacing: 0.01em;
+}
+
+.title {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-heavy);
+  line-height: var(--lh-tight);
+  padding-top: 4px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  font-size: var(--fs-base);
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+@media (forced-colors: active) {
+  .card {
+    border-color: CanvasText;
+  }
+}

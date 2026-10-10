@@ -1,0 +1,47 @@
+{
+ "vehicle_key": "bus:2331",
+ "label": "1631",
+ "route": "49",
+ "destination_label": "North Ave Station",
+ "position": {
+  "lon": -84.38513946533203,
+  "lat": 33.76927947998047
+ },
+ "at": "2026-10-09T17:28:43Z",
+ "age_s": 7,
+ "state": "live",
+ "next_stops": [
+  {
+   "place_id": "stop:500294",
+   "label": "North Ave Station - Bay A",
+   "eta": "2026-10-09T17:30:00Z",
+   "source": "schedule"
+  },
+  {
+   "place_id": "stop:600054",
+   "label": "Peachtree St NE @ North Ave NE",
+   "eta": "2026-10-09T17:47:26Z",
+   "source": "schedule"
+  },
+  {
+   "place_id": "stop:901415",
+   "label": "Peachtree St NE @ Renaissance Pkwy NE",
+   "eta": "2026-10-09T17:48:27Z",
+   "source": "schedule"
+  },
+  {
+   "place_id": "stop:900723",
+   "label": "Ralph Mcgill Blvd @ Peachtree St NE",
+   "eta": "2026-10-09T17:50:13Z",
+   "source": "schedule"
+  },
+  {
+   "place_id": "stop:901063",
+   "label": "Courtland St NE @ Andrew Young Intl Blvd",
+   "eta": "2026-10-09T17:52:27Z",
+   "source": "schedule"
+  }
+ ],
+ "trip_status": "scheduled",
+ "source": "as_of"
+}

@@ -1,0 +1,274 @@
+/* bring it home: design tokens and base styles.
+ *
+ * Brand from the logo (brand/bring-it-home-logo.png): navy #14213D for text and structure, orange #EF5B2B for the
+ * primary action and the route line, white ground. Calm, warm, high contrast: it has to read in Atlanta sunlight
+ * and on a projector, with one thumb, on a borrowed phone.
+ *
+ * Contrast (WCAG 2.2, computed): navy on white 15.9:1; --ink-2 on white 7.4:1; navy on orange 4.7:1 (so primary
+ * buttons carry navy text, passing AA at any size); orange on white 3.4:1, which is used only for fills, lines and
+ * the focus-adjacent accents (non-text, 3:1 needed), never for body text.
+ * Light theme only, on purpose: the brand is navy on white, and a dark variant would halve the contrast work for a
+ * one-weekend build. `color-scheme: light` keeps native controls light too.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* brand */
+  --navy: #14213d;
+  --navy-hover: #22335a;
+  --navy-press: #0c1528;
+  --orange: #ef5b2b;
+  --orange-hover: #f26d41;
+  --orange-press: #d94c1e;
+  --white: #ffffff;
+
+  /* tints for surfaces (navy and orange at low strength over white) */
+  --navy-04: #f5f6f9;
+  --navy-08: #eceff4;
+  --navy-14: #dde2eb;
+  --navy-24: #c4ccdb;
+  --orange-06: #fff5f0;
+  --orange-12: #ffe9df;
+  --orange-24: #fbd0bd;
+  --paper: #fffaf6; /* the desktop frame around the phone column: warm, never grey */
+
+  /* text */
+  --ink: var(--navy);
+  --ink-2: #4a5670; /* secondary text, 7.4:1 on white */
+  --ink-on-dark: #ffffff;
+  --ink-on-orange: var(--navy);
+
+  /* status, each legible as text on white and on its own tint (all >= 6:1) */
+  --ok: #156b3a;
+  --ok-bg: #e7f4ec;
+  --warn: #8a4b00;
+  --warn-bg: #fff3d6;
+  --danger: #b42318;
+  --danger-bg: #fdecea;
+
+  /* MARTA line colours, from the schedule feed's route_color. Swatches only, always beside the line's name */
+  --line-red: #ce242b;
+  --line-gold: #d4a723;
+  --line-blue: #0075b2;
+  --line-green: #009d4b;
+
+  /* type: 18 px base; one family (Schibsted Grotesk, the wordmark's closest Google match) */
+  --font-sans: var(--font-brand, ui-sans-serif), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fs-sm: 1rem; /* 16 */
+  --fs-base: 1.125rem; /* 18 */
+  --fs-md: 1.25rem; /* 20 */
+  --fs-lg: 1.5rem; /* 24 */
+  --fs-xl: 1.875rem; /* 30 */
+  --fs-2xl: 2.375rem; /* 38 */
+  --lh-tight: 1.12;
+  --lh-snug: 1.3;
+  --lh-body: 1.5;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 750;
+  --fw-heavy: 850;
+
+  /* space: 4 px steps */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --gutter: 16px;
+  --column: 480px; /* the phone layout; desktop centres it */
+
+  /* radii echo the logo: its 70-unit stroke turns with a 35-unit radius, half the stroke */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-pill: 999px;
+  --stroke: 3px; /* the route line in UI */
+
+  /* tap targets */
+  --tap: 56px;
+  --tap-lg: 64px;
+
+  /* focus: a navy ring with a white gap, visible on white, on tints and around the orange button */
+  --focus-ring: 0 0 0 3px var(--white), 0 0 0 6px var(--navy);
+
+  /* elevation, warm and soft */
+  --shadow-1: 0 1px 2px rgb(20 33 61 / 0.06), 0 2px 8px rgb(20 33 61 / 0.05);
+  --shadow-2: 0 2px 4px rgb(20 33 61 / 0.06), 0 12px 32px rgb(20 33 61 / 0.1);
+  --shadow-up: 0 -8px 24px rgb(20 33 61 / 0.08);
+
+  /* motion */
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 420ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* safe areas (viewport-fit=cover in the layout) */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0.01ms;
+    --dur: 0.01ms;
+    --dur-slow: 0.01ms;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ------------------------------------------------------------------------------------------------------- base */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: var(--paper);
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-body);
+  font-weight: var(--fw-regular);
+  font-feature-settings: 'kern', 'liga';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden; /* never a horizontal scroll, even if a long label misbehaves */
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+figure {
+  margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: var(--fw-heavy);
+  line-height: var(--lh-tight);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+ul[role='list'],
+ol[role='list'] {
+  list-style: none;
+  padding: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.18em;
+  text-decoration-color: var(--orange);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+
+button {
+  cursor: pointer;
+  touch-action: manipulation; /* no double-tap zoom delay on the big buttons */
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--r-xs);
+}
+
+::selection {
+  background: var(--orange-24);
+  color: var(--navy);
+}
+
+/* screen-reader-only text */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--sp-4);
+  top: calc(var(--sp-2) + var(--safe-top));
+  z-index: 100;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--navy);
+  color: var(--white);
+  border-radius: var(--r-sm);
+  font-weight: var(--fw-bold);
+  transform: translateY(-200%);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
+/* Windows high contrast and other forced-colours modes: keep borders, let the system pick colours */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 3px solid CanvasText;
+    outline-offset: 3px;
+    box-shadow: none;
+  }
+}

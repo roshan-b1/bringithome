@@ -1,0 +1,148 @@
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  min-height: var(--tap);
+  padding: var(--sp-3) var(--sp-6);
+  border: 2px solid transparent;
+  border-radius: var(--r-lg);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-snug);
+  text-align: center;
+  text-decoration: none;
+  user-select: none;
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+
+.full {
+  display: flex;
+  width: 100%;
+}
+
+.md {
+  min-height: var(--tap);
+  font-size: var(--fs-md);
+}
+
+.lg {
+  min-height: var(--tap-lg);
+  font-size: 1.375rem; /* 22 px */
+  padding-inline: var(--sp-8);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.label {
+  overflow-wrap: anywhere;
+}
+
+.sublabel {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  opacity: 0.85;
+}
+
+.icon {
+  flex: none;
+}
+
+/* primary: the route line's orange, navy words */
+.primary {
+  background: var(--orange);
+  color: var(--ink-on-orange);
+  box-shadow: 0 2px 0 var(--orange-press), 0 8px 20px rgb(239 91 43 / 0.28);
+}
+
+.secondary {
+  background: var(--white);
+  color: var(--navy);
+  border-color: var(--navy);
+}
+
+.quiet {
+  background: transparent;
+  color: var(--ink-2);
+  border-color: var(--navy-24);
+  border-style: dashed;
+  font-weight: var(--fw-semibold);
+}
+
+.danger {
+  background: var(--danger);
+  color: var(--white);
+}
+
+@media (hover: hover) {
+  .primary:hover {
+    background: var(--orange-hover);
+  }
+  .secondary:hover {
+    background: var(--navy-04);
+  }
+  .quiet:hover {
+    background: var(--navy-04);
+    color: var(--navy);
+  }
+  .danger:hover {
+    background: #9c1e14;
+  }
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.995);
+}
+
+.primary:active:not(:disabled) {
+  background: var(--orange-press);
+  box-shadow: 0 1px 0 var(--orange-press);
+}
+
+.button:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: var(--r-lg);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.loading {
+  cursor: progress;
+}
+
+.loading:disabled {
+  opacity: 1;
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 50%;
+  border: 3px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (forced-colors: active) {
+  .button {
+    border: 2px solid ButtonText;
+  }
+}

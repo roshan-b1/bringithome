@@ -1,0 +1,41 @@
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--gutter);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-snug);
+}
+
+.replay {
+  background: var(--navy);
+  color: var(--white);
+}
+
+.info {
+  background: var(--navy-04);
+  color: var(--navy);
+}
+
+.warning {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.icon {
+  flex: none;
+  margin-top: 1px;
+}
+
+.text {
+  min-width: 0;
+}
+
+.hint {
+  font-weight: var(--fw-regular);
+  opacity: 0.88;
+}
+
+.replay strong {
+  font-weight: var(--fw-bold);
+}

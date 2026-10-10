@@ -1,0 +1,118 @@
+{
+ "trains": [
+  {
+   "vehicle_key": "rail:404",
+   "line": "RED",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510029",
+    "label": "Oakland City",
+    "eta": "2026-10-09T17:24:10.074000Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:410",
+   "line": "RED",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510037",
+    "label": "Airport",
+    "eta": "2026-10-09T17:24:31.074000Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:408",
+   "line": "RED",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510026",
+    "label": "Midtown",
+    "eta": "2026-10-09T17:24:37.074000Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:301",
+   "line": "GOLD",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510015",
+    "label": "Five Points",
+    "eta": "2026-10-09T17:24:41.074000Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:310",
+   "line": "GOLD",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510024",
+    "label": "Lindbergh Center",
+    "eta": "2026-10-09T17:24:58.074000Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:302",
+   "line": "GOLD",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510006",
+    "label": "Chamblee",
+    "eta": "2026-10-09T17:25:27.074000Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:306",
+   "line": "GOLD",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510008",
+    "label": "College Park",
+    "eta": "2026-10-09T17:26:03.074000Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:407",
+   "line": "RED",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510036",
+    "label": "Buckhead",
+    "eta": "2026-10-09T17:27:15.074000Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:409",
+   "line": "RED",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": null,
+   "distance_m": null,
+   "preselect": false
+  }
+ ],
+ "source": "as_of"
+}

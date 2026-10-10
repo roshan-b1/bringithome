@@ -1,0 +1,56 @@
+{
+ "places": [
+  {
+   "place_id": "stop:500211",
+   "label": "Georgia State Station - Bay B",
+   "kind": "stop",
+   "lat": 33.750662,
+   "lon": -84.386144,
+   "distance_m": 51,
+   "stop_ids": [
+    "500211"
+   ],
+   "routes": [
+    "49",
+    "55"
+   ],
+   "lines": [],
+   "needs_confirm": false
+  },
+  {
+   "place_id": "stop:500210",
+   "label": "Georgia State Station - Bay A",
+   "kind": "stop",
+   "lat": 33.750374,
+   "lon": -84.386457,
+   "distance_m": 73,
+   "stop_ids": [
+    "500210"
+   ],
+   "routes": [
+    "21",
+    "22"
+   ],
+   "lines": [],
+   "needs_confirm": false
+  },
+  {
+   "place_id": "stop:500350",
+   "label": "Georgia State Station - Bay C",
+   "kind": "stop",
+   "lat": 33.749764,
+   "lon": -84.385434,
+   "distance_m": 77,
+   "stop_ids": [
+    "500350"
+   ],
+   "routes": [
+    "20",
+    "55"
+   ],
+   "lines": [],
+   "needs_confirm": false
+  }
+ ],
+ "source": "as_of"
+}

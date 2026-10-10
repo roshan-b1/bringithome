@@ -1,0 +1,83 @@
+.spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  color: var(--ink-2);
+  font-weight: var(--fw-semibold);
+}
+
+.track {
+  position: relative;
+  display: block;
+  width: var(--w);
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--orange-24);
+  overflow: visible;
+}
+
+.sm {
+  --w: 40px;
+}
+.md {
+  --w: 64px;
+}
+.lg {
+  --w: 120px;
+}
+
+.wheel {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: -9px;
+  border: 5px solid var(--navy);
+  border-radius: 50%;
+  background: var(--white);
+  animation: ride 1.4s var(--ease) infinite alternate;
+}
+
+@keyframes ride {
+  from {
+    transform: translateX(-4px);
+  }
+  to {
+    transform: translateX(calc(var(--w) - 14px));
+  }
+}
+
+.label {
+  font-size: var(--fs-base);
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  width: 100%;
+}
+
+.bar {
+  display: block;
+  border-radius: var(--r-xs);
+  background: linear-gradient(90deg, var(--navy-04) 0%, var(--navy-08) 40%, var(--navy-04) 80%) 0 0 / 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wheel {
+    animation: none;
+    transform: translateX(calc(var(--w) / 2 - 9px));
+  }
+  .bar {
+    animation: none;
+  }
+}
