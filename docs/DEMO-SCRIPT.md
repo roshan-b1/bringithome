@@ -150,7 +150,7 @@ Why the planner picks this, in its own rules (ARCHITECTURE.md 7.9):
 **Checked live this morning (Sat Oct 10).** The same scenario at 8:35 AM: rider off a Red to Airport at West End.
 The app matched Red 402 (high) and said: board at 8:40, ride to East Point, other platform, about 8:57 (8:52 to
 9:05). Red 402 reached Airport about 8:46, showed heading north at 8:48 and passed East Point northbound at about
-8:57:30. Predicted 37 min ahead from live data, right on time.
+8:57:30. Predicted about 22 min ahead (asked at about 8:36) from live data, right on time.
 
 ### 4.3 How it changes during the take (all of this is real, expect it)
 
