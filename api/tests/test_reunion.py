@@ -387,6 +387,29 @@ def test_a_scheduled_departure_inside_the_minimum_turn_opens_the_window_for_it_a
     assert here["confidence"] == "low" and "may_come_before_you" in here["note_ids"] and not here["recommended"]
 
 
+def test_a_late_train_may_turn_at_once_so_the_window_opens_from_its_arrival(tmp_path, feed, index):
+    """The late train. Red 405 reaches North Springs at A' of about 16:21, after its 16:20 slot. P3c still picks
+    16:30 (most late trains take the next slot: 36 of 49 on Sat Oct 10), but some turn at once, so the window opens
+    at A' + 60 s plus the run back to Buckhead, not 5 min before the 16:32 estimate. Daytime, no skipped slot: the
+    option keeps its usual confidence; it just asks the rider to be there that early."""
+    rpoll(tmp_path, at(15, 45), train("499", "RED", "S", "Airport", [("510028", at(15, 50, 10)),
+                                                                     ("510036", at(15, 52, 10))],
+                                      started=False, first="510028"))
+    rpoll(tmp_path, at(15, 51), train("499", "RED", "S", "Airport", [("510036", at(15, 52, 10))]))
+    p = at(16, 10, 37)
+    rows = red_world(tmp_path, train("405", "RED", "N", "North Springs", [("510028", p + 590 * S)]), polled_at=p)
+    arrival = p + 590 * S * railturn.ETA_T_CORRECTION
+    assert at(16, 20) < arrival < at(16, 21)
+    body = reunion(MemoryStore(Schedule(feed), rows=rows), index,
+                   rail_session(("405", "RED", "To North Springs"), alight="510036"), ["rail:405"], {}, p + 10 * S,
+                   tmp_path)
+    here = option(body, "wait_here")
+    assert here["reunion_at"] == at(16, 32)                          # still the 16:30 trip
+    run = (at(16, 32) - at(16, 30)).total_seconds()
+    assert abs((here["window_from"] - (arrival + (railturn.LATE_TURN_S + run) * S)).total_seconds()) < 1
+    assert here["confidence"] == "usual" and "may_come_before_you" not in here["note_ids"]
+
+
 def test_a_rider_boarding_a_train_toward_the_end_keeps_a_calm_minute(tmp_path, feed, index):
     """switch_platform hangs on catching the rider's own train, which is not a catch-it plan (missing it costs a
     headway, never the item): it must leave a minute after reaching the platform, ETA - now - need >= 60, and
@@ -502,7 +525,7 @@ def test_after_the_turn_a_meet_on_the_way_back_is_the_plans_meet_and_rank_1(tmp_
     top = plan["reunion"]["options"][0]
     assert (top["kind"], top["place_id"], top["recommended"]) == ("wait_here", "station:510033", True)
     assert top["reunion_at"] == plan["meet"]["eta"][0]               # the meet's own time, never a second one
-    assert [c["kind"] for c in plan["cards"]][:2] == ["bag_staff", "meet"]
+    assert [c["kind"] for c in plan["cards"]][:2] == ["meet", "bag_staff"]
     assert reason(check(plan["reunion"]), "walk_ahead") == "ahead" and reason(plan["reunion"], "shared_track") == \
         "not_on_train"
 
@@ -900,7 +923,7 @@ def test_a_bus_walk_ahead_is_the_plans_meet_and_rank_1(tmp_path, feed, index):
     top = plan["reunion"]["options"][0]
     assert (top["kind"], top["place_id"], top["reunion_at"], top["recommended"]) == \
         ("walk_ahead", "stop:300005", t + 420 * S, True)
-    assert [c["kind"] for c in plan["cards"]][:2] == ["bag_staff", "meet"]
+    assert [c["kind"] for c in plan["cards"]][:2] == ["meet", "bag_staff"]
 
 
 def test_a_bus_stop_still_ahead_on_its_trip_is_never_a_wait_for_a_rider_who_has_to_walk_there(tmp_path, feed,
@@ -1150,7 +1173,7 @@ def test_a_recommended_wait_gets_its_own_card_with_directions_and_the_report_ste
     plan = P.build_plan(MemoryStore(Schedule(feed), rows=rows), index, bus_session("1401"),
                         {"vehicle_keys": ["bus:1401"]}, t=t, as_of=False, data_dir=tmp_path)
     Plan.model_validate(plan)
-    assert [c["kind"] for c in plan["cards"]] == ["bag_staff", "wait_return", "tell_staff", "keep", "report", "call"]
+    assert [c["kind"] for c in plan["cards"]] == ["wait_return", "bag_staff", "tell_staff", "keep", "report", "call"]
     card = next(c for c in plan["cards"] if c["kind"] == "wait_return")
     stop = index.stops["300002"]
     assert card["actions"] == [{"type": "directions", "label_id": "directions",
@@ -1167,7 +1190,7 @@ def test_meet_at_the_end_gets_its_card(tmp_path, feed, index):
     plan = P.build_plan(MemoryStore(Schedule(feed), rows=rows), index, bus_session("1401"),
                         {"vehicle_keys": ["bus:1401"], "user": {"place_id": "stop:300006"}}, t=t, as_of=False,
                         data_dir=tmp_path)
-    card = plan["cards"][1]
+    card = plan["cards"][0]                                          # the way back comes first
     assert card["kind"] == "meet_end" and card["facts"]["pulls_out"] == "3:56 PM"
     assert card["actions"][0]["type"] == "directions"
 
@@ -1193,11 +1216,12 @@ def test_the_plan_screens_item_tap_overrides_the_sessions_item_for_this_plan_onl
     wallet = P.build_plan(store, index, session, {"vehicle_keys": ["rail:405"], "item_category": "wallet"}, t=T0,
                           as_of=False, data_dir=tmp_path)
     kinds = [c["kind"] for c in wallet["cards"]]
-    assert kinds[:2] == ["bag_staff", "freeze_cards"]                 # wallet: freeze cards first
+    assert kinds[1:3] == ["bag_staff", "freeze_cards"]                # wallet: freeze cards right after the way back
     assert session["intake"]["item"]["category"] == stored            # the stored session is untouched
     plain = P.build_plan(store, index, {**session, "intake": {**session["intake"], "item": {"category": "other"}}},
                          {"vehicle_keys": ["rail:405"]}, t=T0, as_of=False, data_dir=tmp_path)
-    assert plain["cards"][0]["kind"] == "bag_staff" and plain["cards"][0]["facts"]["tracks_01"] in (1, True)
+    staff = next(c for c in plain["cards"] if c["kind"] == "bag_staff")    # every plan keeps it, after the way back
+    assert plain["cards"][0]["kind"] != "bag_staff" and staff["facts"]["tracks_01"] in (1, True)
     assert "freeze_cards" not in [c["kind"] for c in plain["cards"]]
     body = P.build_reunion(store, index, session, {"vehicle_keys": ["rail:405"], "item_category": "phone"}, t=T0,
                            as_of=False, data_dir=tmp_path)

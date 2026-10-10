@@ -78,6 +78,13 @@ SERVICE_DAY_CUT_H = 3           # a service day runs to about 1:30 AM; 3 AM sepa
 VANISH_GRACE_S = 600            # missing at T: still expected until the predicted departure + 10 min (53/252 > 5 min)
 VANISH_GRACE_S_AT_NIGHT = {"510024": 1500}   # Lindbergh at night: + 25 min (missing up to 1,240 s, n=12)
 WINDOW_EARLY_S = 300            # P3c signed p10 -279 s: open the window 5 min early
+# The late train. A train reaching T after a scheduled departure S (up to 10 min after it) mostly takes the next
+# slot (Sat Oct 10: 36 of 49), but some leave between the two, a median 297 s after arriving (n=7, p90 566 s),
+# and a few turn at once on S (0 to 175 s, n=3). In the Sat Oct 10 backtest those early turns were 86 of the 157
+# missed recommended train options. So for a late train the window opens as early as it could come back:
+# A' + 60 s plus the run, and a rider who can't be there by then gets no recommendation from it.
+LATE_SLOT_S = 600
+LATE_TURN_S = 60
 WINDOW_LATE_S = 480             # P3c |err| p90 474 s
 LIVE_WINDOW_EARLY_S = 60        # after the turn: p10 -26 s
 LIVE_WINDOW_LATE_S = 150        # after the turn: p90 +115 s
@@ -92,7 +99,10 @@ LAYOVER_S: dict[tuple[str, str], tuple[int | None, int]] = {
     ("510037", "GOLD"): (365, 232), ("510037", "RED"): (354, 423),          # Airport
     ("510010", "GOLD"): (384, 393),                                          # Doraville
     ("510028", "RED"): (324, 620),                                           # North Springs
-    ("510017", "BLUE"): (291, 429), ("510018", "BLUE"): (604, 285),          # H E Holmes, Indian Creek
+    # Indian Creek by day was 604 s on Fri Oct 9, but its turn is hidden from the feed for about 12 min and the
+    # Sat Oct 10 day value is 189 s (n=6), Fri night 251 s (n=15); 604 made 69 of 84 recommended options miss
+    ("510017", "BLUE"): (291, 429), ("510018", "BLUE"): (250, 285),          # H E Holmes, Indian Creek
+    ("510021", "GREEN"): (265, 265),                                         # King Memorial (Saturday Green, n=9)
     ("510004", "GREEN"): (454, 254), ("510014", "GREEN"): (518, 839),        # Bankhead, Edgewood-Candler Park
     ("510014", "BLUE"): (518, 839),
     ("510032", "GREEN"): (None, 402), ("510032", "BLUE"): (None, 402),       # Vine City, night short turns
@@ -326,6 +336,7 @@ class TurnContext:
     vanished: bool                          # the train is not in the newest poll
     labels: dict[str, str] = field(default_factory=dict)
     skipped: tuple[datetime, RailTrip] | None = None   # a scheduled departure in [A', A' + m_T): it may take it
+    late: bool = False                      # a scheduled departure in [A' - 10 min, A'): the train is late
 
     @classmethod
     def build(cls, *, terminus: str, line: str, direction: str, t0: datetime, eta_t: datetime | None, t: datetime,
@@ -337,10 +348,11 @@ class TurnContext:
         earliest = arrival + timedelta(seconds=MIN_TURN_S_AT.get(terminus, MIN_TURN_S))
         picked = next(((dep, trip) for dep, trip in scheduled if earliest <= dep <= arrival + MAX_TURN), None)
         skipped = next(((dep, trip) for dep, trip in scheduled if arrival <= dep < earliest), None)
+        late = any(arrival - timedelta(seconds=LATE_SLOT_S) <= dep < arrival for dep, _ in scheduled)
         feed_dep = (last_feed_departure(data_dir, t, terminus, line, back, names=names, cache=cache)
                     if scheduled else None)
         return cls(terminus, line, back, arrival, t, timetable, schedule_in_effect(feed_dep, scheduled), picked,
-                   vanished, dict(labels or {}), skipped)
+                   vanished, dict(labels or {}), skipped, late)
 
     def at(self, station: str) -> Return:
         """ETA_back(station) before the turn is visible (P3c, else P2b), with its warnings.
@@ -386,6 +398,9 @@ class TurnContext:
                 window_from = min(window_from, self.skipped[0] + timedelta(seconds=early_run - WINDOW_EARLY_S))
                 confidence = "low"
                 notes.append("may_come_before_you")
+        if self.in_effect and self.late:
+            # the late train may turn at once: the window opens at A' + 60 s plus the run (see LATE_SLOT_S)
+            window_from = min(window_from, self.arrival + timedelta(seconds=LATE_TURN_S + run))
         if is_evening(self.arrival):
             confidence = "low"
             notes.append("after_midnight_unmeasured" if after_midnight(self.arrival) else "evening_not_certain")

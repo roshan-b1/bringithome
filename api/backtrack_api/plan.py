@@ -16,20 +16,21 @@ Where every fact comes from:
   - contacts.py (PREP-REPORT section 6 only): every phone, email, link and opening hour;
   - timeutil (via report.py's formatters): New York clock and day text. Comparisons stay in UTC.
 
-Card order (decision 10):
+Card order (decision 10, changed Oct 10: the way back comes first, the rest is what to do if it isn't there):
   1 safety       taken is Maybe or Yes: wb_12_safe with MARTA Police and 911
-  2 bag_staff    every transit loss: bag_01_staff; a train loss adds tracks_01
-  3 meet         a meet is possible; else the reunion planner's recommended way back when it is a wait
+  2 meet         a meet is possible; else the reunion planner's recommended way back when it is a wait
                  (wait_return), the end of the line (meet_end) or a ride and a platform change
                  (switch_platform), each with its facts; else too_far (only when a meet was asked for).
                  tell_staff follows whenever there is no meet: reporting the item never waits on a plan
+  3 bag_staff    every transit loss: bag_01_staff; a train loss adds tracks_01 (too_far, when there is no way
+                 back, comes after it)
   4 keep         the vehicle summary (plan_body_1)
   5 report       MARTA's form fields with values, an Open form link and a Copy action (plan_body_3)
   6 call         weekday hours, or after hours with the next opening and an ics reminder (plan_body_4_*)
   7 extras       wallet: freeze_cards; phone: phone_lost
   8 police_property, only once contacts.json marks Friday's call as confirming it (not yet)
-When the item is a wallet or taken is Maybe or Yes, the order is safety, bag_staff, freeze_cards, then
-the rest. Steps are 1..n in the final order.
+When the item is a wallet or taken is Maybe or Yes, the order is safety, the way back, bag_staff,
+freeze_cards, then the rest. Steps are 1..n in the final order.
 
 Facts carry slot values that fill a copy key's {placeholders}, plus small switches named after what
 they turn on: a copy line with no slots of its own (tracks_01, night, borrowed_phone_hint, valued 1 or
@@ -78,11 +79,14 @@ from .trains import _direction_toward
 UTC = timezone.utc
 THEFT = ("maybe", "yes")                        # "Do you think someone took it?"
 NAMED = ("matched", "ambiguous")                # statuses whose chosen vehicles the plan names (and may meet)
-ORDER = ("safety", "bag_staff", "meet", "wait_return", "meet_end", "switch_platform", "too_far", "tell_staff",
-         "keep", "report", "call", "freeze_cards", "phone_lost", "police_property")
+# The plan is a plan of action: the fastest way back to the item comes first, and everything after it is what to
+# do if it isn't there. Only the theft safety card (MARTA Police, 911) goes above it.
+WAY_BACK = ("meet", "wait_return", "meet_end", "switch_platform")
+ORDER = ("safety",) + WAY_BACK + ("bag_staff", "too_far", "tell_staff", "keep", "report", "call", "freeze_cards",
+                                  "phone_lost", "police_property")
 REUNION_CARDS = {"wait_here": "wait_return", "wait_on_return": "wait_return", "meet_at_end": "meet_end",
                  "switch_platform": "switch_platform"}
-FIRST = ("safety", "bag_staff", "freeze_cards")  # wallet or theft: "freeze cards first"
+FIRST = ("safety",) + WAY_BACK + ("bag_staff", "freeze_cards")  # wallet or theft: freeze cards right after the way back
 LINE_NAMES = report_mod.LINE_NAMES
 INFO_LINES = ("customer_service", "route_schedule_info")   # other MARTA lines worth a call while the office is shut
 
@@ -154,7 +158,8 @@ def card(kind: str, facts: Facts | None = None, *, actions: Iterable[CardAction]
 
 
 def order_cards(cards: Sequence[dict], *, wallet_or_theft: bool) -> list[dict]:
-    """Decision 10's order, steps 1..n. Wallet or theft puts safety, bag_staff and freeze_cards first."""
+    """The plan's order, steps 1..n: the way back first (after the theft safety card), then the steps for when it
+    isn't there. Wallet or theft moves bag_staff and freeze_cards up to right after the way back."""
     order = FIRST + tuple(k for k in ORDER if k not in FIRST) if wallet_or_theft else ORDER
     rank = {kind: i for i, kind in enumerate(order)}
     out = sorted(cards, key=lambda c: rank[c["kind"]])   # stable: one card per kind

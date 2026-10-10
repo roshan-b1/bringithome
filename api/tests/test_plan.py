@@ -57,12 +57,16 @@ def test_the_default_order_follows_decision_10_and_numbers_steps_from_1():
     assert [c["step"] for c in out] == [1, 2, 3, 4, 5, 6, 7]
 
 
-def test_wallet_or_theft_puts_freeze_cards_right_after_safety_and_bag_staff():
+def test_the_way_back_comes_first_and_wallet_or_theft_puts_freeze_cards_right_after_it():
     cards = [stub(k) for k in ("freeze_cards", "call", "report", "keep", "meet", "bag_staff", "safety")]
     assert [c["kind"] for c in P.order_cards(cards, wallet_or_theft=False)] == \
-        ["safety", "bag_staff", "meet", "keep", "report", "call", "freeze_cards"]
+        ["safety", "meet", "bag_staff", "keep", "report", "call", "freeze_cards"]
     assert [c["kind"] for c in P.order_cards(cards, wallet_or_theft=True)] == \
-        ["safety", "bag_staff", "freeze_cards", "meet", "keep", "report", "call"]
+        ["safety", "meet", "bag_staff", "freeze_cards", "keep", "report", "call"]
+    for way in ("wait_return", "meet_end", "switch_platform"):    # every way back, not only the meet
+        got = P.order_cards([stub(k) for k in ("call", "report", "keep", "tell_staff", way, "bag_staff")],
+                            wallet_or_theft=False)
+        assert [c["kind"] for c in got][:2] == [way, "bag_staff"]
 
 
 def test_facts_and_fact_sources_share_keys_by_construction():
@@ -192,10 +196,10 @@ def test_build_plan_on_the_hero_ride(feed, index, tmp_path):
     body = P.build_plan(store, index, session(taps=rail_taps(car="front")),
                         {"vehicle_keys": ["rail:405"], "user": ON_GOLD}, t=T, as_of=False, data_dir=tmp_path)
     plan = Plan.model_validate(body)
-    assert [c.kind for c in plan.cards] == ["bag_staff", "meet", "keep", "report", "call"]
+    assert [c.kind for c in plan.cards] == ["meet", "bag_staff", "keep", "report", "call"]
     assert (plan.meet.place_label, plan.meet.margin_min, plan.meet.platform_hint, plan.meet.direction) == \
         ("West End", 5, "front", "S")
-    meet = plan.cards[1]
+    meet = plan.cards[0]
     assert meet.facts == {"mode": "rail", "stop": "West End", "time": "3:59 PM", "minutes": 11, "toward": "Airport",
                           "platform_hint": "front", "night": 0, "on_train": 1}
     assert all(set(c.facts) == set(c.fact_sources) for c in plan.cards)

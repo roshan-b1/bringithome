@@ -215,7 +215,7 @@ def test_a_matched_bus_meets_at_the_riders_stop_with_its_cards_in_order(api, tmp
     assert p["meet"] == {"possible": True, "reason": "meet", "vehicle_keys": ["bus:1401"], "place_id": "stop:300004",
                          "place_label": "Main St @ 4 St", "eta": [(T + 420 * S).isoformat().replace("+00:00", "Z")],
                          "walk_s": 60, "margin_min": 6}
-    assert kinds(p) == ["bag_staff", "meet", "keep", "report", "call"]
+    assert kinds(p) == ["meet", "bag_staff", "keep", "report", "call"]
     m = card_of(p, "meet")
     assert m["facts"] == {"mode": "bus", "stop": "Main St @ 4 St", "time": "3:55 PM", "minutes": 7}
     assert m["fact_sources"] == {"mode": "rules", "stop": "static_gtfs", "time": "db", "minutes": "db"}
@@ -267,7 +267,7 @@ def test_a_red_tie_is_met_from_a_gold_train_where_both_work(api, tmp_path):
     # West End is too tight for 407 behind the Gold; East Point clears both (decision 9: never pick one)
     assert (p["meet"]["place_id"], p["meet"]["platform_hint"], p["meet"]["direction"]) == ("station:510013", "back", "S")
     assert p["meet"]["eta"] == [at(16, 5).isoformat().replace("+00:00", "Z"), at(16, 2).isoformat().replace("+00:00", "Z")]
-    assert kinds(p) == ["bag_staff", "meet", "keep", "report", "call"]
+    assert kinds(p) == ["meet", "bag_staff", "keep", "report", "call"]
     m = card_of(p, "meet")
     assert m["facts"] == {"mode": "rail", "stop": "East Point", "time": "4:02 PM or 4:05 PM", "minutes": 14,
                           "toward": "Airport", "platform_hint": "back", "night": 0, "on_train": 1}
@@ -350,10 +350,10 @@ def test_the_plan_screens_item_tap_overrides_the_sessions_item_for_this_plan_onl
     assert bad.status_code in (400, 422)
 
 
-def test_a_wallet_taken_with_a_meet_still_puts_freeze_cards_before_the_meet(api, tmp_path):
+def test_a_wallet_taken_with_a_meet_puts_safety_then_the_meet_then_freeze_cards(api, tmp_path):
     c, sid, _ = bus_session(api, tmp_path, item={"category": "wallet"}, taken="yes")
     p, _ = plan(c, sid, ["bus:1401"], {"place_id": "stop:300004"})
-    assert kinds(p) == ["safety", "bag_staff", "freeze_cards", "meet", "keep", "report", "call"]
+    assert kinds(p) == ["safety", "meet", "bag_staff", "freeze_cards", "keep", "report", "call"]
 
 
 # ----------------------------------------------------------------------------- the call card
