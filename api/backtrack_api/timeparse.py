@@ -88,6 +88,10 @@ _NUM_ALT = "|".join(sorted(map(re.escape, [*_VAGUE_WORDS, *_NUMBER_WORDS]), key=
 _AGO = re.compile(
     rf"(?:(?P<num>\d+(?:\.\d+)?|{_NUM_ALT})\s+(?P<half1>and a half\s+)?(?P<unit>minutes?|mins?|m|hours?|hrs?|hr|h)"
     rf"(?P<half2>\s+and a half)?|(?P<halfhour>half an hour|a half hour|half hour|half an hr))\s+ago")
+# A range, "5-10 minutes ago", "5 to 10 min ago", "2 or 3 hours ago": its middle, wide enough to cover both ends.
+_AGO_RANGE = re.compile(
+    rf"(?P<a>\d+(?:\.\d+)?|{_NUM_ALT})\s*(?:-|to|or)\s*(?P<b>\d+(?:\.\d+)?|{_NUM_ALT})\s+"
+    rf"(?P<unit>minutes?|mins?|m|hours?|hrs?|hr|h)\s+ago")
 # Not a bare "now": in a clue it is mostly filler ("and now I can't find it", "now what").
 _NOW = re.compile(r"just now|right now|a moment ago|moments ago|a sec(?:ond)? ago|seconds ago|"
                   r"a few seconds ago|just a (?:minute|moment|sec|second) ago")
@@ -112,6 +116,7 @@ def _prep(phrase: str) -> str:
     s = re.sub(r"(\d)\s*([ap])m\b|(\d)([ap])\b", lambda m: f"{m[1] or m[3]} {m[2] or m[4]}m", s)
     s = re.sub(r"(\d)(minutes?|mins?|m|hours?|hrs?|hr|h)\b", r"\1 \2", s)
     s = s.replace("~", " around ").replace("'", "")
+    s = re.sub(r"(\d)\s*[-\u2013]\s*(\d)", r"\1 to \2", s)    # "5-10 minutes ago" -> "5 to 10 minutes ago"
     s = re.sub(r"[^a-z0-9:. ]+|(?<!\d)\.|\.(?!\d)", " ", s)      # keeps "1.5" (hours), drops other dots
     return " ".join(s.split())
 
@@ -158,6 +163,17 @@ def _read_ago(core: str) -> _Spec | None:
         return _Spec("button", button="under_10")
     if _EARLIER.fullmatch(core):
         return _Spec("button", button="not_sure")
+    r = _AGO_RANGE.fullmatch(core)
+    if r:
+        per = 60 if r["unit"].startswith("h") else 1
+        ends = [float(x) if x[0].isdigit() else _NUMBER_WORDS.get(x) for x in (r["a"], r["b"])]
+        if None in ends:
+            return None
+        lo, hi = sorted(e * per for e in ends)
+        if lo < 0 or hi <= 0 or hi > MAX_AGO_MIN:
+            return None
+        mid = (lo + hi) / 2
+        return _Spec("ago", minutes_ago=mid, window=max(_ago_window(mid), math.ceil((hi - lo) / 2)))
     m = _AGO.fullmatch(core)
     if not m:
         return None

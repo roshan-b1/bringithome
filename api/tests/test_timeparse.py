@@ -288,3 +288,15 @@ def test_earlier_with_a_part_of_the_day_reads_as_that_part():
 def test_a_bare_now_is_not_a_time_but_just_now_and_right_now_are():
     assert read_time("now", AFTERNOON) is None and read_time("about now", AFTERNOON) is None
     assert read_time("just now", AFTERNOON).window_min == read_time("right now", AFTERNOON).window_min == 5
+
+
+def test_a_range_ago_reads_its_middle_wide_enough_for_both_ends():
+    now = datetime(2026, 10, 10, 16, 0, tzinfo=timezone.utc)
+    for phrase in ("5-10 minutes ago", "5 to 10 min ago", "about 5 - 10 mins ago", "five to ten minutes ago"):
+        r = read_time(phrase, now)
+        assert r is not None and r.kind == "ago", phrase
+        assert r.at == now - timedelta(minutes=7.5) and r.window_min == 5, phrase   # 2.5 to 12.5 min ago
+    r = read_time("2 or 3 hours ago", now)
+    assert r.at == now - timedelta(minutes=150) and r.window_min == 60
+    from backtrack_api.timeparse import is_time_phrase
+    assert is_time_phrase("5-10 minutes ago")
