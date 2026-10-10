@@ -26,7 +26,10 @@ floor is a meet):
     v = 1.0 m/s, or 0.7 for "I walk slowly"; feasible if ETA(X) - now - walk_s >= 180 and
     walk_s <= 900; the earliest feasible X wins. Only the 5 stops /now shows are considered,
     so the meet stop is always on the rider's now card and the withdraw check always finds it.
-  TWO candidates (a tie): a place only if it is feasible for both; the Meet names both ETAs.
+  TWO candidates (a tie): a place only if it is feasible for both; the Meet names both ETAs. For
+    two trains and a rider at or near a station, also only where both run the same way and their
+    lines stop at the same platform_stop_id there (one_platform): a station id names every
+    platform, so otherwise one card could send the rider to two platforms at once.
 
 Never a meet on a vehicle that is not live, on schedule-only times, on a block-linked
 ("probably the same bus") vehicle, or on rail predictions without an archived poll. One rule
@@ -42,8 +45,9 @@ Reasons (models.Meet.reason), for the integrator's card choice:
               poll), the train missing from that poll, or its predictions skipping the station
   not_shared  the place is not on the bag vehicle's remaining run in its direction (another
               line or direction, or past a short turn), the two trains share no platform ahead
-              (other lines or directions, Lindbergh, the Airport arrival platforms), or the two
-              candidates are a bus and a train
+              (other lines or directions, Lindbergh, the Airport arrival platforms), two tied
+              trains run opposite ways or stop at different platforms of the rider's station, or
+              the two candidates are a bus and a train
   ahead       the bag train already passed the rider's station, or reaches the first shared
               station before the rider's train (the plan shows tell_staff)
   too_far     all live and shared, but no place clears the margin, the 20 min horizon, the
@@ -58,9 +62,14 @@ remaining_walk_s counts down: the walk for a bus, the walk plus 90 s platform ti
 (90 s when already at the station), and the ride to S plus the 60 s step-off for a rider on a
 train. With it, the withdraw check on the first poll asks exactly the question the plan asked.
 
-The /now withdraw check (7.8) can also be given the rider's own train for an on-board meet
+The /now withdraw check (7.8) applies the floor only while the rider is still on the way: once
+remaining_walk_s reaches 0 the rider is in place, and the card stays while the vehicle is live and
+the place still ahead (see meet_status). It can also be given the rider's own train for an on-board meet
 (withdraw_check's rider_vehicle_key, off by default): the clock-only check can't see that
-train being held, which is the one way real offers failed on Oct 9 (see meet_status).
+train being held, which is the one way real offers failed on Oct 9 (see meet_status). And it
+can be given the meet platform's direction (withdraw_check's direction, the plan's
+Meet.direction): a station id names both platforms, so without it a train that turned at the
+end of the line reads as coming again (see meet_status).
 
 "Meet it on its way back" is not built as its own path. MARTA flips a train's DIRECTION and
 DESTINATION when it turns, and every plan reads the newest poll, so once a later poll shows
@@ -449,6 +458,35 @@ def combine(verdicts: Sequence[Verdict], *, car: str | None = None) -> dict:
     return no_meet("too_far", keys)
 
 
+def one_platform(index, bags: Sequence[Vehicle], verdicts: Sequence[Verdict]) -> list[Verdict]:
+    """A tie of two trains with the rider at or near a station: a place works for both only where both
+    run the same way and their lines stop at the same platform_stop_id (7.8's EXISTS, between the two
+    bag lines). A station id names every platform, so without this a train that turned at the end of
+    the line and one still heading out, or a Red and Gold tie at Lindbergh or the Airport southbound,
+    got one card for two platforms. Other places are dropped, and a verdict left with none is
+    not_shared. The on-board rule needs none of this: there each bag already shares the rider's platform."""
+    if len(bags) < 2:
+        return list(verdicts)
+    dirs = {b.direction for b in bags}
+    if len(dirs) != 1:                             # opposite ways (a train with no known way never passes serves())
+        return [v if v.reason else Verdict(v.key, "not_shared") for v in verdicts]
+    direction = dirs.pop()
+
+    def shared(o: Option) -> bool:
+        parent = _parent(o.place_id)
+        return parent is not None and all(shares_platform(index, bags[0].line, b.line, parent, direction)
+                                          for b in bags[1:])
+
+    out = []
+    for v in verdicts:
+        kept = tuple(o for o in v.options if shared(o))
+        if v.reason or kept == v.options:          # ruled out already, or nothing to drop (no options: too_far)
+            out.append(v)
+        else:
+            out.append(Verdict(v.key, None, kept) if kept else Verdict(v.key, "not_shared"))
+    return out
+
+
 def decide(index, bags: Sequence[Vehicle], rider: Rider, t: datetime, *, rider_train: Vehicle | None = None,
            car: str | None = None) -> dict:
     """The pure core of plan_meet: models.Meet for one or two bag vehicles."""
@@ -462,7 +500,7 @@ def decide(index, bags: Sequence[Vehicle], rider: Rider, t: datetime, *, rider_t
     elif rider_train is not None:
         verdicts = [onboard_verdict(index, b, rider_train, t) for b in bags]
     else:
-        verdicts = [station_verdict(index, b, rider, t) for b in bags]
+        verdicts = one_platform(index, bags, [station_verdict(index, b, rider, t) for b in bags])
     return combine(verdicts, car=car)
 
 
@@ -520,11 +558,18 @@ def block_linked_keys(session_result: Mapping) -> frozenset[str]:
 # ----------------------------------------------------------------------------- the /now withdraw check
 
 def meet_status(v: Vehicle, body: Mapping, *, place_id: str, remaining_walk_s: float, t: datetime,
-                rider_train: TrainPrediction | None = None) -> dict:
+                rider_train: TrainPrediction | None = None, direction: str | None = None) -> dict:
     """{meet_ok, meet_reason} for one /now poll while a meet card shows (7.8 WITHDRAW):
     meet_ok = live, the place still ahead, and ETA(place) - now - remaining_walk_s - pad >= floor
     (train pad 30 and floor 120, bus pad 0 and floor 180). Reasons: stale (not live, or no live
     time for the place any more), passed (the place is no longer ahead), margin (below the floor).
+
+    The floor is for getting there, so it applies only while the rider still is: once nothing is
+    left to make (remaining_walk_s at or below 0, and with rider_train, that train has set the rider
+    down), live and still ahead is enough. As 7.8 writes it, the margin then shrinks with the clock
+    and every meet that goes to plan was withdrawn in its last 150 s (train) or 180 s (bus), with the
+    rider standing where the plan sent them: recorded Oct 9, the 3:27 PM plan for Red 407 at East
+    Point (due 3:34:04) showed "too far" from 3:31:00 on, and the Red came through on time at 3:33:30.
 
     rider_train (optional, beyond 7.8): the rider's own train in the same poll, for a meet planned
     from on board. remaining_walk_s counts down by the clock, so it can't see the rider's train
@@ -533,9 +578,18 @@ def meet_status(v: Vehicle, body: Mapping, *, place_id: str, remaining_walk_s: f
     Measured on Oct 9's archive: 4 of 229 real Gold-rider, Red-bag offers would have failed, each
     because the rider's Gold was held 5 to 18 min past its prediction (the bag Red's ETA was off
     by at most 126 s in any offer). The clock-only check still pulled each card before the Red
-    came through, 1.7 to 18 min ahead of it; with rider_train, 1.7 to 15.7 min earlier still."""
+    came through, 1.7 to 18 min ahead of it; with rider_train, 1.7 to 15.7 min earlier still.
+
+    direction (optional, rail): the direction of the platform the meet is on (the plan's Meet.direction).
+    A station id names both platforms, and a train that turned at the end of the line lists the same
+    station again on its way back: on Oct 9 Red 407 passed East Point southbound at 3:34 PM, turned at
+    the Airport and by 3:42 listed East Point northbound, so "still ahead" read true for a rider on the
+    southbound platform. With direction, a train heading the other way has passed the place."""
     if v.why_not:
         return {"meet_ok": False, "meet_reason": "stale"}
+    if direction is not None and v.mode == "rail" and v.direction != direction:
+        # turned since the plan (passed), or its direction is unknown now (no way to confirm: stale)
+        return {"meet_ok": False, "meet_reason": "stale" if v.direction is None else "passed"}
     stop = _first((s for s in v.stops if s.eta >= t), place_id)
     if stop is None:
         scheduled = any(s.get("place_id") == place_id for s in body.get("next_stops", ()))
@@ -546,16 +600,20 @@ def meet_status(v: Vehicle, body: Mapping, *, place_id: str, remaining_walk_s: f
         mine = _first((s for s in rider_train.stops if s.eta >= t), place_id)
         if mine is not None:            # still riding toward the place: its live ETA counts
             need = max(need, (mine.eta - t).total_seconds() + STEP_OFF_S)
+    if need <= 0:                       # in place, and the vehicle is still coming
+        return {"meet_ok": True, "meet_reason": "ok"}
     margin = (stop.eta - t).total_seconds() - need - pad
     return {"meet_ok": True, "meet_reason": "ok"} if margin >= floor else {"meet_ok": False, "meet_reason": "margin"}
 
 
 def withdraw_check(index, body: Mapping, *, place_id: str, remaining_walk_s: float, t: datetime, data_dir: Path,
-                   rail_files: RailFileCache | None = None, rider_vehicle_key: str | None = None) -> dict:
+                   rail_files: RailFileCache | None = None, rider_vehicle_key: str | None = None,
+                   direction: str | None = None) -> dict:
     """For GET /now?meet_place_id=&remaining_walk_s=: {meet_ok, meet_reason} for the body that
     where.vehicle_now just built at t. A train is checked against its whole predicted run (the
     body lists only 5 stations), from the same archived poll /now read. rider_vehicle_key
-    (optional, "rail:<id>"): the rider's own train for an on-board meet; see meet_status."""
+    (optional, "rail:<id>"): the rider's own train for an on-board meet; direction (optional, rail):
+    the meet platform's direction (meet_direction); see meet_status for both."""
     key = body["vehicle_key"]
     mode, vid = split_key(key)
     train, polled_at, rider_train = None, None, None
@@ -567,4 +625,5 @@ def withdraw_check(index, body: Mapping, *, place_id: str, remaining_walk_s: flo
                 r_mode, r_vid = split_key(rider_vehicle_key)
                 rider_train = snap.trains.get(r_vid) if r_mode == "rail" else None
     v = meet_vehicle(index, key, body, t, train=train, polled_at=polled_at)
-    return meet_status(v, body, place_id=place_id, remaining_walk_s=remaining_walk_s, t=t, rider_train=rider_train)
+    return meet_status(v, body, place_id=place_id, remaining_walk_s=remaining_walk_s, t=t, rider_train=rider_train,
+                       direction=direction)

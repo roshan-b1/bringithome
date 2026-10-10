@@ -6,8 +6,9 @@ matter most (which bus, where, when). So the server builds each one as a templat
 ([[VEHICLE]] [[ROUTE]] [[STOP]] [[TIME]] [[DIRECTION]] [[DATE]] [[ITEM]]) and which holds no values at all. A
 rephrase hook (Gemini, in the next feature) sees only those value-free templates and may only reword around the
 tokens. Its answer must then pass every check in validate(): same tokens the same number of times, no digits,
-clock, date, phone, email, URL or place name outside the tokens, the copy lint, and at most 1.5 times the
-template's length. Anything else, an exception, or no answer inside the budget falls back to the template, which
+number words, ordinals, clock or time-of-day words, durations, date, phone, email, URL or place name outside the
+tokens, no relative word next to a token ("the stop after [[STOP]]", "an hour before [[TIME]]": the token is
+intact but its fact has moved), the copy lint, and at most 1.5 times the template's length. Anything else, an exception, or no answer inside the budget falls back to the template, which
 says the same thing. Only after that are the tokens filled, every one except [[ITEM]], which the phone fills from
 the item description that never leaves it. Gemini therefore can't introduce a time, number, station, stop,
 vehicle or phone, by construction.
@@ -213,8 +214,30 @@ _NUMBER_WORDS = ("zero", "two", "three", "four", "five", "six", "seven", "eight"
                  "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety", "hundred", "thousand",
                  "dozen", "half past", "quarter past", "quarter to")
 _NUMBER = re.compile(r"\b(?:" + "|".join(_NUMBER_WORDS) + r")\b", re.IGNORECASE)
+# "one" stays a plain word ("one of them", "has anyone turned one in") except as a clock time: "at one", "half one",
+# "a quarter after one" ("one o'clock" is caught by _CLOCK).
+_ONE_TIME = re.compile(r"\b(?:at|past|after|before|to|till|until|by|around|about|half|quarter)\s+one\b(?!\s+of\b)",
+                       re.IGNORECASE)
+# Ordinals count days, stops and rides: "the ninth", "my fifth trip". "first", "second", "last" and "next" only where
+# they count one of those ("the second stop", "the next day"), since "first" and "a second" are plain words too.
+_ORDINAL = re.compile(r"\b(?:third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|\w+teenth|\w+tieth|"
+                      r"hundredth|thousandth)\b|\b(?:first|second|last|next|previous|final)\s+(?:stops?|stations?|"
+                      r"days?|nights?|rides?|trips?|times?|bus(?:es)?|trains?|cars?|transfers?|platforms?|of)\b"
+                      r"(?!\s+all\b)", re.IGNORECASE)
 _CLOCK = re.compile(r"\d{1,2}\s*[:.h]\s*\d{2}|\b(?:noon|midnight|o'clock|morning|afternoon|evening|tonight|"
-                    r"overnight|today|tomorrow|yesterday|ago)\b", re.IGNORECASE)
+                    r"overnight|today|tomorrow|yesterday|ago|midday|lunchtime|lunch|night|nights|nighttime|dawn|"
+                    r"dusk|sunrise|sunset|daybreak)\b", re.IGNORECASE)
+# How long or how far: "I waited an hour", "a few minutes", "for days". A lone "day" is left to _shifted, so a
+# greeting ("Good day,") still passes.
+_DURATION = re.compile(r"\b(?:hours?|hrs?|minutes?|mins?|seconds|weeks?|fortnights?|months?|years?|days)\b",
+                       re.IGNORECASE)
+# Words that move a fact when they sit next to its token: "the stop after [[STOP]]", "an hour before [[TIME]]",
+# "the day after [[DATE]]", "[[TIME]] or a bit later", "a block past [[STOP]]".
+_RELATIVE = frozenset({"before", "after", "earlier", "later", "next", "previous", "prior", "since", "until", "till",
+                       "past", "beyond", "preceding", "ahead", "behind", "day", "block", "blocks"})
+NEAR = 4                                 # words between a relative word and a token, at most, to count as a shift
+_SENTENCE = re.compile(r"[.!?;\n]")
+_WORD = re.compile(r"\[\[[A-Z]+\]\]|[A-Za-z']+")
 # am/pm as written for a time ("PM", "pm", "p.m."), never the verb "am"
 _AMPM = re.compile(r"(?<![A-Za-z])(?:[AaPp]\.\s?[Mm]\.?|AM|PM|Pm|pm)(?![A-Za-z])")
 _DAYS_FULL = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "weekday", "weekdays",
@@ -237,6 +260,18 @@ def _outside_tokens(text: str) -> str:
     return TOKEN.sub(" ", text)
 
 
+def _shifted(candidate: str) -> list[str]:
+    """Relative words within NEAR words of any token, in the same sentence. Each would move the fact the token
+    carries ("I got off at the stop after [[STOP]] the day after [[DATE]]") while every other check passes, since
+    the token itself is untouched. "After I got off at [[STOP]]" is five words away and passes."""
+    hits = []
+    for sentence in _SENTENCE.split(candidate):
+        words = _WORD.findall(sentence)
+        at = [i for i, w in enumerate(words) if TOKEN.fullmatch(w)]
+        hits += [w for i, w in enumerate(words) if w.lower() in _RELATIVE and any(abs(i - j) <= NEAR for j in at)]
+    return hits
+
+
 def validate(candidate: str, template: str, names: PlaceNames) -> list[str]:
     """Why `candidate` may not replace `template`; an empty list means it may. Checked separately per string."""
     if not isinstance(candidate, str) or not candidate.strip():
@@ -254,8 +289,16 @@ def validate(candidate: str, template: str, names: PlaceNames) -> list[str]:
         problems.append("a phone number")
     if _NUMBER.search(outside):
         problems.append(f"a number word: {_NUMBER.search(outside).group(0)!r}")
+    spelled = _ONE_TIME.search(outside) or _ORDINAL.search(outside)
+    if spelled:
+        problems.append(f"a spelled-out time or an ordinal: {spelled.group(0)!r}")
     if _CLOCK.search(outside) or _AMPM.search(outside):
         problems.append("a clock time or am/pm")
+    if _DURATION.search(outside):
+        problems.append(f"a duration: {_DURATION.search(outside).group(0)!r}")
+    shifted = _shifted(candidate)
+    if shifted:
+        problems.append(f"a shift next to a token: {shifted}")
     if _DATE_FULL.search(outside) or _DATE_ABBR.search(outside) or _month_may(outside):
         problems.append("a weekday or month name")
     if _EMAIL.search(outside):

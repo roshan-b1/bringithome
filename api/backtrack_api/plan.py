@@ -11,7 +11,8 @@ Where every fact comes from:
   - the saved session (taps and the match): vehicles, routes, lines, stops, pass times and evidence;
   - meet.plan_meet: whether the rider can still meet the bag's vehicle (decision 9, section 7.8), on
     where.vehicle_now and the archived rail poll, read at t;
-  - the archived rail poll at t: which way a meet train is heading ("toward");
+  - the archived rail poll at t: which way a meet train is heading ("toward", and Meet.direction, the
+    platform's direction, which the client sends back to /now as meet_direction);
   - contacts.py (PREP-REPORT section 6 only): every phone, email, link and opening hour;
   - timeutil (via report.py's formatters): New York clock and day text. Comparisons stay in UTC.
 
@@ -58,6 +59,7 @@ from . import wording
 from .models import CardAction, PlanRequest, PlanUser
 from .railpred import RailFileCache, StationNames, rail_predictions_at
 from .report import FactSource, ReportFacts, join_or, rider_clock, rider_date
+from .trains import _direction_toward
 
 UTC = timezone.utc
 THEFT = ("maybe", "yes")                        # "Do you think someone took it?"
@@ -220,16 +222,20 @@ def bag_staff_card(train_loss: bool) -> dict:
     return card("bag_staff", f, actions=[contacts.action("police_non_emergency", "call_police")])
 
 
-def toward(index, data_dir: Path, keys: Sequence[str], t: datetime, rail_files: RailFileCache | None) -> str | None:
-    """Where a meet train is heading, from the same archived poll the meet used ("Airport"): the
-    platform to wait on. Read at t, so a train that turned since the match shows its new way."""
+def heading(index, data_dir: Path, keys: Sequence[str], t: datetime,
+            rail_files: RailFileCache | None) -> tuple[str | None, str | None]:
+    """(where the meet trains are heading, the direction of their platform), from the same archived
+    poll the meet used: ("Airport", "S"). Read at t, so a train that turned since the match shows its
+    new way. The direction is None unless every train agrees on it (a tie on two platforms has none)."""
     vids = [k.split(":", 1)[1] for k in keys if k.startswith("rail:")]
-    if not vids:
-        return None
-    snap = rail_predictions_at(data_dir, t, names=StationNames.from_index(index), cache=rail_files)
-    if snap is None:
-        return None
-    return join_or(_unique(snap.trains[v].destination_label for v in vids if v in snap.trains)) or None
+    names = StationNames.from_index(index)
+    snap = rail_predictions_at(data_dir, t, names=names, cache=rail_files) if vids else None
+    trains = [snap.trains[v] for v in vids if v in snap.trains] if snap is not None else []
+    if not trains:
+        return None, None
+    dirs = {tr.direction or _direction_toward(index, tr.line, names.parent(tr.destination)) for tr in trains}
+    label = join_or(_unique(tr.destination_label for tr in trains)) or None
+    return label, (dirs.pop() if len(dirs) == 1 and len(trains) == len(vids) else None)
 
 
 def meet_card(m: Mapping, t: datetime, *, heading: str | None, on_train: bool, evidence: list[dict]) -> dict:
@@ -318,6 +324,8 @@ def call_card(t: datetime, office: contacts.OfficeStatus) -> dict:
     if office.open_now:
         for key in ("lost_found_hours", "lost_found_transit_time", "lost_found_hold"):
             f.put(key, contacts.contact(key).value, contacts.FACT_SOURCE)
+        # open by the posted hours, but on a day the holiday check didn't cover (Columbus Day): say "usually"
+        f.switch("usually", office.open_now_usually, contacts.FACT_SOURCE)
     else:
         opens = office.next_open.astimezone(ATL)
         f.put("next_weekday", rider_date(opens), contacts.FACT_SOURCE)
@@ -402,10 +410,12 @@ def build_plan(store, index, session: Mapping, request: PlanRequest | Mapping, *
         report, rf = report_mod.make_report(session, keys, names=names, hook=hook)
     except report_mod.ReportError as e:
         raise PlanError(str(e)) from None
-    by_key = {c["vehicle_key"]: c for c in match.get("candidates") or ()}
+    cands = list(match.get("candidates") or ())
+    by_key = {c["vehicle_key"]: c for c in cands}
     named = [by_key[k] for k in rf.vehicle_keys]
-    listed = named or ([c for c in match.get("candidates") or ()][:report_mod.NOTE_MAX]
-                       if match["status"] == "uncertain" else [])
+    # the vehicles the report card stands on: those it names, else those its candidates note lists
+    listed = named or (cands[:report_mod.NOTE_MAX] if match["status"] == "uncertain"
+                       else cands[:2] if match["status"] == "ambiguous" else [])
 
     m = None
     if keys and match["status"] in NAMED:
@@ -423,8 +433,10 @@ def build_plan(store, index, session: Mapping, request: PlanRequest | Mapping, *
     if taken:
         cards.append(safety_card())
     if m is not None and m["possible"]:
-        cards.append(meet_card(m, t, heading=toward(index, data_dir, m["vehicle_keys"], t, rail_files),
-                               on_train=user.on_vehicle is not None, evidence=evidence))
+        toward, direction = heading(index, data_dir, m["vehicle_keys"], t, rail_files)
+        if direction is not None:      # the platform: "Wait at West End southbound"; /now's meet_direction
+            m["direction"] = direction
+        cards.append(meet_card(m, t, heading=toward, on_train=user.on_vehicle is not None, evidence=evidence))
     else:
         if m is not None:
             cards.append(too_far_card())
@@ -439,7 +451,8 @@ def build_plan(store, index, session: Mapping, request: PlanRequest | Mapping, *
         cards.append(police)
 
     return {"generated_at": t.astimezone(UTC),
-            "lost_found": {"open_now": office.open_now, "next_open": office.next_open},
+            "lost_found": {"open_now": office.open_now, "next_open": office.next_open,
+                           "usually": office.open_now_usually if office.open_now else office.next_open_usually},
             "meet": m,
             "cards": order_cards(cards, wallet_or_theft=item == "wallet" or taken),
             "report": report.model_dump(exclude_none=True),

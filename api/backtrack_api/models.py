@@ -370,6 +370,7 @@ class PlanRequest(BaseModel):
 class LostFound(BaseModel):
     open_now: bool
     next_open: datetime
+    usually: bool = False   # the day is not on the verified holiday check (Columbus Day and later): "usually open"
 
 
 class Meet(BaseModel):
@@ -379,6 +380,9 @@ class Meet(BaseModel):
     place_id: str | None = None
     place_label: str | None = None
     platform_hint: Literal["front", "middle", "back"] | None = None
+    # rail: the direction of the platform the meet is on ("Wait at West End southbound"). /now's meet check
+    # takes it back as meet_direction, so a train that turned at the end of the line never reads as coming
+    direction: Dir | None = None
     eta: list[datetime] | None = None
     walk_s: int | None = None
     margin_min: int | None = None

@@ -9,8 +9,8 @@ rider's forwarded IP next to session ids and query strings, and two endpoints ta
 rider's GPS as query parameters. The app installs a filter that drops every access record
 (AccessLogOff), so the log stays off whatever command starts uvicorn; run it with
 --no-access-log as well. A second filter blanks lat, lon, accuracy_m and fix_age_s, and the
-/now meet check's meet_place_id, remaining_walk_s and rider_vehicle_key (where the rider is
-heading, and on which train), should anyone turn the first one off while debugging
+/now meet check's meet_place_id, remaining_walk_s, meet_direction and rider_vehicle_key (where
+the rider is heading, and on which train), should anyone turn the first one off while debugging
 (RedactRiderLocation). The plan's user block travels in the POST body, which no access log
 prints, and is used for that one request only.
 """
@@ -57,7 +57,7 @@ RAIL_KEY = r"^rail:[A-Za-z0-9._-]{1,40}$"
 MAX_WALK_PARAM_S = 86_400
 RIDER_LOCATION_PARAMS = frozenset({"lat", "lon", "accuracy_m", "fix_age_s"})
 # not coordinates, but where the rider is heading and on which train: blanked the same way
-RIDER_TRIP_PARAMS = frozenset({"meet_place_id", "remaining_walk_s", "rider_vehicle_key"})
+RIDER_TRIP_PARAMS = frozenset({"meet_place_id", "remaining_walk_s", "rider_vehicle_key", "meet_direction"})
 REDACTED_PARAMS = RIDER_LOCATION_PARAMS | RIDER_TRIP_PARAMS
 # as_of outside these years is a typo, and years near 1 or 9999 overflow the date arithmetic downstream
 AS_OF_FROM = datetime(2000, 1, 1, tzinfo=timezone.utc)
@@ -388,13 +388,14 @@ def create_app(*, settings: Settings | None = None, index_loader: Callable[[], P
                     vehicle_id: str = Path(..., pattern=VEHICLE_ID), as_of: str | None = None,
                     meet_place_id: str | None = Query(None, pattern=MEET_PLACE_ID),
                     remaining_walk_s: float | None = Query(None, ge=-MAX_WALK_PARAM_S, le=MAX_WALK_PARAM_S),
-                    rider_vehicle_key: str | None = Query(None, pattern=RAIL_KEY)):
+                    rider_vehicle_key: str | None = Query(None, pattern=RAIL_KEY),
+                    meet_direction: str | None = Query(None, pattern="^(N|S|E|W)$")):
         source_of(as_of, response)
         at = parse_as_of(as_of)
         if (meet_place_id is None) != (remaining_walk_s is None):
             raise ApiError(400, "bad_request", "give meet_place_id and remaining_walk_s together")
-        if rider_vehicle_key is not None and meet_place_id is None:
-            raise ApiError(400, "bad_request", "rider_vehicle_key goes with meet_place_id")
+        if (rider_vehicle_key is not None or meet_direction is not None) and meet_place_id is None:
+            raise ApiError(400, "bad_request", "rider_vehicle_key and meet_direction go with meet_place_id")
         idx = index()
         t = at or now()
 
@@ -405,7 +406,8 @@ def create_app(*, settings: Settings | None = None, index_loader: Callable[[], P
             if meet_place_id is not None:   # a meet card is showing: still true? (decision 9, 7.8 WITHDRAW)
                 body.update(meet_mod.withdraw_check(idx, body, place_id=meet_place_id,
                                                     remaining_walk_s=remaining_walk_s, t=t,
-                                                    data_dir=settings.data_dir, rider_vehicle_key=rider_vehicle_key))
+                                                    data_dir=settings.data_dir, rider_vehicle_key=rider_vehicle_key,
+                                                    direction=meet_direction))
             return body
 
         try:   # sync on purpose: the TripUpdates parse (about 850 KB) runs in the threadpool, off the event loop

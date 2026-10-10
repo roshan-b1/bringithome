@@ -470,6 +470,8 @@ def _bus(store, index, latest: PositionRow, fix: PositionRow, t: datetime, snap:
             continuing_as = nxt["route"]
         if len(out) < MAX_NEXT_STOPS:   # the bus is not on it yet: no shape filter, live times if believable
             tu_next = snap.by_trip.get(nxt["trip_id"]) if snap is not None else None
+            if tu_next is not None and tu_next.vehicle_id not in (None, latest.vehicle_id):
+                tu_next = None          # MARTA has that trip on another bus: its times are not this bus's
             ahead = tu_next.upcoming(t) if tu_next is not None else []
             if ahead and reachable(index, fix, ahead[0].stop_id, ahead[0].arrival):
                 out += [_next_stop(index, u.stop_id, u.arrival, "live") for u in ahead]

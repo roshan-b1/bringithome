@@ -589,6 +589,73 @@ def test_a_tie_reports_the_first_failing_reason(index):
         assert M.decide(index, mixed, rider, T)["reason"] == "not_shared"
 
 
+def test_a_stale_tie_outranks_a_tie_without_live_times(index):
+    """The tie precedence decision 9 documents: stale before no_eta, whichever key comes first."""
+    rider = Rider(station="510033", at_station=True)
+    stale = train_v("407", "RED", "S", why_not="stale", state="stale")
+    no_eta = train_v("409", "RED", "S", why_not="no_eta")
+    for pair in ([stale, no_eta], [no_eta, stale]):
+        assert M.decide(index, pair, rider, T)["reason"] == "stale"
+
+
+def test_a_tie_heading_opposite_ways_is_never_one_meet(index):
+    """Red 407 turned at the Airport and now comes north through West End while Red 408 still runs south.
+    A station id names both platforms, so one card would put the rider on two platforms at once."""
+    rider = Rider(station="510033", at_station=True)
+    south = train_v("408", "RED", "S", ("510033", T + 400 * S))
+    north = train_v("407", "RED", "N", ("510033", T + 720 * S))
+    assert M.decide(index, [south], rider, T)["reason"] == "meet"           # each alone is a meet
+    assert M.decide(index, [north], rider, T)["reason"] == "meet"
+    assert M.decide(index, [south, north], rider, T) == M.no_meet("not_shared", ["rail:408", "rail:407"])
+    west_end = STATIONS["510033"]
+    near = Rider(point=(west_end[2], west_end[1]), fix=(west_end[2], west_end[1]))   # a fix, no station chosen
+    assert M.decide(index, [south, north], near, T)["reason"] == "not_shared"
+    unknown = train_v("407", "RED", None, ("510033", T + 720 * S))         # a way we can't confirm is not one
+    assert M.decide(index, [south, unknown], rider, T)["reason"] == "not_shared"
+
+
+def test_plan_meet_never_names_one_station_for_trains_heading_opposite_ways(tmp_path, feed, index):
+    poll(tmp_path, P, ("408", "RED", "S", "Airport", [("510033", T + 400 * S), ("510013", T + 700 * S)]),
+         ("407", "RED", "N", "North Springs", [("510033", T + 720 * S), ("510038", T + 840 * S)]))
+    status(tmp_path, "rail", P)
+    rows = [rail_row("408", "RED"), rail_row("407", "RED", direction="N", destination="North Springs")]
+    got = plan(feed, index, tmp_path, rows, ["rail:408", "rail:407"], {"place_id": "station:510033", "at_station": True})
+    assert got == M.no_meet("not_shared", ["rail:408", "rail:407"])
+
+
+def test_a_red_and_gold_tie_never_meets_where_the_lines_stop_at_different_platforms(index):
+    """Lindbergh has a platform per line both ways and the Airport a southbound arrival platform per line:
+    a rider there can wait for one line's train, not for both."""
+    lindbergh = Rider(station="510024", at_station=True)
+    for d in "NS":
+        tie = [train_v("405", "RED", d, ("510024", T + 360 * S)), train_v("310", "GOLD", d, ("510024", T + 480 * S))]
+        assert M.decide(index, tie, lindbergh, T) == M.no_meet("not_shared", ["rail:405", "rail:310"]), d
+    airport = Rider(station="510037", at_station=True)
+    south = [train_v("405", "RED", "S", ("510037", T + 360 * S)), train_v("310", "GOLD", "S", ("510037", T + 480 * S))]
+    assert M.decide(index, south, airport, T)["reason"] == "not_shared"
+    north = [train_v("405", "RED", "N", ("510037", T + 360 * S)), train_v("310", "GOLD", "N", ("510037", T + 480 * S))]
+    assert M.decide(index, north, airport, T)["place_id"] == "station:510037"   # the shared departure platform
+    arts = Rider(station="510001", at_station=True)                            # the trunk: one platform
+    trunk = [train_v("405", "RED", "S", ("510001", T + 360 * S)), train_v("310", "GOLD", "S", ("510001", T + 480 * S))]
+    assert (M.decide(index, trunk, arts, T)["reason"], M.decide(index, trunk, arts, T)["eta"]) == \
+        ("meet", [T + 360 * S, T + 480 * S])
+
+
+def test_from_a_fix_a_split_platform_is_skipped_for_the_next_shared_one(index):
+    """A rider between College Park and the Airport with a Red and Gold tie southbound: the Airport works
+    for both by the clock, but the two lines arrive at different platforms there, so it is never the place."""
+    cp, ap = STATIONS["510008"], STATIONS["510037"]
+    mid = ((cp[2] + ap[2]) / 2, (cp[1] + ap[1]) / 2)
+    reach = max(M.walk_seconds(haversine_m(*mid, s[2], s[1])) for s in (cp, ap)) + M.PLATFORM_S
+    assert reach < 1200 - 150                                                 # both stations are in walking reach
+    soon, late = T + math.floor(reach) * S, T + 1190 * S                      # College Park too soon, Airport fine
+    rider = Rider(point=mid, fix=mid)
+    tie = [train_v("405", "RED", "S", ("510008", soon), ("510037", late)),
+           train_v("310", "GOLD", "S", ("510008", soon + 5 * S), ("510037", late + 5 * S))]
+    assert M.decide(index, tie[:1], rider, T)["place_id"] == "station:510037"    # one train alone meets there
+    assert M.decide(index, tie, rider, T) == M.no_meet("too_far", ["rail:405", "rail:310"])
+
+
 def test_plan_meet_takes_zero_to_two_keys(tmp_path, feed, index):
     rows = hero_world(tmp_path)
     assert plan(feed, index, tmp_path, rows, [], ON_GOLD) is None
@@ -679,7 +746,9 @@ def test_withdraw_states_for_a_bus(tmp_path, feed, index):
     assert check(body, f"stop:{sid4}", 120) == {"meet_ok": True, "meet_reason": "ok"}     # 300 - 120 = 180
     assert check(body, f"stop:{sid4}", 121) == {"meet_ok": False, "meet_reason": "margin"}
     assert check(body, f"stop:{bus_stop(1)[0]}", 0)["meet_reason"] == "passed"
-    assert check(body, f"stop:{bus_stop(2)[0]}", -200)["meet_reason"] == "margin"   # a negative walk counts as 0
+    # at stop 2 already (no walk left, however negative): the bus 60 s out is still coming, so the card stays
+    assert check(body, f"stop:{bus_stop(2)[0]}", -200) == {"meet_ok": True, "meet_reason": "ok"}
+    assert check(body, f"stop:{bus_stop(2)[0]}", 1)["meet_reason"] == "margin"      # still walking: the floor holds
     down = vehicle_now(store, index, "bus", "1401", T, as_of=False, data_dir=tmp_path,
                        tripupdates=StubTripUpdates(None))
     assert check(down, f"stop:{sid4}", 0) == {"meet_ok": False, "meet_reason": "stale"}  # only the timetable now
@@ -714,6 +783,30 @@ def test_withdraw_can_see_the_riders_own_train_being_held(tmp_path, feed, index)
     assert check(rider_vehicle_key="rail:310") == {"meet_ok": False, "meet_reason": "margin"}
 
 
+def test_a_rider_in_place_keeps_the_card_until_the_train_comes(tmp_path, feed, index):
+    """Oct 9, recorded: the 3:27 PM plan met Red 407 at East Point, due 3:34:04. The rider was on the platform
+    by 3:30:44, yet the floor withdrew the card from 3:31:00 while the Red came through on time at 3:33:30.
+    The floor is for getting there; once remaining_walk_s reaches 0 the card stays while the train still comes."""
+    later = at(15, 58)                                                    # the Red is due at West End in 100 s
+    rows = hero_world(tmp_path) + [rail_row("405", "RED", ts=later - 5 * S),
+                                   rail_row("310", "GOLD", (-84.4300, 33.7000), later - 5 * S)]
+    poll(tmp_path, later - 5 * S, ("405", "RED", "S", "Airport", RED_405[1:]),
+         ("310", "GOLD", "S", "Airport", GOLD_310[2:]))                   # the Gold left West End at 3:52:30
+    body = now_body(feed, index, tmp_path, rows, "rail", "405", later)
+    check = lambda walk, **kw: M.withdraw_check(index, body, place_id="station:510033", remaining_walk_s=walk,  # noqa: E731
+                                                t=later, data_dir=tmp_path, **kw)
+    ok = {"meet_ok": True, "meet_reason": "ok"}
+    assert check(0) == ok and check(-30) == ok                            # 100 - 30 < 120, but nothing left to make
+    assert check(0, rider_vehicle_key="rail:310", direction="S") == ok    # the rider's own train already set them down
+    assert check(1) == {"meet_ok": False, "meet_reason": "margin"}        # still on the way: the floor holds
+    # the rider's train held short of West End: the clock says in place, the poll says not yet
+    held = tmp_path / "held"
+    poll(held, later - 5 * S, ("405", "RED", "S", "Airport", RED_405[1:]),
+         ("310", "GOLD", "S", "Airport", [("510033", later + 40 * S)]))
+    assert M.withdraw_check(index, body, place_id="station:510033", remaining_walk_s=0, t=later, data_dir=held,
+                            rider_vehicle_key="rail:310") == {"meet_ok": False, "meet_reason": "margin"}
+
+
 def test_withdraw_on_the_first_poll_asks_what_the_plan_asked(tmp_path, feed, index):
     rows = hero_world(tmp_path)
     got = plan(feed, index, tmp_path, rows, ["rail:405"], ON_GOLD)
@@ -740,6 +833,17 @@ def test_real_platforms_share_the_trunk_and_split_where_the_spec_says(real_index
     assert M.shares_platform(real_index, "RED", "GOLD", "510037", "N")
     assert not any(M.shares_platform(real_index, "RED", "BLUE", "510015", d) for d in "NSEW")
     assert M.shares_platform(real_index, "BLUE", "GREEN", "510015", "E")
+
+
+def test_a_real_red_and_gold_tie_gets_no_meet_at_lindbergh_or_the_airport_southbound(real_index):
+    """On the real schedule: Lindbergh is Red 907775 and Gold 908055 northbound (907823 and 908054
+    southbound), the Airport southbound Red 906837 and Gold 906647. Arts Center is one platform."""
+    for parent, d in (("510024", "N"), ("510024", "S"), ("510037", "S")):
+        tie = [train_v("405", "RED", d, (parent, at(15, 54))), train_v("310", "GOLD", d, (parent, at(15, 56)))]
+        got = M.decide(real_index, tie, Rider(station=parent, at_station=True), T)
+        assert got["reason"] == "not_shared", (parent, d)
+    trunk = [train_v("405", "RED", "N", ("510001", at(15, 54))), train_v("310", "GOLD", "N", ("510001", at(15, 56)))]
+    assert M.decide(real_index, trunk, Rider(station="510001", at_station=True), T)["reason"] == "meet"
 
 
 REAL_DATA = Path(__file__).resolve().parents[2] / "data"

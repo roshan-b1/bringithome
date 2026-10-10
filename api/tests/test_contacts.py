@@ -133,6 +133,12 @@ def test_a_broken_mailto_or_tel_stops_the_load():
         Contacts(edited(lambda r: r["entries"]["lost_found_phone"].update(tel="tel:4048483208")))
 
 
+def test_a_dash_in_a_fact_value_stops_the_load():
+    raw = edited(lambda r: r["entries"]["lost_found_hold"].update(value="30 days \u2014 usually"))
+    with pytest.raises(ContactsError, match="copy lint"):
+        Contacts(raw)
+
+
 def test_rider_facing_contact_text_passes_the_copy_lint():
     for key, c in CONTACTS.entries.items():
         for text in (c.value, c.display):

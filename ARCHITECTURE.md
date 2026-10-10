@@ -726,11 +726,11 @@ Shorter runs of repeated rail coordinates are stale reports and count at their f
 - Feasible if ETA − now − walk_s ≥ 180 s and walk_s ≤ 15 min. Pick the earliest feasible stop.
 - **The 3 min margin is a judgment call, not a measured TripUpdates error.** It gets measured on Saturday only if bus meet survives the H18.5 checkpoint. Otherwise bus meet is cut, as PLAN's cut order allows.
 
-**Two candidates.** `/plan` takes up to two vehicle_keys and offers a meet only at a station and time that work for both: "Wait at West End southbound for the 3:58 or the 4:05." Otherwise the tell-staff card names both trains.
+**Two candidates.** `/plan` takes up to two vehicle_keys and offers a meet only at a station and time that work for both: "Wait at West End southbound for the 3:58 or the 4:05." For two trains that means one platform: both heading the same way, and both lines stopping at the same `platform_stop_id` there (never Lindbergh, or the Airport southbound, for a Red and Gold tie). Otherwise the tell-staff card names both trains.
 
 **Staying true (matching red team).**
 - While a meet card shows, each `/now` poll carries `meet_place_id` and `remaining_walk_s` (the plan's walk minus the elapsed time, so the client never resends location).
-- `meet_ok` turns false when the vehicle stops being live, passes the place, or the margin drops below the floor.
+- `meet_ok` turns false when the vehicle stops being live, passes the place, or the margin drops below the floor while the rider is still on the way. Once `remaining_walk_s` reaches 0 the rider is in place, and the card stays while the vehicle is live and still coming (otherwise every meet that went to plan was withdrawn in its last 150 s).
 - The client then swaps in "Too far to meet right now" plus tell-staff.
 
 **Copy.**
@@ -2073,11 +2073,13 @@ BUS, rider at P (fix with accuracy <= 100 m and age < 30 s, or a chosen stop)
   pick     earliest feasible X
 
 TWO candidates (tie)  offer S only if feasible for both; card names both times; else tell_staff names both
+                      two trains, rider at or near S: both same direction and same platform_stop_id at S
 NEVER                 on stale, schedule-only, as_of without an archived poll, or block-linked vehicles
 
 WITHDRAW (every /now poll while a meet card shows)
   meet_ok = state == 'live'  and  meet place still ahead  and
             ETA(place) - now - remaining_walk_s - pad >= floor     (train: pad 30, floor 120; bus: pad 0, floor 180)
+            the floor applies only while remaining_walk_s > 0: once in place, live and still ahead is enough
   meet_ok false -> client replaces the card with too_far + tell_staff
 ```
 
@@ -2112,6 +2114,7 @@ WITHDRAW (every /now poll while a meet card shows)
    - the same token set, each token present exactly as many times as in the template;
    - zero digits outside tokens;
    - no clock or am/pm patterns, no weekday or month names;
+   - no number words, ordinals, time-of-day or duration words, and no relative word (before, after, later, next, past ...) within 4 words of a token, since "the stop after [[STOP]]" or "an hour before [[TIME]]" keeps the token but moves its fact;
    - no phone, email or URL patterns;
    - no stop, station, alias, line color or route name from our tables;
    - the copy lint (no em or en dashes, no "--", none of the banned words matched as whole words, with the negated safety allowlist, "running on Vultr" and "train run");

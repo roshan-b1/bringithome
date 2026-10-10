@@ -141,8 +141,42 @@ ADVERSARIAL = {
     "an en dash": lambda t: _with(t, "Hi,", "Hi \u2013"),
     "a double hyphen": lambda t: _with(t, "Hi,", "Hi --"),
     "a 2x-length reply": lambda t: t + " " + "I really appreciate any help you can give me with this. " * 6,
+    "a 1.6x-length reply": lambda t: _grow(t, 1.6),
     "an empty reply": lambda t: "   ",
+    # each of these is caught by one rule alone, so dropping that rule fails the suite
+    "a short weekday": lambda t: _with(t, "on [[DATE]]", "on [[DATE]] (Fri)"),
+    "noon": lambda t: _with(t, "Has anything", "I called around noon. Has anything"),
+    "the weekend": lambda t: _with(t, "Has anything", "I was out this weekend. Has anything"),
+    "an email without a domain": lambda t: _with(t, "Hi,", "Hi, I wrote to lostandfound@itsmarta,"),
+    # spelled-out times built on "one", ordinals, more times of day
+    "a quarter after one": lambda t: _with(t, "I left", "At a quarter after one, I left"),
+    "at one": lambda t: _with(t, "I left", "At one, I left"),
+    "half one": lambda t: _with(t, "I left", "Around half one, I left"),
+    "one o'clock": lambda t: _with(t, "I left", "By one o'clock I left"),
+    "midday": lambda t: _with(t, "I left", "At midday I left"),
+    "last night": lambda t: _with(t, "I left", "Last night I left"),
+    "late at night": lambda t: _with(t, "I left", "Late at night I left"),
+    "an ordinal": lambda t: _with(t, "on [[DATE]]", "on [[DATE]], the ninth"),
+    "the second stop": lambda t: _with(t, "I got off at [[STOP]]", "I got off at the second stop, [[STOP]]"),
+    "my fifth ride": lambda t: _with(t, "I left", "On my fifth ride, I left"),
+    # a shift next to a token moves the fact it carries
+    "the stop after": lambda t: _with(t, "at [[STOP]]", "at the stop after [[STOP]]"),
+    "the day after": lambda t: _with(t, "on [[DATE]]", "the day after [[DATE]]"),
+    "an hour before": lambda t: _with(t, "at [[TIME]]", "an hour before [[TIME]]"),
+    "half an hour after": lambda t: _with(t, "at [[TIME]]", "half an hour after [[TIME]]"),
+    "a week before": lambda t: _with(t, "on [[DATE]]", "a week before [[DATE]]"),
+    "or a bit later": lambda t: _with(t, "at [[TIME]]", "at [[TIME]] or a bit later"),
+    "a duration": lambda t: _with(t, "Has anything", "I waited for an hour. Has anything"),
 }
+
+
+def _grow(template: str, factor: float) -> str:
+    """A clean reply padded past `factor` times the template's length (and well under 2x)."""
+    out = template
+    while len(out) < factor * len(template):
+        out += " Thank you for your help."
+    assert len(out) < 1.75 * len(template)
+    return out
 
 
 @pytest.mark.parametrize("case", sorted(ADVERSARIAL))
@@ -221,6 +255,26 @@ def test_without_place_names_the_hook_is_never_asked():
     assert not asked and out.call_script.wording == "template"
 
 
+def test_shifted_times_places_and_dates_never_reach_the_rider(names):
+    """The review's case: every clause moves a fact its token carries, so neither string is used."""
+    call = _with(BUS.call_script, "I got off at [[STOP]] on [[DATE]], at [[TIME]].",
+                 "I got off at the stop after [[STOP]] the day after [[DATE]], an hour before [[TIME]].")
+    body = _with(BUS.email_body, "I'm writing to report a lost item.",
+                 "Last night, at a quarter after one, on my second ride, I lost something.")
+    out = render(VALUES, "bus", "alight", names=names, hook=lambda t: {"email_body": body, "call_script": call})
+    assert (out.email.wording, out.call_script.wording) == ("template", "template")
+    assert out.call_script.text == render(VALUES, "bus", "alight").call_script.text
+
+
+def test_plain_uses_of_one_after_and_day_still_pass(names):
+    """The new rules are narrow: "one" as a pronoun, "after" well away from a token, and a greeting's "day"."""
+    call = ("Hi, I'm calling to report a lost item. After I got off at [[STOP]] on [[DATE]], at [[TIME]], I saw I "
+            "had left [[ITEM]] on bus [[VEHICLE]], route [[ROUTE]], heading [[DIRECTION]]. I've also sent the online "
+            "report. Has anyone turned one in, and what should I do next?")
+    assert validate(call, BUS.call_script, names) == []
+    assert validate(BUS.email_body.replace("Hello,", "Good day,"), BUS.email_body, names) == []
+
+
 def test_plain_words_that_look_like_dates_or_times_are_fine(names):
     template = "I left [[ITEM]] on [[DATE]] at [[TIME]]."
     assert validate("May I ask about [[ITEM]]? I lost it on [[DATE]] at [[TIME]].", template, names) == []
@@ -262,7 +316,8 @@ def test_the_allowlist_lets_negated_safety_lines_and_run_numbers_through(text):
     ("The bus is running late.", "banned_word"), ("Cross the tracks to the other side.", "banned_word"),
     ("MARTA will hold the train for you.", "promise"), ("We'll contact the driver.", "promise"),
     ("The bus will wait for you.", "promise"), ("Breathe \u2014 slowly.", "dash"), ("8\u20139 AM", "dash"),
-    ("Step one -- breathe.", "dash"),
+    ("Step one -- breathe.", "dash"), ("No, run for it.", "banned_word"), ("Jump on.", "banned_word"),
+    ("Rush over.", "banned_word"), ("It is a treatment.", "banned_word"),
 ])
 def test_the_lint_flags_unsafe_and_off_brand_copy(text, kind):
     assert kind in {p.kind for p in lint(text)}
