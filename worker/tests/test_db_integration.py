@@ -71,10 +71,11 @@ def test_a_replay_fills_missing_values_but_never_overwrites(store):
 
 
 def test_same_vehicle_id_from_two_sources_does_not_collide(store):
-    a = PositionRow(ts=T, mode="bus", vehicle_id="1501", source="marta-bus", lat=33.7, lon=-84.4, polled_at=T)
-    b = PositionRow(ts=T, mode="bus", vehicle_id="1501", source="other-city-bus", lat=40.7, lon=-74.0, polled_at=T)
+    t = datetime.now(timezone.utc).replace(microsecond=0)   # latest() looks back one day from the real clock
+    a = PositionRow(ts=t, mode="bus", vehicle_id="1501", source="marta-bus", lat=33.7, lon=-84.4, polled_at=t)
+    b = PositionRow(ts=t, mode="bus", vehicle_id="1501", source="other-city-bus", lat=40.7, lon=-74.0, polled_at=t)
     assert store.insert([a, b]) == 2
-    assert store.latest("bus", "marta-bus", "1501") == T
+    assert store.latest("bus", "marta-bus", "1501") == t
 
 
 def test_gaps_only_grow(store):
@@ -103,6 +104,33 @@ def test_status_upsert_keeps_the_first_start(store):
     assert one(store, "SELECT first_started_at, status->>'polls' FROM recorder_status") == (T, "2")
     store.upsert_status("marta-bus", "vultr-1", T + timedelta(hours=20), {"polls": 7})
     assert one(store, "SELECT count(*) FROM recorder_status")[0] == 2   # one row per machine
+
+
+def test_a_silent_recorder_is_no_gap_while_another_covers_the_source(store):
+    now = datetime.now(timezone.utc)
+
+    def status(recorder, started, updated):
+        store.upsert_status("marta-bus", recorder, started, {"started_at": started.isoformat()})
+        store._connection().execute("UPDATE recorder_status SET updated_at = %s WHERE recorder = %s",
+                                    (updated, recorder))
+
+    def silent():
+        return store._connection().execute(
+            "SELECT recorder, ended_at FROM recorder_gaps_live WHERE kind = 'recorder_silent'").fetchall()
+
+    status("laptop", now - timedelta(hours=9), now - timedelta(hours=2))
+    assert silent() == [("laptop", None)]                        # nobody else: open gap, as before
+
+    status("vultr-1", now - timedelta(hours=3), now)             # took over before the laptop stopped
+    assert silent() == []
+
+    started = now - timedelta(hours=1)                           # took over an hour after: a closed hole
+    status("vultr-1", started, now)
+    assert silent() == [("laptop", started)]
+
+    store._connection().execute("UPDATE recorder_status SET updated_at = %s WHERE recorder = 'vultr-1'",
+                                (now - timedelta(minutes=10),))   # both silent: both open
+    assert sorted(silent()) == [("laptop", None), ("vultr-1", None)]
 
 
 def test_refused_value_is_a_data_error(store):
