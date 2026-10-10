@@ -1,11 +1,11 @@
 # Caddy on the Vultr box: HTTPS for the API (Let's Encrypt, automatic). The phone app is served by Vercel,
-# which forwards /api/* here (vercel.json). The sslip.io name works before the api.bringit.casa DNS record
-# exists. No `log` directive on purpose: no access log, because rider coordinates travel in query strings.
+# which forwards /api/* here (vercel.json). The API lives at the sslip.io name (it maps to the box's IP, so no
+# DNS record of our own is needed). No `log` directive on purpose: no access log, because rider coordinates travel in query strings.
 # Written for Ubuntu's caddy 2.6 (trusted_proxies is a reverse_proxy option there, not a global one).
 #
 #   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
 
-api.bringit.casa, 155-138-217-184.sslip.io {
+155-138-217-184.sslip.io {
 	encode zstd gzip
 	reverse_proxy 127.0.0.1:8000 {
 		# Requests arrive through Vercel; pass the rider's address on in X-Forwarded-For for the rate limit.
