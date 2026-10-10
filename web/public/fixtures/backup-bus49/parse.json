@@ -1,0 +1,39 @@
+{
+ "fields": {
+  "item_category": "bag",
+  "mode": "bus",
+  "route": "49",
+  "alight": {
+   "place_phrase": "piedmont and gilmer",
+   "choices": [
+    {
+     "place_id": "stop:210555",
+     "label": "Piedmont Ave SE @ Gilmer St SE (route 49 near Piedmont Ave SE @ Gilmer St SE)",
+     "kind": "stop",
+     "lat": 33.752543,
+     "lon": -84.384156,
+     "distance_m": 0,
+     "stop_ids": [
+      "210555"
+     ],
+     "routes": [
+      "20",
+      "21",
+      "22",
+      "42",
+      "49",
+      "55"
+     ],
+     "lines": [],
+     "needs_confirm": false
+    }
+   ],
+   "time_phrase": "around 1:18",
+   "at": "2026-10-09T17:18:00Z",
+   "day_label": "today",
+   "window_min": 20
+  }
+ },
+ "dropped": [],
+ "source": "gemini"
+}

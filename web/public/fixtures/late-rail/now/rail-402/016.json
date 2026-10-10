@@ -1,0 +1,43 @@
+{
+ "vehicle_key": "rail:402",
+ "label": null,
+ "route": "RED",
+ "line": "RED",
+ "destination_label": "Airport",
+ "position": {
+  "lon": -84.427253,
+  "lat": 33.710398
+ },
+ "at": "2026-10-10T01:22:34.151000Z",
+ "age_s": 6,
+ "state": "live",
+ "next_stops": [
+  {
+   "place_id": "station:510022",
+   "label": "Lakewood-Ft McPherson",
+   "eta": "2026-10-10T01:22:50.151000Z",
+   "source": "live"
+  },
+  {
+   "place_id": "station:510013",
+   "label": "East Point",
+   "eta": "2026-10-10T01:25:38.151000Z",
+   "source": "live"
+  },
+  {
+   "place_id": "station:510008",
+   "label": "College Park",
+   "eta": "2026-10-10T01:28:26.151000Z",
+   "source": "live"
+  },
+  {
+   "place_id": "station:510037",
+   "label": "Airport",
+   "eta": "2026-10-10T01:30:33.151000Z",
+   "source": "live"
+  }
+ ],
+ "turns_around_at": "Airport",
+ "trip_status": "scheduled",
+ "source": "as_of"
+}

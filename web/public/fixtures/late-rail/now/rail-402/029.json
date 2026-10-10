@@ -1,0 +1,37 @@
+{
+ "vehicle_key": "rail:402",
+ "label": null,
+ "route": "RED",
+ "line": "RED",
+ "destination_label": "Airport",
+ "position": {
+  "lon": -84.431098,
+  "lat": 33.693721
+ },
+ "at": "2026-10-10T01:24:34.174000Z",
+ "age_s": 16,
+ "state": "live",
+ "next_stops": [
+  {
+   "place_id": "station:510013",
+   "label": "East Point",
+   "eta": "2026-10-10T01:25:48.174000Z",
+   "source": "live"
+  },
+  {
+   "place_id": "station:510008",
+   "label": "College Park",
+   "eta": "2026-10-10T01:28:36.174000Z",
+   "source": "live"
+  },
+  {
+   "place_id": "station:510037",
+   "label": "Airport",
+   "eta": "2026-10-10T01:30:43.174000Z",
+   "source": "live"
+  }
+ ],
+ "turns_around_at": "Airport",
+ "trip_status": "scheduled",
+ "source": "as_of"
+}

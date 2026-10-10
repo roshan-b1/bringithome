@@ -1,0 +1,117 @@
+{
+ "options": [
+  {
+   "kind": "wait_on_return",
+   "rank": 1,
+   "recommended": false,
+   "vehicle_keys": [
+    "bus:2331"
+   ],
+   "place_id": "stop:600028",
+   "place_label": "Courtland St NE @ Auburn Ave NE",
+   "stop_lat": 33.755912,
+   "stop_lon": -84.384348,
+   "reunion_at": "2026-10-09T17:53:58Z",
+   "window_from": "2026-10-09T17:50:58Z",
+   "window_to": "2026-10-09T18:00:58Z",
+   "leave_by": "2026-10-09T17:41:50.452512Z",
+   "walk_s": 548,
+   "wait_s": 750,
+   "margin_s": 750,
+   "basis": "timetable",
+   "confidence": "low",
+   "note_ids": [
+    "usually_comes_back",
+    "timetable_only",
+    "assumed_location"
+   ],
+   "facts": {
+    "mode": "bus",
+    "vehicle": "Bus 49",
+    "label": "1631",
+    "stop": "Courtland St NE @ Auburn Ave NE",
+    "time": "1:53 PM",
+    "window_from": "1:50 PM",
+    "window_to": "2:00 PM",
+    "minutes": 21,
+    "walk_min": 10,
+    "leave_by": "1:41 PM"
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "label": "db",
+    "stop": "static_gtfs",
+    "time": "static_gtfs",
+    "window_from": "static_gtfs",
+    "window_to": "static_gtfs",
+    "minutes": "static_gtfs",
+    "walk_min": "rules",
+    "leave_by": "static_gtfs"
+   }
+  },
+  {
+   "kind": "wait_here",
+   "rank": 2,
+   "recommended": false,
+   "vehicle_keys": [
+    "bus:2331"
+   ],
+   "place_id": "stop:213732",
+   "place_label": "Coca Cola Pl SE @ Jesse Hill Jr Dr SE",
+   "stop_lat": 33.753719,
+   "stop_lon": -84.381169,
+   "reunion_at": "2026-10-09T17:55:42Z",
+   "window_from": "2026-10-09T17:52:42Z",
+   "window_to": "2026-10-09T18:02:42Z",
+   "leave_by": "2026-10-09T17:45:04.785392Z",
+   "walk_s": 458,
+   "wait_s": 944,
+   "margin_s": 944,
+   "basis": "timetable",
+   "confidence": "low",
+   "note_ids": [
+    "usually_comes_back",
+    "timetable_only",
+    "assumed_location"
+   ],
+   "facts": {
+    "mode": "bus",
+    "vehicle": "Bus 49",
+    "label": "1631",
+    "stop": "Coca Cola Pl SE @ Jesse Hill Jr Dr SE",
+    "time": "1:55 PM",
+    "window_from": "1:52 PM",
+    "window_to": "2:02 PM",
+    "minutes": 23,
+    "walk_min": 8,
+    "leave_by": "1:45 PM"
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "label": "db",
+    "stop": "static_gtfs",
+    "time": "static_gtfs",
+    "window_from": "static_gtfs",
+    "window_to": "static_gtfs",
+    "minutes": "static_gtfs",
+    "walk_min": "rules",
+    "leave_by": "static_gtfs"
+   }
+  }
+ ],
+ "not_offered": [
+  {
+   "kind": "walk_ahead",
+   "reason": "not_live"
+  },
+  {
+   "kind": "meet_at_end",
+   "reason": "too_far"
+  }
+ ],
+ "rider_location": "assumed_alight",
+ "computed_at": "2026-10-09T17:32:20Z",
+ "source": "as_of"
+}

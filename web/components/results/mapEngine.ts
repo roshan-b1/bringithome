@@ -63,11 +63,22 @@ export interface RiderPoint {
   accuracy_m: number
 }
 
+export interface TargetPoint {
+  lat: number
+  lon: number
+  /** the marker's words ("Meet it here") */
+  label: string
+  /** the place's name, for the map in words */
+  place: string
+}
+
 export interface Engine {
   play: () => void
   skipToEnd: () => void
   setNow: (key: VehicleKey, pos: LonLat | null) => void
   setRider: (fix: RiderPoint | null) => void
+  /** the plan's best way back, a public stop or station (never the rider); null removes it */
+  setTarget: (target: TargetPoint | null) => void
   /** fit the rider and the named vehicle(s): only ever on the rider's tap (tiles for the rider's area are fetched
    *  only when they ask to see themselves) */
   fitRider: () => void
@@ -310,7 +321,7 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
   // --------------------------------------------------------------------------------------------- markers
   // stacking, bottom to top: the rider's dot, the stop and its label (text must stay legible when the rider is
   // standing at it), the candidates, the match
-  const Z = { rider: '1', stop: '2', candidate: '3', match: '4' } as const
+  const Z = { rider: '1', stop: '2', target: '3', candidate: '4', match: '5' } as const
   const stopEl = el(styles.stop!)
   stopEl.append(el(styles.stopRing!), el(styles.stopLabel!, init.text.yourStop))
   const stopMarker = new Marker({ element: stopEl, anchor: 'center' }).setLngLat([focus.lon, focus.lat]).addTo(map)
@@ -337,6 +348,8 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
 
   let riderMarker: Marker | null = null
   let rider: RiderPoint | null = null
+  let targetMarker: Marker | null = null
+  let target: TargetPoint | null = null
 
   // ----------------------------------------------------------------------------------------- the replay
   const posAt = (key: VehicleKey, t: number): LonLat | null => {
@@ -408,9 +421,12 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
       const p = m.now ?? m.end
       if (p) pts.push(p)
     }
+    if (target) pts.push([target.lon, target.lat])
     const b = boundsOf(pts)
     if (!b) return
-    map.fitBounds(new LngLatBounds(b[0], b[1]), { padding: FIT_PADDING, maxZoom: 16.5, duration: animate && !reducedMotion ? 1200 : 0 })
+    // the pin's words sit beside it: room on the right
+    const padding = target ? { ...FIT_PADDING, right: FIT_PADDING.right + 96 } : FIT_PADDING
+    map.fitBounds(new LngLatBounds(b[0], b[1]), { padding, maxZoom: 16.5, duration: animate && !reducedMotion ? 1200 : 0 })
   }
 
   const finish = () => {
@@ -511,6 +527,29 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
     src?.setData({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [circleRing(fix, acc, 48)] } })
   }
 
+  const setTarget = (next: TargetPoint | null) => {
+    const moved = !target || !next || target.lat !== next.lat || target.lon !== next.lon
+    target = next
+    if (destroyed) return
+    if (!next) {
+      targetMarker?.remove()
+      targetMarker = null
+      return
+    }
+    if (!targetMarker) {
+      const root = el(styles.target!)
+      root.append(el(styles.targetPin!), el(styles.targetLabel!, next.label))
+      targetMarker = new Marker({ element: root, anchor: 'center' }).setLngLat([next.lon, next.lat]).addTo(map)
+      targetMarker.getElement().style.zIndex = Z.target
+    } else {
+      targetMarker.setLngLat([next.lon, next.lat])
+      const label = targetMarker.getElement().querySelector(`.${styles.targetLabel}`)
+      if (label) label.textContent = next.label
+    }
+    // a new place takes the view once, after the replay; the same place moving its words never moves the map
+    if (moved && phase === 'done') fitAll(true)
+  }
+
   const fitRider = () => {
     if (!rider || destroyed) return
     const pts: LonLat[] = [[rider.lon, rider.lat]]
@@ -518,6 +557,7 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
       const p = m.now ?? m.end ?? m.pos
       if (p) pts.push(p)
     }
+    if (target) pts.push([target.lon, target.lat])
     if (pts.length === 1) pts.push([focus.lon, focus.lat])
     const b = boundsOf(pts)!
     map.fitBounds(new LngLatBounds(b[0], b[1]), { padding: FIT_PADDING, maxZoom: 16.5, duration: reducedMotion ? 0 : 900 })
@@ -537,6 +577,7 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
     },
     setNow,
     setRider,
+    setTarget,
     fitRider,
     destroy: () => {
       destroyed = true

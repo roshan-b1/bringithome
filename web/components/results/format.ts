@@ -72,6 +72,7 @@ export function countedNoun(counted: MatchContext['counted'], n: number): string
  */
 export function contextLine(match: Pick<Match, 'status' | 'level' | 'context'>): { line: string; fits: string | null; where: string | null } {
   const c = match.context
+  if (!c) return { line: '', fits: null, where: null }   // a match the API sent without its context: say nothing
   const radius = c.radius_m ?? 400
   const place = c.place_label.trim()
   const hasWindow = Date.parse(c.window.to) > Date.parse(c.window.from)

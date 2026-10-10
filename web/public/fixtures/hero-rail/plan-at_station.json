@@ -1,0 +1,393 @@
+{
+ "generated_at": "2026-10-09T19:27:00Z",
+ "lost_found": {
+  "open_now": true,
+  "next_open": "2026-10-12T12:30:00Z",
+  "usually": false
+ },
+ "meet": {
+  "possible": false,
+  "reason": "ahead",
+  "vehicle_keys": [
+   "rail:407"
+  ]
+ },
+ "cards": [
+  {
+   "kind": "bag_staff",
+   "step": 1,
+   "facts": {
+    "police_non_emergency": "404-848-4900",
+    "tracks_01": 1
+   },
+   "fact_sources": {
+    "police_non_emergency": "contacts",
+    "tracks_01": "rules"
+   },
+   "actions": [
+    {
+     "type": "tel",
+     "label_id": "call_police",
+     "value": "tel:+14048484900"
+    }
+   ],
+   "evidence": [],
+   "source": "static"
+  },
+  {
+   "kind": "switch_platform",
+   "step": 2,
+   "facts": {
+    "mode": "rail",
+    "vehicle": "Red Line train",
+    "train_run": "407",
+    "toward": "North Springs",
+    "night": 0,
+    "get_off_at": "Lakewood-Ft McPherson",
+    "ride_run": "411",
+    "ride_toward": "Airport",
+    "off_time": "3:42 PM",
+    "board_at": "Five Points",
+    "board_time": "3:32 PM",
+    "stop": "Lakewood-Ft McPherson",
+    "time": "3:53 PM",
+    "window_from": "3:48 PM",
+    "window_to": "4:01 PM",
+    "minutes": 26,
+    "walk_min": 18,
+    "leave_by": "3:30 PM",
+    "confidence": "usual",
+    "usually": 0,
+    "assumed": 0
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "train_run": "db",
+    "toward": "static_gtfs",
+    "night": "rules",
+    "get_off_at": "static_gtfs",
+    "ride_run": "db",
+    "ride_toward": "db",
+    "off_time": "db",
+    "board_at": "static_gtfs",
+    "board_time": "db",
+    "stop": "static_gtfs",
+    "time": "rules",
+    "window_from": "rules",
+    "window_to": "rules",
+    "minutes": "rules",
+    "walk_min": "rules",
+    "leave_by": "rules",
+    "confidence": "rules",
+    "usually": "rules",
+    "assumed": "rules"
+   },
+   "actions": [],
+   "evidence": [],
+   "source": "live"
+  },
+  {
+   "kind": "tell_staff",
+   "step": 3,
+   "facts": {
+    "mode": "rail",
+    "vehicle": "Red Line train",
+    "train_run": "407",
+    "direction": "To Airport"
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "train_run": "db",
+    "direction": "db"
+   },
+   "actions": [],
+   "evidence": [
+    {
+     "role": "alight",
+     "place_label": "Garnett",
+     "at": "2026-10-09T19:23:59.352815Z",
+     "distance_m": 5
+    }
+   ],
+   "source": "live"
+  },
+  {
+   "kind": "keep",
+   "step": 4,
+   "facts": {
+    "mode": "rail",
+    "vehicle": "Red Line train",
+    "train_run": "407",
+    "stop": "Garnett",
+    "time": "3:23 PM",
+    "role": "alight"
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "train_run": "db",
+    "stop": "static_gtfs",
+    "time": "db",
+    "role": "rules"
+   },
+   "actions": [
+    {
+     "type": "copy",
+     "label_id": "keep_copy",
+     "value": "Red Line train, MARTA train run 407, got off at Garnett around 3:23 PM on Friday, October 9."
+    }
+   ],
+   "evidence": [
+    {
+     "role": "alight",
+     "place_label": "Garnett",
+     "at": "2026-10-09T19:23:59.352815Z",
+     "distance_m": 5
+    }
+   ],
+   "source": "live"
+  },
+  {
+   "kind": "report",
+   "step": 5,
+   "facts": {
+    "direction": "To Airport",
+    "location": "Garnett",
+    "time": "Fri Oct 9, about 3:23 PM",
+    "rail_line": "Red Line",
+    "rail_station": "Garnett",
+    "train_run": "MARTA train run 407, from MARTA's public feeds"
+   },
+   "fact_sources": {
+    "direction": "db",
+    "location": "static_gtfs",
+    "time": "db",
+    "rail_line": "db",
+    "rail_station": "static_gtfs",
+    "train_run": "db"
+   },
+   "actions": [
+    {
+     "type": "link",
+     "label_id": "report_open_form",
+     "value": "https://itsmarta.com/tplecrmcontact-v2.aspx"
+    },
+    {
+     "type": "copy",
+     "label_id": "report_copy",
+     "value": "Rail Line: Red Line\nMARTA Rail Station: Garnett\nDirection of Travel/Destination: To Airport\nLocation: Garnett\nTime: Fri Oct 9, about 3:23 PM\nMARTA train run 407, from MARTA's public feeds"
+    }
+   ],
+   "evidence": [
+    {
+     "role": "alight",
+     "place_label": "Garnett",
+     "at": "2026-10-09T19:23:59.352815Z",
+     "distance_m": 5
+    }
+   ],
+   "source": "live"
+  },
+  {
+   "kind": "call",
+   "step": 6,
+   "facts": {
+    "open_now": 1,
+    "lost_found_phone": "404-848-3208",
+    "lost_found_hours": "Mon to Fri, 8:30 AM to 5 PM",
+    "lost_found_transit_time": "up to 5 business days",
+    "lost_found_hold": "30 days",
+    "usually": 0
+   },
+   "fact_sources": {
+    "open_now": "contacts",
+    "lost_found_phone": "contacts",
+    "lost_found_hours": "contacts",
+    "lost_found_transit_time": "contacts",
+    "lost_found_hold": "contacts",
+    "usually": "contacts"
+   },
+   "actions": [
+    {
+     "type": "tel",
+     "label_id": "call_lost_found",
+     "value": "tel:+14048483208"
+    },
+    {
+     "type": "mailto",
+     "label_id": "email_lost_found",
+     "value": "mailto:lostandfound@itsmarta.com"
+    }
+   ],
+   "evidence": [],
+   "source": "static"
+  }
+ ],
+ "report": {
+  "form_fields": {
+   "direction": "To Airport",
+   "location": "Garnett",
+   "time": "Fri Oct 9, about 3:23 PM",
+   "rail_line": "Red Line",
+   "rail_station": "Garnett",
+   "train_run": "MARTA train run 407, from MARTA's public feeds"
+  },
+  "email": {
+   "subject": "Lost item on a Red Line train, Friday, October 9",
+   "body": "Hello,\n\nI hope you can help with a missing property report. I misplaced [[ITEM]] aboard a Red Line train going to Airport. MARTA's public feeds show this as train run 407. I got off at Garnett on Friday, October 9, at about 3:23 PM.\n\nI also submitted these facts via the web form. Please contact me regarding recovery steps if it is found. I am happy to provide a description and photo ID.\n\nThank you.",
+   "wording": "gemini"
+  },
+  "call_script": {
+   "text": "Hi, I am calling to report a lost property issue. I misplaced [[ITEM]] aboard a Red Line train going to Airport. MARTA's public feeds show this as train run 407. I got off at Garnett on Friday, October 9, at about 3:23 PM. I also submitted the web report. Has this item been turned in, and what are the recovery steps?",
+   "wording": "gemini"
+  }
+ },
+ "source": "as_of",
+ "reunion": {
+  "options": [
+   {
+    "kind": "switch_platform",
+    "rank": 1,
+    "recommended": true,
+    "vehicle_keys": [
+     "rail:407"
+    ],
+    "place_id": "station:510022",
+    "place_label": "Lakewood-Ft McPherson",
+    "direction": "N",
+    "stop_lat": 33.70042,
+    "stop_lon": -84.42883,
+    "reunion_at": "2026-10-09T19:53:00Z",
+    "window_from": "2026-10-09T19:48:00Z",
+    "window_to": "2026-10-09T20:01:00Z",
+    "leave_by": "2026-10-09T19:30:18Z",
+    "walk_s": 1080,
+    "wait_s": 480,
+    "margin_s": 258,
+    "basis": "estimate",
+    "confidence": "usual",
+    "note_ids": [
+     "watch_after_turn",
+     "change_platform"
+    ],
+    "facts": {
+     "mode": "rail",
+     "vehicle": "Red Line train",
+     "train_run": "407",
+     "toward": "North Springs",
+     "night": 0,
+     "get_off_at": "Lakewood-Ft McPherson",
+     "ride_run": "411",
+     "ride_toward": "Airport",
+     "off_time": "3:42 PM",
+     "board_at": "Five Points",
+     "board_time": "3:32 PM",
+     "stop": "Lakewood-Ft McPherson",
+     "time": "3:53 PM",
+     "window_from": "3:48 PM",
+     "window_to": "4:01 PM",
+     "minutes": 26,
+     "walk_min": 18,
+     "leave_by": "3:30 PM"
+    },
+    "fact_sources": {
+     "mode": "rules",
+     "vehicle": "db",
+     "train_run": "db",
+     "toward": "static_gtfs",
+     "night": "rules",
+     "get_off_at": "static_gtfs",
+     "ride_run": "db",
+     "ride_toward": "db",
+     "off_time": "db",
+     "board_at": "static_gtfs",
+     "board_time": "db",
+     "stop": "static_gtfs",
+     "time": "rules",
+     "window_from": "rules",
+     "window_to": "rules",
+     "minutes": "rules",
+     "walk_min": "rules",
+     "leave_by": "rules"
+    }
+   },
+   {
+    "kind": "wait_here",
+    "rank": 2,
+    "recommended": false,
+    "vehicle_keys": [
+     "rail:407"
+    ],
+    "place_id": "station:510015",
+    "place_label": "Five Points",
+    "direction": "N",
+    "stop_lat": 33.75387,
+    "stop_lon": -84.39157,
+    "reunion_at": "2026-10-09T20:02:00Z",
+    "window_from": "2026-10-09T19:57:00Z",
+    "window_to": "2026-10-09T20:10:00Z",
+    "leave_by": "2026-10-09T19:55:00Z",
+    "walk_s": 120,
+    "wait_s": 1980,
+    "margin_s": 1950,
+    "basis": "estimate",
+    "confidence": "usual",
+    "note_ids": [
+     "watch_after_turn",
+     "change_platform"
+    ],
+    "facts": {
+     "mode": "rail",
+     "vehicle": "Red Line train",
+     "train_run": "407",
+     "toward": "North Springs",
+     "night": 0,
+     "stop": "Five Points",
+     "time": "4:02 PM",
+     "window_from": "3:57 PM",
+     "window_to": "4:10 PM",
+     "minutes": 35,
+     "walk_min": 2,
+     "leave_by": "3:55 PM"
+    },
+    "fact_sources": {
+     "mode": "rules",
+     "vehicle": "db",
+     "train_run": "db",
+     "toward": "static_gtfs",
+     "night": "rules",
+     "stop": "static_gtfs",
+     "time": "rules",
+     "window_from": "rules",
+     "window_to": "rules",
+     "minutes": "rules",
+     "walk_min": "rules",
+     "leave_by": "rules"
+    }
+   }
+  ],
+  "not_offered": [
+   {
+    "kind": "walk_ahead",
+    "reason": "ahead"
+   },
+   {
+    "kind": "shared_track",
+    "reason": "not_on_train"
+   },
+   {
+    "kind": "wait_on_return",
+    "reason": "too_far"
+   },
+   {
+    "kind": "meet_at_end",
+    "reason": "not_turned"
+   }
+  ],
+  "rider_location": "chosen",
+  "computed_at": "2026-10-09T19:27:00Z",
+  "source": "as_of"
+ }
+}

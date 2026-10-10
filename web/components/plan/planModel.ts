@@ -135,14 +135,16 @@ export function withdrawnCards(plan: Plan, meet: Card): Card[] {
 }
 
 /**
- * The card kinds this build has wording for (PlanCards' CardBody and the screen's slots). The reunion planner's
- * wait_return, meet_end and switch_platform have no reviewed copy yet: a card of a kind not listed here is left out
- * (a numbered step with no words would be worse), and it doesn't count as the meet, so the screen still asks
- * "Can you meet it?" in its place. Add a kind here together with its wording.
+ * The card kinds this build has wording for (PlanCards' CardBody and the screen's slots). A card of a kind not
+ * listed here is left out (a numbered step with no words would be worse). Add a kind here together with its wording.
  */
 export const RENDERED_KINDS: ReadonlySet<CardKind> = new Set<CardKind>([
-  'safety', 'bag_staff', 'meet', 'too_far', 'tell_staff', 'keep', 'report', 'call', 'freeze_cards', 'phone_lost', 'police_property',
+  'safety', 'bag_staff', 'meet', 'wait_return', 'meet_end', 'switch_platform', 'too_far', 'tell_staff', 'keep', 'report',
+  'call', 'freeze_cards', 'phone_lost', 'police_property',
 ])
+
+/** The cards that hold the plan's "how to get it back" step: the meet, the reunion's way, or "no meet right now". */
+export const WAY_KINDS: ReadonlySet<CardKind> = new Set<CardKind>(['meet', 'wait_return', 'meet_end', 'switch_platform', 'too_far'])
 
 /**
  * The cards the screen shows, in order, steps renumbered 1..n: the API's list (kinds this build can word), with the
@@ -159,9 +161,9 @@ export function arrangeCards(
     if (c.kind === 'meet' && opts.withdrawn) cards.push(...withdrawnCards(plan, c))
     else cards.push(c)
   }
-  // the screen asks where the rider is in the meet's place in the route; the API sends too_far there when it
-  // had no place to check, and this keeps a slot when it sent neither card
-  if (opts.meetSlot && !cards.some((c) => c.kind === 'meet' || c.kind === 'too_far')) {
+  // the screen asks where the rider is, and shows the ways to get it back, in the meet's place in the route; the API
+  // sends too_far or a reunion card there when it had no meet, and this keeps a slot when it sent none of them
+  if (opts.meetSlot && !cards.some((c) => WAY_KINDS.has(c.kind))) {
     const at = cards.findIndex((c) => c.kind === 'tell_staff' || c.kind === 'keep')
     const slot: Card = { kind: 'too_far', step: 0, facts: {}, fact_sources: {}, actions: [], evidence: [], source: 'live' }
     cards.splice(at < 0 ? cards.length : at, 0, slot)

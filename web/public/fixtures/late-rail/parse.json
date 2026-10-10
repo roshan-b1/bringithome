@@ -1,0 +1,35 @@
+{
+ "fields": {
+  "item_category": "bag",
+  "mode": "rail",
+  "line": "RED",
+  "alight": {
+   "place_phrase": "west end",
+   "choices": [
+    {
+     "place_id": "alias:west end",
+     "label": "West End",
+     "kind": "alias",
+     "lat": 33.736134875,
+     "lon": -84.4135345,
+     "stop_ids": [
+      "908704",
+      "908705"
+     ],
+     "routes": [],
+     "lines": [
+      "RED",
+      "GOLD"
+     ],
+     "needs_confirm": false
+    }
+   ],
+   "time_phrase": "around 9:16 pm",
+   "at": "2026-10-10T01:16:00Z",
+   "day_label": "today",
+   "window_min": 20
+  }
+ },
+ "dropped": [],
+ "source": "gemini"
+}

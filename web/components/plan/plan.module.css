@@ -641,3 +641,233 @@
   flex-direction: column;
   gap: var(--sp-4);
 }
+
+/* ------------------------------------------------------------------------------------- ways to get it back */
+
+.ways {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  /* the browser keeps the reader's place when this section changes above them (PlanScreen also corrects it) */
+  overflow-anchor: auto;
+}
+
+.wayMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.ticketTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-1);
+}
+
+.eyebrowSmall {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--ink-2);
+  letter-spacing: 0.01em;
+}
+
+.confidence {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+}
+
+.leaveRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  margin-top: var(--sp-2);
+}
+
+/* "Leave by 3:28 PM, in about 4 min": navy like the meet's walk pill, never a warning colour (calm, not urgent) */
+.leavePill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 44px;
+  padding: 6px 14px 6px 10px;
+  /* a pill on one line (44 px tall), a rounded box when the words wrap on a narrow phone */
+  border-radius: var(--r-lg);
+  background: var(--navy);
+  color: var(--white);
+  line-height: var(--lh-snug);
+}
+
+.leavePill > svg {
+  flex-shrink: 0; /* the clock keeps its shape when the words wrap */
+}
+
+.leavePill strong {
+  font-weight: var(--fw-heavy);
+  white-space: nowrap; /* "Leave by 3:28 PM" stays whole; the countdown wraps after it */
+}
+
+.leaveIn {
+  font-weight: var(--fw-semibold);
+}
+
+.getThere {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+}
+
+.noWay {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-4);
+  border: 2px solid var(--navy-08);
+  border-radius: var(--r-md);
+  background: var(--navy-04);
+}
+
+.wayList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.wayListHeading {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-heavy);
+}
+
+.wayItems {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wayItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  border: 2px solid var(--navy-08);
+  border-radius: var(--r-md);
+  background: var(--white);
+}
+
+.wayItemHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.wayItemPlace {
+  flex: 1 1 12rem;
+  min-width: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-heavy);
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+}
+
+.wayItemTime {
+  font-weight: var(--fw-bold);
+}
+
+.whyList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0 var(--sp-4) var(--sp-4);
+  list-style: none;
+  line-height: var(--lh-snug);
+}
+
+.whyList li {
+  padding-left: var(--sp-3);
+  border-left: 3px solid var(--navy-14);
+}
+
+/* the ways a reason is about, on their own line above it */
+.whyName {
+  display: block;
+  font-weight: var(--fw-semibold);
+}
+
+.updated {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.updatedText {
+  min-width: 0;
+}
+
+.pulseOff {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+
+/* Live, Estimate, Timetable: the chip's shape (components/ui/Chip), its own words */
+.basis {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 2px solid transparent;
+  border-radius: var(--r-pill);
+  font-size: 0.9375rem;
+  font-weight: var(--fw-bold);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.basis_live {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.basis_estimate {
+  background: var(--navy-08);
+  color: var(--navy);
+  border-color: var(--navy-14);
+}
+
+.basis_timetable {
+  background: var(--warn-bg);
+  color: var(--warn);
+  border-color: #f0d79a;
+}
+
+.basisDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.mapToggle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+@media (forced-colors: active) {
+  .basis {
+    border-color: CanvasText;
+  }
+}

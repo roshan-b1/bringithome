@@ -1,0 +1,70 @@
+{
+ "trains": [
+  {
+   "vehicle_key": "rail:405",
+   "line": "RED",
+   "direction": "S",
+   "destination_label": "Lindbergh Center",
+   "next_station": {
+    "place_id": "station:510036",
+    "label": "Buckhead",
+    "eta": "2026-10-10T01:20:20.123000Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:402",
+   "line": "RED",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510029",
+    "label": "Oakland City",
+    "eta": "2026-10-10T01:20:32.123000Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:305",
+   "line": "GOLD",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510027",
+    "label": "North Ave",
+    "eta": "2026-10-10T01:21:35.123000Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:301",
+   "line": "GOLD",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510010",
+    "label": "Doraville",
+    "eta": "2026-10-10T01:23:03.123000Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:404",
+   "line": "RED",
+   "direction": "S",
+   "destination_label": "Lindbergh Center",
+   "next_station": {
+    "place_id": "station:510028",
+    "label": "North Springs",
+    "eta": "2026-10-10T01:32:03.123000Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  }
+ ],
+ "source": "as_of"
+}

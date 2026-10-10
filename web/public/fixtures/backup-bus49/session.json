@@ -1,6 +1,6 @@
 {
- "session_id": "089096f3-14e6-44bc-8d6f-c7340fad0ed2",
- "deletes_by": "2026-10-11T04:47:29.687750Z",
+ "session_id": "1dbb3f60-9714-471f-aa6b-bd2d98e8b9e9",
+ "deletes_by": "2026-10-11T08:10:50.454659Z",
  "as_of": "2026-10-09T13:30:00-04:00",
  "record": false,
  "match": {
@@ -52,7 +52,7 @@
   "stats": {
    "positions_scanned": 912,
    "vehicles_considered": 6,
-   "query_ms": 55,
+   "query_ms": 42,
    "sql": "SELECT source, vehicle_id, label, route_short, trip_id, trip_canceled, direction, destination, anchor_idx, piece, dist_m, t_pass, t_in, t_out, gap_s FROM vehicle_passes(%(mode)s, %(lons)s, %(lats)s, %(t_from)s, %(t_to)s, 400, interval '600 seconds', interval '90 seconds', %(until)s)",
    "engine": "sql"
   }

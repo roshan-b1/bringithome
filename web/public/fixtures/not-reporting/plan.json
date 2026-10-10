@@ -159,13 +159,14 @@
   },
   "email": {
    "subject": "Lost item on a route 20 bus, Friday, October 9",
-   "body": "Hello,\n\nI'm writing to report a lost item. I left [[ITEM]] on a route 20 bus, heading toward Five Points Station. I got off at Piedmont Ave SE @ Gilmer St SE on Friday, October 9, at about 1:17 PM.\n\nI have also sent these details through the online lost item form. If it turns up, please let me know how to arrange a pickup. I can describe it in more detail and bring a photo ID.\n\nThank you.",
-   "wording": "template"
+   "body": "Hello,\n\nI hope you are doing well. I need to report a missing belonging. I accidentally left [[ITEM]] on a route 20 bus, moving toward Five Points Station. I got off at Piedmont Ave SE @ Gilmer St SE on Friday, October 9, at about 1:17 PM.\n\nI also submitted these details via the web form. If it is found, please let me know how I can pick it up. I am happy to provide a full description and show my photo ID.\n\nThank you.",
+   "wording": "gemini"
   },
   "call_script": {
-   "text": "Hi, I'm calling to report a lost item. I left [[ITEM]] on a route 20 bus, heading toward Five Points Station. I got off at Piedmont Ave SE @ Gilmer St SE on Friday, October 9, at about 1:17 PM. I've also sent the online report. Has anything like that been turned in, and what should I do next?",
-   "wording": "template"
+   "text": "Hi, I am calling to report a missing belonging. I left [[ITEM]] on a route 20 bus, moving toward Five Points Station. I got off at Piedmont Ave SE @ Gilmer St SE on Friday, October 9, at about 1:17 PM. I have also sent the web report. Has anything of that sort been turned in, and what are my options?",
+   "wording": "gemini"
   }
  },
- "source": "as_of"
+ "source": "as_of",
+ "reunion": null
 }

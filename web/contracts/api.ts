@@ -507,6 +507,7 @@ export const REUNION_NOTES = [
   'usually_comes_back', 'running_very_late', 'evening_not_certain', 'after_midnight_unmeasured',
   'vanished_still_expected', 'watch_train', 'watch_after_turn', 'schedule_not_in_effect', 'change_platform',
   'assumed_location', 'may_come_before_you', 'night', 'timetable_only', 'at_the_end_of_the_line',
+  'late_still_expected',
 ] as const
 export type ReunionNote = (typeof REUNION_NOTES)[number]
 
@@ -787,6 +788,21 @@ export const VehicleNowCheck = obj<VehicleNow>({
   meet_ok: opt(nullable(bool)), meet_reason: opt(nullable(lit('ok', 'stale', 'passed', 'margin'))), source,
 })
 
+/** 10a. POST /api/sessions/{id}/reunion; the plan carries the same object as `reunion`. */
+export const ReunionCheck = obj<Reunion>({
+  options: arr(obj<ReunionOption>({
+    kind: reunionKind, rank: int, recommended: bool, vehicle_keys: arr(str), place_id: str, place_label: str,
+    direction: opt(nullable(dir)), platform_hint: opt(nullable(lit('front', 'middle', 'back'))), stop_lat: num, stop_lon: num,
+    reunion_at: iso, window_from: iso, window_to: iso, leave_by: opt(nullable(iso)), walk_s: int, wait_s: int, margin_s: int,
+    basis: lit('live', 'estimate', 'timetable'), confidence: lit('high', 'usual', 'low'), note_ids: arr(lit(...REUNION_NOTES)),
+    facts: record(oneOf(str, num)), fact_sources: record(factSource),
+  })),
+  not_offered: arr(obj<NotOffered>({ kind: reunionKind, reason: lit(...REUNION_REASONS) })),
+  rider_location: lit('gps', 'chosen', 'assumed_alight', 'on_train', 'none'),
+  computed_at: iso,
+  source,
+})
+
 export const PlanCheck = obj<Plan>({
   generated_at: iso,
   lost_found: obj<LostFound>({ open_now: bool, next_open: iso, usually: opt(bool) }),
@@ -814,19 +830,7 @@ export const PlanCheck = obj<Plan>({
     call_script: obj<Wording>({ text: str, wording: lit('gemini', 'template') }),
   }),
   source,
-  reunion: opt(nullable(obj<Reunion>({
-    options: arr(obj<ReunionOption>({
-      kind: reunionKind, rank: int, recommended: bool, vehicle_keys: arr(str), place_id: str, place_label: str,
-      direction: opt(nullable(dir)), platform_hint: opt(nullable(lit('front', 'middle', 'back'))), stop_lat: num, stop_lon: num,
-      reunion_at: iso, window_from: iso, window_to: iso, leave_by: opt(nullable(iso)), walk_s: int, wait_s: int, margin_s: int,
-      basis: lit('live', 'estimate', 'timetable'), confidence: lit('high', 'usual', 'low'), note_ids: arr(lit(...REUNION_NOTES)),
-      facts: record(oneOf(str, num)), fact_sources: record(factSource),
-    })),
-    not_offered: arr(obj<NotOffered>({ kind: reunionKind, reason: lit(...REUNION_REASONS) })),
-    rider_location: lit('gps', 'chosen', 'assumed_alight', 'on_train', 'none'),
-    computed_at: iso,
-    source,
-  }))),
+  reunion: opt(nullable(ReunionCheck)),
 })
 
 const parsedAnchor = obj<ParsedAnchor>({
@@ -856,6 +860,8 @@ export const FixtureMetaCheck = obj<FixtureMeta>({
 export function checkerForFixture(relPath: string): Validator | null {
   const name = relPath.split('/').pop() ?? ''
   if (/^now\/[a-z]+-[^/]+\/\d{3}\.json$/.test(relPath)) return VehicleNowCheck
+  if (/^reunion\/[a-z_]+\/\d{3}\.json$/.test(relPath)) return ReunionCheck
+  if (relPath === name && /^reunion(-[a-z_]+)?\.json$/.test(name)) return ReunionCheck
   if (/^session(-[a-z_]+)?\.json$/.test(name)) return SessionCheck
   if (/^plan(-.+)?\.json$/.test(name)) return PlanCheck
   const table: Record<string, Validator> = {

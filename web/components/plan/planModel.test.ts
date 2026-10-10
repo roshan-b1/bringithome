@@ -89,12 +89,17 @@ test('the API order stands; steps are renumbered 1..n', () => {
   assert.deepEqual(cards.map((c) => c.step), [1, 2, 3, 4, 5])
 })
 
-test('a card kind this build has no wording for (the reunion planner\'s) is left out, and the meet slot still shows', () => {
-  const extra = { ...garnett, cards: [...garnett.cards.filter((c) => c.kind !== 'meet'), { ...garnett.cards.find((c) => c.kind === 'meet')!, kind: 'meet_end' as const }] }
-  const cards = arrangeCards(extra, { taken: null, withdrawn: false, contacts, meetSlot: true })
-  assert.equal(cards.some((c) => c.kind === 'meet_end'), false)
-  assert.equal(cards.filter((c) => c.kind === 'too_far').length, 1) // "Can you meet it?" in the meet's place
-  assert.deepEqual(cards.map((c) => c.step), cards.map((_, i) => i + 1))
+test('the reunion planner\'s cards render and hold the way step: no second "Can you meet it?" slot', () => {
+  for (const kind of ['wait_return', 'meet_end', 'switch_platform'] as const) {
+    const extra = { ...garnett, cards: [...garnett.cards.filter((c) => c.kind !== 'meet'), { ...garnett.cards.find((c) => c.kind === 'meet')!, kind }] }
+    const cards = arrangeCards(extra, { taken: null, withdrawn: false, contacts, meetSlot: true })
+    assert.equal(cards.filter((c) => c.kind === kind).length, 1, kind)
+    assert.equal(cards.some((c) => c.kind === 'too_far'), false, kind)
+    assert.deepEqual(cards.map((c) => c.step), cards.map((_, i) => i + 1))
+  }
+  // with no way card at all, the screen still gets its slot
+  const bare = { ...garnett, cards: garnett.cards.filter((c) => c.kind !== 'meet') }
+  assert.equal(arrangeCards(bare, { taken: null, withdrawn: false, contacts, meetSlot: true }).filter((c) => c.kind === 'too_far').length, 1)
 })
 
 test('"taken" answered on the plan: the safety card first, from the bundled contacts, unless the API sent one', () => {

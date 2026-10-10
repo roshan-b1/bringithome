@@ -11,7 +11,7 @@ import { t } from '@/lib/copy'
 import { useOnline, useReducedMotion } from '@/lib/hooks'
 import { clock } from '@/lib/time'
 import { busLabel, countedNoun, formatDistance, haversineM, isLine, stateLine, trainRun, vehicleName } from './format'
-import type { Engine, Highlight, MapStyleKind, Phase } from './mapEngine'
+import type { Engine, Highlight, MapStyleKind, Phase, TargetPoint } from './mapEngine'
 import type { RiderFix, RiderStatus } from './useRiderLocation'
 import styles from './MatchMap.module.css'
 
@@ -36,6 +36,10 @@ export interface MatchMapProps {
   className?: string
   /** the laptop's right pane: a taller map (the phone keeps its short one so the card peeks above the thumb zone) */
   tall?: boolean
+  /** the plan's best way back: a stop or station's public coordinates and its words */
+  target?: TargetPoint | null
+  /** open on where things are now (the plan: the rider has already watched the replay on results) */
+  skipReplay?: boolean
 }
 
 type Load =
@@ -63,7 +67,7 @@ function chipFor(c: MatchCandidate): string {
   return [c.route, c.label].filter(Boolean).join(' · ')
 }
 
-export function MatchMap({ sessionId, match, vehicleKeys, tone, now, nowSource = 'live', rider, riderStatus, onShowMe, className, tall = false }: MatchMapProps) {
+export function MatchMap({ sessionId, match, vehicleKeys, tone, now, nowSource = 'live', rider, riderStatus, onShowMe, className, tall = false, target = null, skipReplay = false }: MatchMapProps) {
   const reducedMotion = useReducedMotion()
   const online = useOnline()
   const [load, setLoad] = useState<Load>({ kind: 'loading' })
@@ -119,6 +123,8 @@ export function MatchMap({ sessionId, match, vehicleKeys, tone, now, nowSource =
   const replayData = load.kind === 'ready' ? load.result.data : null
   const reducedRef = useRef(reducedMotion)
   reducedRef.current = reducedMotion
+  const skipRef = useRef(skipReplay)
+  skipRef.current = skipReplay
 
   // the engine: created when the replay, WebGL and the style are known; rebuilt only if the style falls back
   useEffect(() => {
@@ -158,7 +164,7 @@ export function MatchMap({ sessionId, match, vehicleKeys, tone, now, nowSource =
         made = e
         engine.current = e
         setDrawn(true)
-        if (reducedRef.current) e.skipToEnd()
+        if (reducedRef.current || skipRef.current) e.skipToEnd()
         else window.setTimeout(() => alive && e.play(), 500)
       })
       .catch(() => {
@@ -181,6 +187,11 @@ export function MatchMap({ sessionId, match, vehicleKeys, tone, now, nowSource =
   useEffect(() => {
     engine.current?.setRider(rider ? { lat: rider.lat, lon: rider.lon, accuracy_m: rider.accuracy_m } : null)
   }, [rider, phase])
+  const targetKey = target ? `${target.lat},${target.lon},${target.label},${target.place}` : ''
+  useEffect(() => {
+    engine.current?.setTarget(target)
+    // compared by value: a new object for the same place is the same target
+  }, [targetKey, phase, drawn])
 
   // the live distance under "Show both": one named vehicle only (on a tie it couldn't say which one it measures)
   const soleNow = candidates.length === 1 ? (nowList.find((n) => n.vehicle_key === candidates[0]!.vehicle_key) ?? null) : null
@@ -198,6 +209,7 @@ export function MatchMap({ sessionId, match, vehicleKeys, tone, now, nowSource =
       now={nowList}
       nowSource={nowSource}
       rider={rider ?? null}
+      target={target}
     />
   )
 
@@ -313,6 +325,7 @@ function MapInWords({
   now,
   nowSource,
   rider,
+  target,
 }: {
   replay: Replay | null
   match: Match
@@ -320,6 +333,7 @@ function MapInWords({
   now: VehicleNow[]
   nowSource: 'live' | 'as_of' | 'fixture'
   rider: RiderFix | null
+  target: TargetPoint | null
 }) {
   const radius = replay?.focus.radius_m ?? match.context.radius_m ?? 400
   // an empty label never reaches a required slot (a throw in render blanks the page)
@@ -341,6 +355,7 @@ function MapInWords({
     if (next) items.push(t('map.mirror_next', { stop: next.label, time: clock(next.eta) }))
     if (rider) items.push(t('map.mirror_you', { distance: formatDistance(haversineM(rider, n.position)) }))
   }
+  if (target) items.push(t('map.mirror_target', { place: target.place }))
   return (
     <ul className={styles.mirror}>
       {items.map((s, i) => (

@@ -18,7 +18,8 @@ export interface RiderFix {
   lat: number
   lon: number
   accuracy_m: number
-  /** performance.now() of the fix arriving, for "how fresh"; never a wall-clock time to store */
+  /** performance.now() of when the fix was taken (its arrival less the browser's own age for it), for "how fresh";
+   *  never a wall-clock time to store */
   at: number
 }
 
@@ -79,7 +80,8 @@ export function useRiderLocation(enabled = true): RiderLocation {
     setStatus((s) => (s === 'watching' ? s : 'waiting'))
     const id = navigator.geolocation.watchPosition(
       (p) => {
-        setFix({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy_m: p.coords.accuracy, at: performance.now() })
+        const age = Math.min(Math.max(0, Date.now() - p.timestamp), 60_000)
+        setFix({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy_m: p.coords.accuracy, at: performance.now() - age })
         setStatus('watching')
       },
       (err) => {

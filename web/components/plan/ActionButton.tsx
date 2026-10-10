@@ -7,6 +7,8 @@ import { tFacts, type CopyId } from '@/lib/copy'
 import { displayForHref } from '@/lib/contacts'
 import { CopyButton } from './CopyButton'
 import { NoBreak } from './FactText'
+import { directionsFromValue } from './reunionModel'
+import { useAppleMaps } from './useAppleMaps'
 
 // A plan card's action, as the API sent it: {type, label_id, value}. The words come from copy.ts by label_id, the
 // {number} in them from the bundled contacts by the action's own href, so a label never shows a number the link
@@ -28,10 +30,8 @@ const LABEL: Record<string, CopyId> = {
 
 const ICON: Record<CardAction['type'], IconName> = { tel: 'phone', mailto: 'mail', link: 'link', copy: 'copy', ics: 'calendar', directions: 'pin' }
 
-// a directions action's value is the stop's own public "lat,lon" (never the rider's), opened in the phone's maps
-const LAT_LON = /^-?\d{1,2}(\.\d+)?,-?\d{1,3}(\.\d+)?$/
-export const directionsHref = (value: string): string | null =>
-  LAT_LON.test(value) ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(value)}&travelmode=walking` : null
+// a directions action's value is the stop's own public "lat,lon" (never the rider's), opened in the phone's own
+// maps app: Apple Maps on iPhone, iPad and Mac Safari, Google Maps elsewhere (reunionModel.directionsUrl)
 
 /** The action's words ("Call MARTA Police 404-848-4900"), or null when they can't be filled honestly. */
 export function actionLabel(a: CardAction): string | null {
@@ -55,10 +55,11 @@ export function ActionButton({
   /** a file name for a data: download (the reminder) */
   download?: string
 }) {
+  const apple = useAppleMaps()
   const label = actionLabel(action)
   if (!label) return null
   if (action.type === 'copy') return <CopyButton text={action.value} label={label} variant={variant === 'primary' ? 'primary' : 'secondary'} />
-  const target = href ?? (action.type === 'directions' ? directionsHref(action.value) : action.value)
+  const target = href ?? (action.type === 'directions' ? directionsFromValue(action.value, apple) : action.value)
   if (!target) return null
   const external = action.type === 'link' || action.type === 'directions'
   return (

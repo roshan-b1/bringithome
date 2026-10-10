@@ -17,7 +17,14 @@ import styles from './plan.module.css'
 // and call cards carry state: the /now poll, the typed car number, the item description; and a too_far card turns
 // into "Can you meet it?" while the screen still needs to know where the rider is).
 
-const TONE: Partial<Record<Card['kind'], CardTone>> = { safety: 'safety', meet: 'accent', too_far: 'quiet' }
+const TONE: Partial<Record<Card['kind'], CardTone>> = {
+  safety: 'safety',
+  meet: 'accent',
+  too_far: 'quiet',
+  wait_return: 'accent',
+  meet_end: 'accent',
+  switch_platform: 'accent',
+}
 
 export interface CardOverride {
   title?: string
@@ -98,6 +105,17 @@ function CardBody({ card }: { card: Card }) {
       return <Lines lines={[tFacts('res_02_meet', f)]} />
     case 'too_far':
       return <p>{t('res_04_far')}</p>
+    // the reunion's recommended way, as the API worded it for the plan (the screen renders the live section
+    // in its place through slots; this is the card on its own)
+    case 'wait_return':
+    case 'meet_end':
+    case 'switch_platform':
+      return (
+        <>
+          <Lines lines={[tFacts(card.kind === 'wait_return' ? 'reunion_wait' : card.kind === 'meet_end' ? 'reunion_end' : 'reunion_switch', f)]} />
+          <Actions card={card} />
+        </>
+      )
     case 'tell_staff':
       return (
         <>

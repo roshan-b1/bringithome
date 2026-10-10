@@ -1,0 +1,23 @@
+{
+ "resolved": {
+  "place_id": "alias:west end",
+  "label": "West End",
+  "kind": "alias",
+  "lat": 33.736134875,
+  "lon": -84.4135345,
+  "stop_ids": [
+   "908704",
+   "908705"
+  ],
+  "routes": [],
+  "lines": [
+   "RED",
+   "GOLD"
+  ],
+  "needs_confirm": false
+ },
+ "choices": [],
+ "method": "alias",
+ "needs_confirm": false,
+ "source": "as_of"
+}

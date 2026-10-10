@@ -133,7 +133,8 @@ test('TellMe with several places needs a pick; a left-out fact is asked by tap',
 })
 
 test('TellMe falls back to the taps when /api/parse is missing', async ({ page }) => {
-  // the recorded set has no parse.json, exactly like a server without the route
+  // the set's parse.json answers 404, exactly like a server without the route
+  await page.route('**/fixtures/*/parse.json', (route) => route.fulfill({ status: 404, json: { error: 'not_found', message: 'no parse' } }))
   await page.goto(`${H}?screen=off&mode=mock&set=backup-bus49&near=gsu`)
   await page.getByRole('button', { name: 'Type it instead' }).click()
   await page.getByRole('textbox', { name: 'Where and when' }).fill('bus near gsu')

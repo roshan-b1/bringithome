@@ -3,7 +3,7 @@
  * familiar blue location dot. Every marker is decorative; the text beside the map says the same in words. */
 
 .stop {
-  position: relative;
+  position: absolute; /* as MapLibre places markers: in flow, each marker would push the next one down */
   width: 22px;
   height: 22px;
   pointer-events: none;
@@ -35,7 +35,7 @@
 }
 
 .vehicle {
-  position: relative;
+  position: absolute; /* as MapLibre places markers: in flow, each marker would push the next one down */
   width: 24px;
   height: 24px;
   pointer-events: none;
@@ -108,7 +108,7 @@
 }
 
 .rider {
-  position: relative;
+  position: absolute; /* as MapLibre places markers: in flow, each marker would push the next one down */
   width: 20px;
   height: 20px;
   pointer-events: none;
@@ -139,4 +139,45 @@
   .locked.match .vehicleDot::after {
     display: none;
   }
+}
+
+/* the plan's best way back: an orange pin with its words, so "meet it here" reads without colour */
+.target {
+  position: absolute; /* as MapLibre places markers: in flow, each marker would push the next one down */
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
+}
+
+.targetPin {
+  position: absolute;
+  inset: 0;
+  border: 4px solid var(--white);
+  border-radius: 50%;
+  background: var(--orange);
+  box-shadow: 0 0 0 3px var(--orange), 0 2px 8px rgb(20 33 61 / 0.35);
+}
+
+.targetPin::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: var(--navy);
+}
+
+.targetLabel {
+  position: absolute;
+  top: 50%;
+  left: 38px;
+  transform: translateY(-50%);
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--orange);
+  color: var(--navy);
+  font-size: 0.8125rem;
+  font-weight: var(--fw-heavy);
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgb(20 33 61 / 0.25);
 }

@@ -5,10 +5,13 @@
 //
 //   node scripts/snapshot.mjs                    every set, then mock = a copy of hero-rail
 //   node scripts/snapshot.mjs hero-rail          one set (mock is refreshed whenever hero-rail is)
-//   BACKTRACK_API_ORIGIN=http://127.0.0.1:8000   the API to record from (default)
+//   BACKTRACK_API_ORIGIN=http://127.0.0.1:8000   the API to record from (default). The deployed API answers as_of
+//                                                too: BACKTRACK_API_ORIGIN=https://155-138-217-184.sslip.io
 //
 // Per set it writes meta.json (label, as_of, recorded_at, the exact taps), health, places-nearby, places-search,
 // directions, trains-nearby (rail), session (+ session-<case> variants), replay, plan (+ plan-<variant>),
+// reunion (+ reunion-<variant>: POST /reunion with the same body as that plan), reunion/<variant>/000..017 (the
+// reunion poll's frames, as_of moving 20 s per frame; <variant> is "default" for plan.json's body),
 // now/<mode>-<id>/000..035 (as_of moving 10 s per frame, with the meet check's parameters when the set's meet plan
 // has a meet) and parse when POST /api/parse exists on the running API.
 //
@@ -23,6 +26,8 @@ const API = process.env.BACKTRACK_API_ORIGIN ?? 'http://127.0.0.1:8000'
 const ROOT = fileURLToPath(new URL('../public/fixtures/', import.meta.url))
 const FRAMES = 36 // decision 13: one /now frame per 10 s of the demo, six minutes in all
 const FRAME_S = 10
+const REUNION_FRAMES = 18 // the plan screen polls /reunion every 20 s: the same six minutes
+const REUNION_FRAME_S = 20
 
 // The sets. `taps` is what a rider taps in the app to reach `intake` (meta.json keeps it, so a reviewer can redo it
 // live); `variants` are other first POSTs the same set answers with ?case=<name>.
@@ -38,6 +43,7 @@ const SETS = {
       'line RED and direction S (Red Line, To Airport: the results question, or said in Type it instead)',
       'plan, Where are you now: On another train, Gold Line run 310 (user.on_vehicle rail:310)',
       'plan, Which part of the train: middle',
+      'or plan, Where are you now: At a station, Five Points (user.place_id station:510015, at_station)',
     ],
     nearby: { near: 'garnett', mode: 'rail' },
     search: { q: 'garnett', mode: 'rail' },
@@ -64,6 +70,9 @@ const SETS = {
       'plan.json': { vehicle_keys: ['rail:407'] },
       // the hero beat: the rider is on Gold run 310 and gets off ahead of the bag's train
       'plan-on_vehicle.json': { vehicle_keys: ['rail:407'], user: { on_vehicle: { mode: 'rail', vehicle_key: 'rail:310' } }, car: 'middle' },
+      // the rider says they are at Five Points: the 3:34 PM train south stops being boardable in time during the
+      // poll, so the recorded frames move the best way (Lakewood, then Oakland City) and the screen announces it
+      'plan-at_station.json': { vehicle_keys: ['rail:407'], user: { place_id: 'station:510015', at_station: true } },
     },
     meetPlan: 'plan-on_vehicle.json',
   },
@@ -117,6 +126,34 @@ const SETS = {
     plans: { 'plan.json': { vehicle_keys: [] } },
     meetPlan: null,
     expect: ['not_reporting', 'no_match'],
+  },
+  // the evening case: Red 402 to the Airport after 9 PM. The timetable has no Red departure left back, so the
+  // reunion promises nothing (may_leave_service); on Oct 9 it vanished at 9:31 PM and never came back
+  'late-rail': {
+    label: 'Recorded example: a bag left on a Red Line train at night, Fri Oct 9',
+    as_of: '2026-10-09T21:20:00-04:00',
+    taps: [
+      'what: bag',
+      'mode: rail (Train)',
+      'off: West End station (alias:west end, stop_ids 908704, 908705)',
+      'when: picked 21:16 (9:16 PM), window 5',
+      'line RED and direction S (Red Line, To Airport: the results question, or said in Type it instead)',
+    ],
+    nearby: { near: 'west end', mode: 'rail' },
+    search: { q: 'west end', mode: 'rail' },
+    directions: { place_id: 'station:510033', mode: 'rail', line: 'RED' },
+    trains: { line: 'RED', direction: 'S' },
+    parse: 'left my bag on the red line, got off at west end around 9:16 pm',
+    intake: {
+      item: { category: 'bag' },
+      mode: 'rail',
+      line: 'RED',
+      direction: 'S',
+      anchors: [{ role: 'alight', place_id: 'alias:west end', stop_ids: ['908704', '908705'], at: '2026-10-09T21:16:00-04:00', time_kind: 'picked', window_min: 5 }],
+    },
+    variants: {},
+    plans: { 'plan.json': { vehicle_keys: 'top' } },
+    meetPlan: null,
   },
 }
 
@@ -174,6 +211,13 @@ function nyNow() {
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}${off}`
 }
 
+/** One line for the log: the recommended option (or "nothing recommended") and the count. */
+function describeReunion(r) {
+  const rec = r.options.find((o) => o.recommended)
+  const head = rec ? `${rec.kind} at ${rec.place_label} ${rec.facts.time} (${rec.basis}, ${rec.confidence})` : 'nothing recommended'
+  return `${head}; ${r.options.length} option(s), not offered: ${r.not_offered.map((n) => `${n.kind} ${n.reason}`).join(', ')}`
+}
+
 // ------------------------------------------------------------------------------------------------------- one set
 
 async function record(name, spec) {
@@ -221,6 +265,23 @@ async function record(name, spec) {
     plans[file] = p
     put(file, p)
     log(`${file}: ${p.cards.map((c) => c.kind).join(', ')}${p.meet?.possible ? `; meet at ${p.meet.place_label}` : ''}`)
+
+    // the reunion poll for the same body: reunion(-<variant>).json at as_of, then its frames 20 s apart
+    const variant = file === 'plan.json' ? null : file.replace(/^plan-|\.json$/g, '')
+    const reunionBody = { ...body, vehicle_keys }
+    const r0 = await must('POST', `/api/sessions/${session.session_id}/reunion`, { ...reunionBody, as_of })
+    put(variant ? `reunion-${variant}.json` : 'reunion.json', r0)
+    log(`${variant ? `reunion-${variant}` : 'reunion'}.json: ${describeReunion(r0)}`)
+    if (vehicle_keys.length) {
+      const seen = []
+      for (let i = 0; i < REUNION_FRAMES; i++) {
+        const r = i === 0 ? r0 : await must('POST', `/api/sessions/${session.session_id}/reunion`, { ...reunionBody, as_of: plusSeconds(as_of, i * REUNION_FRAME_S) })
+        put(`reunion/${variant ?? 'default'}/${String(i).padStart(3, '0')}.json`, r)
+        const d = describeReunion(r)
+        if (seen.at(-1)?.d !== d) seen.push({ i, d })
+      }
+      log(`reunion/${variant ?? 'default'}: ${REUNION_FRAMES} frames; ${seen.map((x) => `from ${x.i}: ${x.d}`).join('; ')}`)
+    }
   }
 
   // /now frames for the vehicle the plan is about, with the meet check while the set's meet plan has a meet

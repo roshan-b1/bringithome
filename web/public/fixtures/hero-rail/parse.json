@@ -1,0 +1,35 @@
+{
+ "fields": {
+  "item_category": "bag",
+  "mode": "rail",
+  "line": "RED",
+  "alight": {
+   "place_phrase": "garnett",
+   "choices": [
+    {
+     "place_id": "alias:garnett",
+     "label": "Garnett",
+     "kind": "alias",
+     "lat": 33.748817,
+     "lon": -84.395643,
+     "stop_ids": [
+      "907843",
+      "908600"
+     ],
+     "routes": [],
+     "lines": [
+      "RED",
+      "GOLD"
+     ],
+     "needs_confirm": false
+    }
+   ],
+   "time_phrase": "around 3:24",
+   "at": "2026-10-09T19:24:00Z",
+   "day_label": "today",
+   "window_min": 20
+  }
+ },
+ "dropped": [],
+ "source": "cache"
+}

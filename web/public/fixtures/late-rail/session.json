@@ -1,0 +1,61 @@
+{
+ "session_id": "f1e4e7bc-4e2f-439f-99df-efa9dea11379",
+ "deletes_by": "2026-10-11T08:11:04.713855Z",
+ "as_of": "2026-10-09T21:20:00-04:00",
+ "record": false,
+ "match": {
+  "status": "matched",
+  "level": "high",
+  "context": {
+   "vehicles_near": 3,
+   "counted": "trains",
+   "radius_m": 400,
+   "place_label": "West End",
+   "window": {
+    "from": "2026-10-09T21:08:00-04:00",
+    "to": "2026-10-09T21:24:00-04:00"
+   }
+  },
+  "candidates": [
+   {
+    "vehicle_key": "rail:402",
+    "mode": "rail",
+    "vehicle_id": "402",
+    "label": null,
+    "route": "RED",
+    "continuing_as": null,
+    "line": "RED",
+    "direction_label": "To Airport",
+    "confidence": 0.827,
+    "level": "high",
+    "evidence": [
+     {
+      "role": "alight",
+      "place_label": "West End",
+      "at": "2026-10-10T01:18:14.107000Z",
+      "t_in": "2026-10-10T01:18:14.107000Z",
+      "t_out": "2026-10-10T01:18:15.273104Z",
+      "distance_m": 21
+     }
+    ],
+    "flags": [],
+    "source": "live"
+   }
+  ],
+  "schedule_candidates": [],
+  "coverage": {
+   "unreported_share": 0,
+   "recorder_gap": false
+  },
+  "tie_break": null,
+  "separate_by": null,
+  "stats": {
+   "positions_scanned": 141,
+   "vehicles_considered": 3,
+   "query_ms": 21,
+   "sql": "SELECT source, vehicle_id, label, route_short, trip_id, trip_canceled, direction, destination, anchor_idx, piece, dist_m, t_pass, t_in, t_out, gap_s FROM vehicle_passes(%(mode)s, %(lons)s, %(lats)s, %(t_from)s, %(t_to)s, 400, interval '600 seconds', interval '90 seconds', %(until)s)",
+   "engine": "sql"
+  }
+ },
+ "source": "as_of"
+}

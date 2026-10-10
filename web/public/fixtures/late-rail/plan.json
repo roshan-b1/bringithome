@@ -1,0 +1,241 @@
+{
+ "generated_at": "2026-10-10T01:20:00Z",
+ "lost_found": {
+  "open_now": false,
+  "next_open": "2026-10-12T12:30:00Z",
+  "usually": true
+ },
+ "meet": {
+  "possible": false,
+  "reason": "too_far",
+  "vehicle_keys": [
+   "rail:402"
+  ]
+ },
+ "cards": [
+  {
+   "kind": "bag_staff",
+   "step": 1,
+   "facts": {
+    "police_non_emergency": "404-848-4900",
+    "tracks_01": 1
+   },
+   "fact_sources": {
+    "police_non_emergency": "contacts",
+    "tracks_01": "rules"
+   },
+   "actions": [
+    {
+     "type": "tel",
+     "label_id": "call_police",
+     "value": "tel:+14048484900"
+    }
+   ],
+   "evidence": [],
+   "source": "static"
+  },
+  {
+   "kind": "too_far",
+   "step": 2,
+   "facts": {},
+   "fact_sources": {},
+   "actions": [],
+   "evidence": [],
+   "source": "live"
+  },
+  {
+   "kind": "tell_staff",
+   "step": 3,
+   "facts": {
+    "mode": "rail",
+    "vehicle": "Red Line train",
+    "train_run": "402",
+    "direction": "To Airport"
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "train_run": "db",
+    "direction": "db"
+   },
+   "actions": [],
+   "evidence": [
+    {
+     "role": "alight",
+     "place_label": "West End",
+     "at": "2026-10-10T01:18:14.107000Z",
+     "distance_m": 21
+    }
+   ],
+   "source": "live"
+  },
+  {
+   "kind": "keep",
+   "step": 4,
+   "facts": {
+    "mode": "rail",
+    "vehicle": "Red Line train",
+    "train_run": "402",
+    "stop": "West End",
+    "time": "9:18 PM",
+    "role": "alight"
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "train_run": "db",
+    "stop": "static_gtfs",
+    "time": "db",
+    "role": "rules"
+   },
+   "actions": [
+    {
+     "type": "copy",
+     "label_id": "keep_copy",
+     "value": "Red Line train, MARTA train run 402, got off at West End around 9:18 PM on Friday, October 9."
+    }
+   ],
+   "evidence": [
+    {
+     "role": "alight",
+     "place_label": "West End",
+     "at": "2026-10-10T01:18:14.107000Z",
+     "distance_m": 21
+    }
+   ],
+   "source": "live"
+  },
+  {
+   "kind": "report",
+   "step": 5,
+   "facts": {
+    "direction": "To Airport",
+    "location": "West End",
+    "time": "Fri Oct 9, about 9:18 PM",
+    "rail_line": "Red Line",
+    "rail_station": "West End",
+    "train_run": "MARTA train run 402, from MARTA's public feeds"
+   },
+   "fact_sources": {
+    "direction": "db",
+    "location": "static_gtfs",
+    "time": "db",
+    "rail_line": "db",
+    "rail_station": "static_gtfs",
+    "train_run": "db"
+   },
+   "actions": [
+    {
+     "type": "link",
+     "label_id": "report_open_form",
+     "value": "https://itsmarta.com/tplecrmcontact-v2.aspx"
+    },
+    {
+     "type": "copy",
+     "label_id": "report_copy",
+     "value": "Rail Line: Red Line\nMARTA Rail Station: West End\nDirection of Travel/Destination: To Airport\nLocation: West End\nTime: Fri Oct 9, about 9:18 PM\nMARTA train run 402, from MARTA's public feeds"
+    }
+   ],
+   "evidence": [
+    {
+     "role": "alight",
+     "place_label": "West End",
+     "at": "2026-10-10T01:18:14.107000Z",
+     "distance_m": 21
+    }
+   ],
+   "source": "live"
+  },
+  {
+   "kind": "call",
+   "step": 6,
+   "facts": {
+    "open_now": 0,
+    "lost_found_phone": "404-848-3208",
+    "next_weekday": "Monday, October 12",
+    "opens_at": "8:30 AM",
+    "usually": 1,
+    "borrowed_phone_hint": 1
+   },
+   "fact_sources": {
+    "open_now": "contacts",
+    "lost_found_phone": "contacts",
+    "next_weekday": "contacts",
+    "opens_at": "contacts",
+    "usually": "contacts",
+    "borrowed_phone_hint": "rules"
+   },
+   "actions": [
+    {
+     "type": "tel",
+     "label_id": "call_lost_found",
+     "value": "tel:+14048483208"
+    },
+    {
+     "type": "mailto",
+     "label_id": "email_lost_found",
+     "value": "mailto:lostandfound@itsmarta.com"
+    },
+    {
+     "type": "ics",
+     "label_id": "call_reminder",
+     "value": "2026-10-12T08:30:00-04:00"
+    }
+   ],
+   "evidence": [],
+   "source": "static"
+  }
+ ],
+ "report": {
+  "form_fields": {
+   "direction": "To Airport",
+   "location": "West End",
+   "time": "Fri Oct 9, about 9:18 PM",
+   "rail_line": "Red Line",
+   "rail_station": "West End",
+   "train_run": "MARTA train run 402, from MARTA's public feeds"
+  },
+  "email": {
+   "subject": "Lost item on a Red Line train, Friday, October 9",
+   "body": "Hello,\n\nI hope you can help with a missing property report. I misplaced [[ITEM]] aboard a Red Line train going to Airport. MARTA's public feeds show this as train run 402. I got off at West End on Friday, October 9, at about 9:18 PM.\n\nI also submitted these facts via the web form. Please contact me regarding recovery steps if it is found. I am happy to provide a description and photo ID.\n\nThank you.",
+   "wording": "gemini"
+  },
+  "call_script": {
+   "text": "Hi, I am calling to report a lost property issue. I misplaced [[ITEM]] aboard a Red Line train going to Airport. MARTA's public feeds show this as train run 402. I got off at West End on Friday, October 9, at about 9:18 PM. I also submitted the web report. Has this item been turned in, and what are the recovery steps?",
+   "wording": "gemini"
+  }
+ },
+ "source": "as_of",
+ "reunion": {
+  "options": [],
+  "not_offered": [
+   {
+    "kind": "walk_ahead",
+    "reason": "no_location"
+   },
+   {
+    "kind": "shared_track",
+    "reason": "not_on_train"
+   },
+   {
+    "kind": "switch_platform",
+    "reason": "may_leave_service"
+   },
+   {
+    "kind": "wait_here",
+    "reason": "may_leave_service"
+   },
+   {
+    "kind": "wait_on_return",
+    "reason": "too_far"
+   },
+   {
+    "kind": "meet_at_end",
+    "reason": "not_turned"
+   }
+  ],
+  "rider_location": "assumed_alight",
+  "computed_at": "2026-10-10T01:20:00Z",
+  "source": "as_of"
+ }
+}

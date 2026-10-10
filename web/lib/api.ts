@@ -31,6 +31,7 @@ import type {
   PlacesSearch,
   QueryMode,
   Replay,
+  Reunion,
   SessionResponse,
   Source,
   TrainsNearby,
@@ -40,6 +41,7 @@ import type {
 
 export const TIMEOUT_MS = 4000
 export const NOW_POLL_MS = 10_000 // decision 8: /now every 10 s while the page is visible
+export const REUNION_FRAME_MS = 20_000 // the plan screen polls /reunion every 20 s; a recorded set has a frame per 20 s
 
 // ---------------------------------------------------------------------------------------------- runtime params
 
@@ -470,6 +472,26 @@ async function probe(dir: string, want: number, last: number): Promise<number> {
   }
 }
 
+/** Which recorded plan answers this user block: the train the rider is on, a station, a place, or none. */
+function planVariant(u: PlanRequest['user'] | undefined): 'on_vehicle' | 'at_station' | 'place' | null {
+  return u?.on_vehicle ? 'on_vehicle' : u?.at_station ? 'at_station' : u?.place_id ? 'place' : null
+}
+
+const exists = new Map<string, Promise<boolean>>()
+/** Whether a file exists in the active set (HEAD, remembered per set and path). */
+function fixtureExists(file: string): Promise<boolean> {
+  const key = `${runtime().set}/${file}`
+  let p = exists.get(key)
+  if (!p) {
+    p = request(`/fixtures/${key}`, { method: 'HEAD' }, {}).then(
+      () => true,
+      () => false,
+    )
+    exists.set(key, p)
+  }
+  return p
+}
+
 /**
  * 10. POST /api/sessions/{id}/plan. `user` is where the rider is now, used for this one answer. Fixture: the set's
  * plan for where the rider said they are (plan-on_vehicle.json, plan-at_station.json, plan-place.json), else
@@ -477,18 +499,33 @@ async function probe(dir: string, want: number, last: number): Promise<number> {
  */
 export async function plan(id: string, body: Omit<PlanRequest, 'as_of'>, opts: CallOpts = {}): Promise<ApiResult<Plan>> {
   const as_of = await asOfParam()
-  const u = body.user
-  const variant = u?.on_vehicle ? 'on_vehicle' : u?.at_station ? 'at_station' : u?.place_id ? 'place' : null
-  const fixture = async () => {
-    if (!variant) return 'plan.json'
-    try {
-      await request(`/fixtures/${runtime().set}/plan-${variant}.json`, { method: 'HEAD' }, {})
-      return `plan-${variant}.json`
-    } catch {
-      return 'plan.json'
-    }
-  }
+  const variant = planVariant(body.user)
+  const fixture = async () => (variant && (await fixtureExists(`plan-${variant}.json`)) ? `plan-${variant}.json` : 'plan.json')
   return call({ url: `/api/sessions/${encodeURIComponent(id)}/plan`, init: json({ ...body, as_of }) }, fixture, opts, as_of ?? null)
+}
+
+// fixture frames for /reunion: frame 000 is the answer the plan itself carried, so the first poll (20 s after the
+// plan) reads 001, then one more per 20 s of visible time, held at the last frame the set recorded
+const reunionFrames = new Map<string, { start: number; last: number }>()
+
+/**
+ * 10a. POST /api/sessions/{id}/reunion, the `/plan` body; polled every 20 s by the plan screen with the rider's
+ * live fix in `user` (this one request only). Fixture: reunion/<variant>/NNN.json frames for where the rider said
+ * they are ("default" when they said nothing), else reunion-<variant>.json, else reunion.json.
+ */
+export async function reunion(id: string, body: Omit<PlanRequest, 'as_of'>, opts: CallOpts = {}): Promise<ApiResult<Reunion>> {
+  const as_of = await asOfParam()
+  const variant = planVariant(body.user)
+  const fixture = async () => {
+    const dir = variant && (await fixtureExists(`reunion/${variant}/000.json`)) ? `reunion/${variant}` : (await fixtureExists('reunion/default/000.json')) ? 'reunion/default' : null
+    if (!dir) return variant && (await fixtureExists(`reunion-${variant}.json`)) ? `reunion-${variant}.json` : 'reunion.json'
+    const st = reunionFrames.get(dir) ?? { start: visibleClock(), last: 0 }
+    reunionFrames.set(dir, st)
+    const want = 1 + Math.floor((visibleClock() - st.start) / REUNION_FRAME_MS)
+    st.last = want > st.last ? await probe(dir, want, st.last) : st.last
+    return `${dir}/${String(st.last).padStart(3, '0')}.json`
+  }
+  return call({ url: `/api/sessions/${encodeURIComponent(id)}/reunion`, init: json({ ...body, as_of }) }, fixture, opts, as_of ?? null)
 }
 
 /** "rail:405" -> ["rail", "405"]. */

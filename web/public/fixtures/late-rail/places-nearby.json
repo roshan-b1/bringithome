@@ -1,0 +1,59 @@
+{
+ "places": [
+  {
+   "place_id": "station:510033",
+   "label": "West End station",
+   "kind": "station",
+   "lat": 33.73612,
+   "lon": -84.41364,
+   "distance_m": 49,
+   "stop_ids": [
+    "908704",
+    "908705"
+   ],
+   "routes": [],
+   "lines": [
+    "RED",
+    "GOLD"
+   ],
+   "needs_confirm": false
+  },
+  {
+   "place_id": "station:510038",
+   "label": "Garnett station",
+   "kind": "station",
+   "lat": 33.748544,
+   "lon": -84.395888,
+   "distance_m": 2158,
+   "stop_ids": [
+    "907843",
+    "908600"
+   ],
+   "routes": [],
+   "lines": [
+    "RED",
+    "GOLD"
+   ],
+   "needs_confirm": false
+  },
+  {
+   "place_id": "station:510002",
+   "label": "Ashby station",
+   "kind": "station",
+   "lat": 33.75645,
+   "lon": -84.41728,
+   "distance_m": 2288,
+   "stop_ids": [
+    "908963",
+    "908964"
+   ],
+   "routes": [],
+   "lines": [
+    "BLUE",
+    "GREEN"
+   ],
+   "needs_confirm": false
+  }
+ ],
+ "source": "as_of"
+}

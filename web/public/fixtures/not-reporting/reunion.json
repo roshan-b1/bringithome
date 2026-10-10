@@ -1,0 +1,24 @@
+{
+ "options": [],
+ "not_offered": [
+  {
+   "kind": "walk_ahead",
+   "reason": "not_matched"
+  },
+  {
+   "kind": "wait_here",
+   "reason": "not_matched"
+  },
+  {
+   "kind": "wait_on_return",
+   "reason": "not_matched"
+  },
+  {
+   "kind": "meet_at_end",
+   "reason": "not_matched"
+  }
+ ],
+ "rider_location": "assumed_alight",
+ "computed_at": "2026-10-09T17:25:00Z",
+ "source": "as_of"
+}

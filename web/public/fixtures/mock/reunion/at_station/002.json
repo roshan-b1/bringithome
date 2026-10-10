@@ -1,0 +1,145 @@
+{
+ "options": [
+  {
+   "kind": "switch_platform",
+   "rank": 1,
+   "recommended": true,
+   "vehicle_keys": [
+    "rail:407"
+   ],
+   "place_id": "station:510022",
+   "place_label": "Lakewood-Ft McPherson",
+   "direction": "N",
+   "stop_lat": 33.70042,
+   "stop_lon": -84.42883,
+   "reunion_at": "2026-10-09T19:53:00Z",
+   "window_from": "2026-10-09T19:48:00Z",
+   "window_to": "2026-10-09T20:01:00Z",
+   "leave_by": "2026-10-09T19:30:06.010000Z",
+   "walk_s": 1029,
+   "wait_s": 491,
+   "margin_s": 206,
+   "basis": "estimate",
+   "confidence": "usual",
+   "note_ids": [
+    "watch_after_turn",
+    "change_platform"
+   ],
+   "facts": {
+    "mode": "rail",
+    "vehicle": "Red Line train",
+    "train_run": "407",
+    "toward": "North Springs",
+    "night": 0,
+    "get_off_at": "Lakewood-Ft McPherson",
+    "ride_run": "411",
+    "ride_toward": "Airport",
+    "off_time": "3:41 PM",
+    "board_at": "Five Points",
+    "board_time": "3:32 PM",
+    "stop": "Lakewood-Ft McPherson",
+    "time": "3:53 PM",
+    "window_from": "3:48 PM",
+    "window_to": "4:01 PM",
+    "minutes": 25,
+    "walk_min": 18,
+    "leave_by": "3:30 PM"
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "train_run": "db",
+    "toward": "static_gtfs",
+    "night": "rules",
+    "get_off_at": "static_gtfs",
+    "ride_run": "db",
+    "ride_toward": "db",
+    "off_time": "db",
+    "board_at": "static_gtfs",
+    "board_time": "db",
+    "stop": "static_gtfs",
+    "time": "rules",
+    "window_from": "rules",
+    "window_to": "rules",
+    "minutes": "rules",
+    "walk_min": "rules",
+    "leave_by": "rules"
+   }
+  },
+  {
+   "kind": "wait_here",
+   "rank": 2,
+   "recommended": false,
+   "vehicle_keys": [
+    "rail:407"
+   ],
+   "place_id": "station:510015",
+   "place_label": "Five Points",
+   "direction": "N",
+   "stop_lat": 33.75387,
+   "stop_lon": -84.39157,
+   "reunion_at": "2026-10-09T20:02:00Z",
+   "window_from": "2026-10-09T19:57:00Z",
+   "window_to": "2026-10-09T20:10:00Z",
+   "leave_by": "2026-10-09T19:55:00Z",
+   "walk_s": 120,
+   "wait_s": 1940,
+   "margin_s": 1910,
+   "basis": "estimate",
+   "confidence": "usual",
+   "note_ids": [
+    "watch_after_turn",
+    "change_platform"
+   ],
+   "facts": {
+    "mode": "rail",
+    "vehicle": "Red Line train",
+    "train_run": "407",
+    "toward": "North Springs",
+    "night": 0,
+    "stop": "Five Points",
+    "time": "4:02 PM",
+    "window_from": "3:57 PM",
+    "window_to": "4:10 PM",
+    "minutes": 34,
+    "walk_min": 2,
+    "leave_by": "3:55 PM"
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "train_run": "db",
+    "toward": "static_gtfs",
+    "night": "rules",
+    "stop": "static_gtfs",
+    "time": "rules",
+    "window_from": "rules",
+    "window_to": "rules",
+    "minutes": "rules",
+    "walk_min": "rules",
+    "leave_by": "rules"
+   }
+  }
+ ],
+ "not_offered": [
+  {
+   "kind": "walk_ahead",
+   "reason": "ahead"
+  },
+  {
+   "kind": "shared_track",
+   "reason": "not_on_train"
+  },
+  {
+   "kind": "wait_on_return",
+   "reason": "too_far"
+  },
+  {
+   "kind": "meet_at_end",
+   "reason": "not_turned"
+  }
+ ],
+ "rider_location": "chosen",
+ "computed_at": "2026-10-09T19:27:40Z",
+ "source": "as_of"
+}

@@ -27,8 +27,28 @@ const sets = (() => {
 })()
 
 describe('fixture sets match the contract', () => {
-  test('there is the mock set and the three recorded sets', () => {
-    for (const s of ['mock', 'hero-rail', 'backup-bus49', 'not-reporting']) assert.ok(sets.includes(s), `sets: ${sets.join(', ')}`)
+  test('there is the mock set and the four recorded sets', () => {
+    for (const s of ['mock', 'hero-rail', 'backup-bus49', 'not-reporting', 'late-rail']) assert.ok(sets.includes(s), `sets: ${sets.join(', ')}`)
+  })
+  test('every set has the reunion and parse answers, and a set that names a vehicle has the poll frames', () => {
+    for (const set of sets) {
+      const has = (f: string) => {
+        try {
+          return statSync(join(ROOT, set, f)).isFile()
+        } catch {
+          return false
+        }
+      }
+      assert.ok(has('reunion.json'), `${set}/reunion.json`)
+      assert.ok(has('parse.json'), `${set}/parse.json`)
+      const plan = JSON.parse(readFileSync(join(ROOT, set, 'plan.json'), 'utf8'))
+      if (plan.reunion) {
+        assert.ok(has('reunion/default/000.json') && has('reunion/default/017.json'), `${set}/reunion/default frames`)
+        // the poll's first frame is the answer the plan carried
+        const frame = JSON.parse(readFileSync(join(ROOT, set, 'reunion/default/000.json'), 'utf8'))
+        assert.deepEqual(frame.options.map((o: { kind: string; place_id: string }) => `${o.kind}@${o.place_id}`), plan.reunion.options.map((o: { kind: string; place_id: string }) => `${o.kind}@${o.place_id}`), set)
+      }
+    }
   })
   for (const set of sets) {
     test(`set "${set}"`, () => {

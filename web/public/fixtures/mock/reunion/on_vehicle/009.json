@@ -1,0 +1,140 @@
+{
+ "options": [
+  {
+   "kind": "shared_track",
+   "rank": 1,
+   "recommended": true,
+   "vehicle_keys": [
+    "rail:407"
+   ],
+   "place_id": "station:510008",
+   "place_label": "College Park",
+   "direction": "S",
+   "platform_hint": "middle",
+   "stop_lat": 33.65159,
+   "stop_lon": -84.44878,
+   "reunion_at": "2026-10-09T19:36:19.044000Z",
+   "window_from": "2026-10-09T19:35:19.044000Z",
+   "window_to": "2026-10-09T19:38:49.044000Z",
+   "leave_by": null,
+   "walk_s": 219,
+   "wait_s": 160,
+   "margin_s": 130,
+   "basis": "live",
+   "confidence": "high",
+   "note_ids": [
+    "watch_train"
+   ],
+   "facts": {
+    "mode": "rail",
+    "vehicle": "Red Line train",
+    "train_run": "407",
+    "night": 0,
+    "platform_hint": "middle",
+    "stop": "College Park",
+    "time": "3:36 PM",
+    "window_from": "3:35 PM",
+    "window_to": "3:38 PM",
+    "minutes": 6,
+    "walk_min": 4
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "train_run": "db",
+    "night": "rules",
+    "platform_hint": "rules",
+    "stop": "static_gtfs",
+    "time": "db",
+    "window_from": "db",
+    "window_to": "db",
+    "minutes": "db",
+    "walk_min": "rules"
+   }
+  },
+  {
+   "kind": "switch_platform",
+   "rank": 2,
+   "recommended": false,
+   "vehicle_keys": [
+    "rail:407"
+   ],
+   "place_id": "station:510008",
+   "place_label": "College Park",
+   "direction": "N",
+   "platform_hint": "middle",
+   "stop_lat": 33.65159,
+   "stop_lon": -84.44878,
+   "reunion_at": "2026-10-09T19:47:00Z",
+   "window_from": "2026-10-09T19:42:00Z",
+   "window_to": "2026-10-09T19:55:00Z",
+   "leave_by": null,
+   "walk_s": 339,
+   "wait_s": 681,
+   "margin_s": 651,
+   "basis": "estimate",
+   "confidence": "usual",
+   "note_ids": [
+    "watch_after_turn",
+    "change_platform"
+   ],
+   "facts": {
+    "mode": "rail",
+    "vehicle": "Red Line train",
+    "train_run": "407",
+    "toward": "North Springs",
+    "night": 0,
+    "get_off_at": "College Park",
+    "ride_run": "310",
+    "ride_toward": "Airport",
+    "off_time": "3:32 PM",
+    "platform_hint": "middle",
+    "stop": "College Park",
+    "time": "3:47 PM",
+    "window_from": "3:42 PM",
+    "window_to": "3:55 PM",
+    "minutes": 17,
+    "walk_min": 6
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "train_run": "db",
+    "toward": "static_gtfs",
+    "night": "rules",
+    "get_off_at": "static_gtfs",
+    "ride_run": "db",
+    "ride_toward": "db",
+    "off_time": "db",
+    "platform_hint": "rules",
+    "stop": "static_gtfs",
+    "time": "rules",
+    "window_from": "rules",
+    "window_to": "rules",
+    "minutes": "rules",
+    "walk_min": "rules"
+   }
+  }
+ ],
+ "not_offered": [
+  {
+   "kind": "walk_ahead",
+   "reason": "on_train"
+  },
+  {
+   "kind": "wait_here",
+   "reason": "on_train"
+  },
+  {
+   "kind": "wait_on_return",
+   "reason": "on_train"
+  },
+  {
+   "kind": "meet_at_end",
+   "reason": "not_turned"
+  }
+ ],
+ "rider_location": "on_train",
+ "computed_at": "2026-10-09T19:30:00Z",
+ "source": "as_of"
+}

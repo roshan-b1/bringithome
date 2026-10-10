@@ -13,6 +13,7 @@
   ],
   "place_id": "station:510013",
   "place_label": "East Point",
+  "platform_hint": "middle",
   "direction": "S",
   "eta": [
    "2026-10-09T19:34:04Z"
@@ -51,6 +52,7 @@
     "time": "3:34 PM",
     "minutes": 7,
     "toward": "Airport",
+    "platform_hint": "middle",
     "night": 0,
     "on_train": 1
    },
@@ -60,6 +62,7 @@
     "time": "db",
     "minutes": "db",
     "toward": "db",
+    "platform_hint": "rules",
     "night": "rules",
     "on_train": "rules"
    },
@@ -197,13 +200,153 @@
   },
   "email": {
    "subject": "Lost item on a Red Line train, Friday, October 9",
-   "body": "Hello,\n\nI'm writing to report a lost item. I left [[ITEM]] on a Red Line train, heading to Airport. MARTA's public feeds list it as train run 407. I got off at Garnett on Friday, October 9, at about 3:23 PM.\n\nI have also sent these details through the online lost item form. If it turns up, please let me know how to arrange a pickup. I can describe it in more detail and bring a photo ID.\n\nThank you.",
-   "wording": "template"
+   "body": "Hello,\n\nI hope you can help with a missing property report. I misplaced [[ITEM]] aboard a Red Line train going to Airport. MARTA's public feeds show this as train run 407. I got off at Garnett on Friday, October 9, at about 3:23 PM.\n\nI also submitted these facts via the web form. Please contact me regarding recovery steps if it is found. I am happy to provide a description and photo ID.\n\nThank you.",
+   "wording": "gemini"
   },
   "call_script": {
-   "text": "Hi, I'm calling to report a lost item. I left [[ITEM]] on a Red Line train, heading to Airport. MARTA's public feeds list it as train run 407. I got off at Garnett on Friday, October 9, at about 3:23 PM. I've also sent the online report. Has anything like that been turned in, and what should I do next?",
-   "wording": "template"
+   "text": "Hi, I am calling to report a lost property issue. I misplaced [[ITEM]] aboard a Red Line train going to Airport. MARTA's public feeds show this as train run 407. I got off at Garnett on Friday, October 9, at about 3:23 PM. I also submitted the web report. Has this item been turned in, and what are the recovery steps?",
+   "wording": "gemini"
   }
  },
- "source": "as_of"
+ "source": "as_of",
+ "reunion": {
+  "options": [
+   {
+    "kind": "shared_track",
+    "rank": 1,
+    "recommended": true,
+    "vehicle_keys": [
+     "rail:407"
+    ],
+    "place_id": "station:510013",
+    "place_label": "East Point",
+    "direction": "S",
+    "platform_hint": "middle",
+    "stop_lat": 33.67753,
+    "stop_lon": -84.4405,
+    "reunion_at": "2026-10-09T19:34:04Z",
+    "window_from": "2026-10-09T19:33:04Z",
+    "window_to": "2026-10-09T19:36:34Z",
+    "leave_by": null,
+    "walk_s": 224,
+    "wait_s": 200,
+    "margin_s": 170,
+    "basis": "live",
+    "confidence": "high",
+    "note_ids": [
+     "watch_train"
+    ],
+    "facts": {
+     "mode": "rail",
+     "vehicle": "Red Line train",
+     "train_run": "407",
+     "night": 0,
+     "platform_hint": "middle",
+     "stop": "East Point",
+     "time": "3:34 PM",
+     "window_from": "3:33 PM",
+     "window_to": "3:36 PM",
+     "minutes": 7,
+     "walk_min": 4
+    },
+    "fact_sources": {
+     "mode": "rules",
+     "vehicle": "db",
+     "train_run": "db",
+     "night": "rules",
+     "platform_hint": "rules",
+     "stop": "static_gtfs",
+     "time": "db",
+     "window_from": "db",
+     "window_to": "db",
+     "minutes": "db",
+     "walk_min": "rules"
+    }
+   },
+   {
+    "kind": "switch_platform",
+    "rank": 2,
+    "recommended": false,
+    "vehicle_keys": [
+     "rail:407"
+    ],
+    "place_id": "station:510008",
+    "place_label": "College Park",
+    "direction": "N",
+    "platform_hint": "middle",
+    "stop_lat": 33.65159,
+    "stop_lon": -84.44878,
+    "reunion_at": "2026-10-09T19:47:00Z",
+    "window_from": "2026-10-09T19:42:00Z",
+    "window_to": "2026-10-09T19:55:00Z",
+    "leave_by": null,
+    "walk_s": 512,
+    "wait_s": 688,
+    "margin_s": 658,
+    "basis": "estimate",
+    "confidence": "usual",
+    "note_ids": [
+     "watch_after_turn",
+     "change_platform"
+    ],
+    "facts": {
+     "mode": "rail",
+     "vehicle": "Red Line train",
+     "train_run": "407",
+     "toward": "North Springs",
+     "night": 0,
+     "get_off_at": "College Park",
+     "ride_run": "310",
+     "ride_toward": "Airport",
+     "off_time": "3:32 PM",
+     "platform_hint": "middle",
+     "stop": "College Park",
+     "time": "3:47 PM",
+     "window_from": "3:42 PM",
+     "window_to": "3:55 PM",
+     "minutes": 20,
+     "walk_min": 9
+    },
+    "fact_sources": {
+     "mode": "rules",
+     "vehicle": "db",
+     "train_run": "db",
+     "toward": "static_gtfs",
+     "night": "rules",
+     "get_off_at": "static_gtfs",
+     "ride_run": "db",
+     "ride_toward": "db",
+     "off_time": "db",
+     "platform_hint": "rules",
+     "stop": "static_gtfs",
+     "time": "rules",
+     "window_from": "rules",
+     "window_to": "rules",
+     "minutes": "rules",
+     "walk_min": "rules"
+    }
+   }
+  ],
+  "not_offered": [
+   {
+    "kind": "walk_ahead",
+    "reason": "on_train"
+   },
+   {
+    "kind": "wait_here",
+    "reason": "on_train"
+   },
+   {
+    "kind": "wait_on_return",
+    "reason": "on_train"
+   },
+   {
+    "kind": "meet_at_end",
+    "reason": "not_turned"
+   }
+  ],
+  "rider_location": "on_train",
+  "computed_at": "2026-10-09T19:27:00Z",
+  "source": "as_of"
+ }
 }

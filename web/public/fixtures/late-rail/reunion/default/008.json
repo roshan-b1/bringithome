@@ -1,0 +1,32 @@
+{
+ "options": [],
+ "not_offered": [
+  {
+   "kind": "walk_ahead",
+   "reason": "no_location"
+  },
+  {
+   "kind": "shared_track",
+   "reason": "not_on_train"
+  },
+  {
+   "kind": "switch_platform",
+   "reason": "may_leave_service"
+  },
+  {
+   "kind": "wait_here",
+   "reason": "may_leave_service"
+  },
+  {
+   "kind": "wait_on_return",
+   "reason": "too_far"
+  },
+  {
+   "kind": "meet_at_end",
+   "reason": "not_turned"
+  }
+ ],
+ "rider_location": "assumed_alight",
+ "computed_at": "2026-10-10T01:22:40Z",
+ "source": "as_of"
+}

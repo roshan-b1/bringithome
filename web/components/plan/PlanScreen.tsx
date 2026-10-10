@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Mark } from '@/components/brand/Mark'
 import { ReplayBanner } from '@/components/ui/Banner'
 import { BigButton } from '@/components/ui/BigButton'
@@ -12,7 +12,9 @@ import { SafetyFooter } from '@/components/ui/SafetyFooter'
 import { Screen } from '@/components/ui/Screen'
 import { Skeleton, Spinner } from '@/components/ui/Spinner'
 import type { ScreenComponentProps } from '@/components/screens/registry'
-import type { ItemCategory, PlanUser, SessionResponse, VehicleKey } from '@/contracts/api'
+import type { ItemCategory, PlanUser, ReunionKind, SessionResponse, VehicleKey } from '@/contracts/api'
+import type { TargetPoint } from '@/components/results/mapEngine'
+import { useRiderLocation } from '@/components/results/useRiderLocation'
 import { fixtureData, openRecordedExample, placesNearby, runtime } from '@/lib/api'
 import { contact, lostFoundForm } from '@/lib/contacts'
 import { t, type CopyId, tLoose } from '@/lib/copy'
@@ -24,10 +26,12 @@ import { CallCard } from './CallCard'
 import { ClearNow } from './ClearNow'
 import { MeetCard, meetLines } from './MeetCard'
 import { PlanAside } from './PlanAside'
-import { PlanCards, type CardSlots } from './PlanCards'
+import { PlanCards, type CardOverride, type CardSlots } from './PlanCards'
 import { ProofFooter } from './ProofFooter'
 import { Answered, QuickChoice } from './QuickChoice'
 import { ReportCard } from './ReportCard'
+import { Ways } from './Reunion'
+import { changeSaid, mainOption, reunionBody, type PollFix } from './reunionModel'
 import { WhereNow } from './WhereNow'
 import { usePlaceCoords } from './placeCoords'
 import {
@@ -54,9 +58,10 @@ import {
   type Walk,
 } from './planModel'
 import { clearPlanAnswers, usePlanAnswers } from './planStore'
-import { locationPermission, useRiderPosition } from './useRiderPosition'
+import { locationPermission, meetPosition } from './useRiderPosition'
 import { useMeetWatch } from './useMeetWatch'
 import { usePlanRequest, type PlanBody } from './usePlanRequest'
+import { useReunion } from './useReunion'
 import styles from './plan.module.css'
 
 // The plan step (decision 10, CHANGES 1 and 2): POST /api/sessions/{id}/plan as soon as the screen opens, the
@@ -256,10 +261,13 @@ function PlanView({
   const meetMode = keyMode(meet?.vehicle_keys[0]) ?? 'bus'
   const spot: RiderSpot = user.on_vehicle ? 'on_train' : user.at_station ? 'at_station' : 'walking'
   const showingMeet = Boolean(meet && meetCard) && view === 'plan'
-  const position = useRiderPosition(showingMeet && spot === 'walking')
+  // one watch for the screen (the live blue dot's hook): the meet's walk time, the map's dot and the reunion poll
+  const rider = useRiderLocation(view === 'plan')
+  const position = meetPosition(rider)
+  const walkingFix = showingMeet && spot === 'walking' ? rider.fix : null
   const placeAt = usePlaceCoords(meet?.place_id, meet?.place_label)
-  const distance = position.fix && placeAt ? haversineM(position.fix, placeAt) : null
-  const live = distance !== null && position.fix ? { distanceM: distance, accuracyM: position.fix.accuracy_m } : null
+  const distance = walkingFix && placeAt ? haversineM(walkingFix, placeAt) : null
+  const live = distance !== null && walkingFix ? { distanceM: distance, accuracyM: walkingFix.accuracy_m } : null
 
   const remaining = useRef<() => number>(() => 0)
   remaining.current = () =>
@@ -278,6 +286,34 @@ function PlanView({
     riderVehicleKey: user.on_vehicle?.vehicle_key ?? null,
     resetKey: plan.receivedAt,
   })
+
+  // ------------------------------------------------------------------------------------ ways to get it back
+  // the plan's reunion, then POST /reunion every 20 s while this screen is open and visible, with the rider's taps
+  // and, while they walk, the live fix (reunionModel.reunionBody: in that one request's body, nowhere else)
+  const named = keys.length > 0 && (match.status === 'matched' || match.status === 'ambiguous')
+  const replaying = result ? result.source !== 'live' : true
+  const fixRef = useRef(rider.fix)
+  fixRef.current = rider.fix
+  const reunionLive = useReunion({
+    sessionId,
+    initial: result?.data.reunion ?? null,
+    initialAt: result ? plan.receivedAt : null,
+    enabled: view === 'plan' && named && result !== null,
+    body: async () => {
+      if (!body) return null
+      const f = fixRef.current
+      let fix: PollFix | null = f ? { lat: f.lat, lon: f.lon, accuracy_m: f.accuracy_m, age_s: (performance.now() - f.at) / 1000 } : null
+      // a rider standing still gets few watch updates: ask once for a fresh fix rather than send a stale one
+      if (fix && fix.age_s > 20 && !replaying) {
+        const fresh = await getFix(4000)
+        if (fresh) fix = { lat: fresh.lat, lon: fresh.lon, accuracy_m: fresh.accuracy_m, age_s: fresh.fix_age_s }
+      }
+      return reunionBody(body, fix, { replaying })
+    },
+  })
+  const reunion = reunionLive.reunion
+  // a meet /now withdrew is not offered again from an older answer
+  const skipKinds = useCallback((k: ReunionKind) => watch.withdrawn && (k === 'walk_ahead' || k === 'shared_track'), [watch.withdrawn])
 
   // a clock for the minutes: the server's (or the replayed) "now" from the latest /now, moved on by wall time
   const [tick, setTick] = useState(0)
@@ -323,7 +359,94 @@ function PlanView({
     noLocation: nearState === 'none',
   }
 
+  // the map: the best way back pinned beside the vehicle and the rider (laptop pane; on a phone, on a tap)
+  const best = mainOption(reunion)
+  const target: TargetPoint | null =
+    showingMeet && meet?.place_label && placeAt
+      ? { lat: placeAt.lat, lon: placeAt.lon, label: t('ways.map_target'), place: meet.place_label }
+      : best && !skipKinds(best.kind)
+        ? { lat: best.stop_lat, lon: best.stop_lon, label: t('ways.map_target'), place: best.place_label }
+        : null
+  const wide = useWide()
+  const canMap = named && !wide
+  const [mapOpen, setMapOpen] = useState(false)
+  const phoneMap = canMap ? (
+    <div className={styles.mapToggle}>
+      <BigButton variant="secondary" size="md" icon="pin" aria-expanded={mapOpen} onClick={() => setMapOpen((o) => !o)}>
+        {mapOpen ? t('ways.hide_map') : t('ways.show_map')}
+      </BigButton>
+      {mapOpen ? <PlanAside sessionId={sessionId} match={match} keys={keys} source={flow.session?.source ?? 'live'} rider={rider} target={target} compact /> : null}
+    </div>
+  ) : null
+
+  // a live bus match: the meet and the waits need to know where the rider is
+  const nearOffer =
+    mode === 'bus' && keys.length > 0 && result?.source === 'live' && !near && !watch.withdrawn ? (
+      <div className={styles.offer}>
+        <p>{t('near.offer')}</p>
+        {nearState === 'none' ? (
+          <p className={styles.note}>{t('where.no_location')}</p>
+        ) : (
+          <>
+            <BigButton
+              variant="secondary"
+              size="md"
+              icon="locate"
+              loading={nearState === 'looking'}
+              onClick={() => {
+                rider.start()
+                void findNear()
+              }}
+            >
+              {t('near.use_location')}
+            </BigButton>
+            <p className={styles.note}>{t('where.near_line')}</p>
+          </>
+        )}
+      </div>
+    ) : null
+
+  const carAsk = mode === 'rail' && !tie && best && !skipKinds(best.kind) ? <CarAsk car={answers.car} onCar={(v) => update({ car: v })} /> : null
+  const ways = (meetShown: boolean) => (
+    <div ref={waysRef}>
+      <Ways
+        reunion={reunion}
+        receivedAt={reunionLive.receivedAt}
+        failing={reunionLive.failing}
+        live={view === 'plan' && named}
+        car={mode === 'rail' && answers.car && answers.car !== 'unsure' ? answers.car : null}
+        meetShown={meetShown}
+        skip={skipKinds}
+        whereAsked={askWhere || nearOffer !== null}
+        extra={meetShown ? null : (
+          <>
+            {carAsk}
+            {phoneMap}
+          </>
+        )}
+      />
+    </div>
+  )
+  // "Ways to get it back": in the meet's place in the route, whichever card the API put there
+  const waysCard = (): CardOverride | null =>
+    reunion
+      ? {
+          title: t('plan.card.ways'),
+          tone: 'accent',
+          body: (
+            <>
+              {askWhere ? <WhereNow {...whereProps} /> : null}
+              {nearOffer}
+              {ways(false)}
+            </>
+          ),
+        }
+      : null
+
   const slots: CardSlots = {
+    wait_return: waysCard,
+    meet_end: waysCard,
+    switch_platform: waysCard,
     meet: (card) => ({
       body: (
         <>
@@ -342,31 +465,17 @@ function PlanView({
             onSlow={(s) => flow.setExtra({ walk: s ? 'slow' : 'normal' })}
             checking={showingMeet && !watch.withdrawn}
           />
+          {reunion ? ways(true) : null}
+          {phoneMap}
         </>
       ),
     }),
     too_far: (card) => {
+      const w = waysCard()
+      if (w) return w
+      // no reunion in this answer (an API that predates it): the meet question alone, as before
       if (askWhere && !answers.where) return { title: t('plan.card.meet_check'), tone: 'accent', body: <WhereNow {...whereProps} /> }
-      if (mode === 'bus' && keys.length > 0 && result?.source === 'live' && !near && !watch.withdrawn)
-        return {
-          title: t('plan.card.meet_check'),
-          tone: 'accent',
-          body: (
-            <>
-              <p>{t('near.offer')}</p>
-              {nearState === 'none' ? (
-                <p className={styles.note}>{t('where.no_location')}</p>
-              ) : (
-                <>
-                  <BigButton variant="secondary" size="md" icon="locate" loading={nearState === 'looking'} onClick={() => void findNear()}>
-                    {t('near.use_location')}
-                  </BigButton>
-                  <p className={styles.note}>{t('where.near_line')}</p>
-                </>
-              )}
-            </>
-          ),
-        }
+      if (nearOffer) return { title: t('plan.card.meet_check'), tone: 'accent', body: nearOffer }
       if (askWhere)
         return {
           body: (
@@ -449,6 +558,34 @@ function PlanView({
   useEffect(() => {
     if (watch.withdrawn) setSaid(t('meet.withdrawn'))
   }, [watch.withdrawn])
+  // a poll that changes the best way says so, politely; times moving inside the same advice are not announced.
+  // While the meet card is the main card the best way is not on screen (the card, checked every 10 s, is the
+  // advice), so its changes are not announced either: the ear never hears a place the eye can't find.
+  const meetIsMain = useRef(false)
+  meetIsMain.current = showingMeet && !watch.withdrawn
+  useEffect(() => {
+    if (meetIsMain.current) return
+    const s = changeSaid(reunionLive.previous, reunionLive.reunion)
+    if (s) setSaid(s)
+  }, [reunionLive.previous, reunionLive.reunion])
+
+  // never jump the layout while the rider reads: when the section changes height above where they are reading
+  // (they scrolled on to the report), keep their place. Browsers with scroll anchoring do this themselves.
+  const waysRef = useRef<HTMLDivElement>(null)
+  const waysHeight = useRef<number | null>(null)
+  useLayoutEffect(() => {
+    const el = waysRef.current
+    if (!el) {
+      waysHeight.current = null
+      return
+    }
+    const box = el.getBoundingClientRect()
+    const before = waysHeight.current
+    waysHeight.current = box.height
+    if (before === null || before === box.height) return
+    const anchored = typeof CSS !== 'undefined' && CSS.supports?.('overflow-anchor', 'auto')
+    if (!anchored && box.bottom - (box.height - before) <= 0) window.scrollBy(0, box.height - before)
+  }, [reunionLive.reunion, reunionLive.receivedAt])
 
   const onClear = async () => {
     await clearSession(sessionId)
@@ -467,11 +604,7 @@ function PlanView({
           ? t('res_canceled')
           : t('plan.lead')
   // laptop: the vehicles on the map beside the cards (a match with no named vehicle keeps the clue panel)
-  const wide = useWide()
-  const aside =
-    wide && keys.length > 0 && (match.status === 'matched' || match.status === 'ambiguous') ? (
-      <PlanAside sessionId={sessionId} match={match} keys={keys} source={flow.session?.source ?? 'live'} />
-    ) : undefined
+  const aside = wide && named ? <PlanAside sessionId={sessionId} match={match} keys={keys} source={flow.session?.source ?? 'live'} rider={rider} target={target} /> : undefined
   const banner = result && replay ? <ReplayBanner asOf={result.data.generated_at} withHint={false} /> : null
   const footer = (
     <>
@@ -592,5 +725,29 @@ function TakenAsk({ taken, onTaken }: { taken: Taken | undefined; onTaken: (v: T
         onChoose={onTaken}
       />
     </section>
+  )
+}
+
+// ----------------------------------------------------------------------------- the car, for a train's platform
+
+/** "Which part of the train?" beside a train's way back: the platform hint (sent as `car`, for this plan only). */
+function CarAsk({ car, onCar }: { car: Car | 'unsure' | undefined; onCar: (v: Car | 'unsure' | undefined) => void }) {
+  if (car)
+    return (
+      <Answered onChange={() => onCar(undefined)} changeLabel={t('answer.change')}>
+        {t('wb_10_car')} <strong>{car === 'unsure' ? t('not_sure') : t(`wb_10_car.${car}`)}</strong>
+      </Answered>
+    )
+  return (
+    <QuickChoice<Car | 'unsure'>
+      question={t('wb_10_car')}
+      options={[
+        { value: 'front', label: t('wb_10_car.front') },
+        { value: 'middle', label: t('wb_10_car.middle') },
+        { value: 'back', label: t('wb_10_car.back') },
+        { value: 'unsure', label: t('not_sure'), quiet: true },
+      ]}
+      onChoose={onCar}
+    />
   )
 }
