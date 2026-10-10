@@ -21,10 +21,21 @@ are never asked up front: when the match comes back tied or uncertain, the resul
 re-runs the match. The intake sends the neutral item `other`: **What did you lose?** is an optional tap on the plan
 (it never changes the match), sent as `item_category` in the plan and reunion bodies for the item's own steps (wallet:
 freeze cards first; phone: lock or erase it). Unanswered, the plan is worded for any item, and the unattended-bag
-card is always in it. The plan also asks "Do you think someone took it?", for a train "Where are you now?" (at a
-station, on another train from `/api/trains/nearby`, somewhere else) and on a train way back "Which part of the
-train?", each only when it changes the plan. Step 2 of the plan is "Ways to get it back" (below), kept live while the
-screen is open.
+card is always in it. The plan screen, top to bottom: the live map of where the item is now (`PlanAside`: the
+matched vehicle labeled "Your bag is here" from the item tap, else "Your item is here", moving with `/now` every
+10 s; the rider's blue dot; the best way pinned "Meet it here" with a dashed walking line when they walk there; one
+line under it, "Red Line train, now near Oakland City, heading to Airport. Updated 21 s ago."; no tap needed on a
+phone, the right pane on a laptop), then **Your best plan** (below), then the item tap, then **Didn't find it?**: one
+button that opens everything else in the API's order (tell staff, keep these details, the report form, call or email
+Lost and Found, the item's extras), closed while there is a way back, open when there isn't, the rider's own tap kept
+per session. Theft is not asked: a quiet "Think someone took it?" link above the safety footer sends `taken: "yes"`
+(the police and 911 step then shows above the map) and its Undo sends `"no"`; never tapped, no `taken` is sent. For a
+train the plan also asks "Where are you now?" (at a station, on another train from `/api/trains/nearby`, somewhere
+else) and on a train way back "Which part of the train?", each only when it changes the plan.
+
+Every distance a rider sees is in feet and miles (`lib/distance.ts` `formatDistance`: feet to 5 ft below 100 ft and
+to 50 ft under 0.2 mi, then miles to 0.05 below 1 mi and to 0.1 from 1 mi); the API keeps sending metres, and only
+the display converts.
 
 **Lost it somewhere else?** (on off) is all on the phone: up to 3 places, most recent first (`ElsewhereScreen`),
 then **What did you lose?** (`ElsewhereWhatScreen`, step `elsewhere_what`: the plan's six tiles, optional, Skip), then
@@ -110,18 +121,20 @@ item plans are recorded for the default body only; the reunion poll
 reads `reunion/<variant>/`, frame 001 on its first call (frame 000 is what the plan carried) and one more per 20 s of
 visible time, holding the last; `/now` advances one frame per 10 s of visible time, holding the last one.
 
-## Ways to get it back (the reunion planner on the plan screen)
+## Your best plan (the reunion planner on the plan screen)
 
-Step 2 of the plan, in the meet's place in the route, whichever card the API put there (`meet`, `wait_return`,
-`meet_end`, `switch_platform` or `too_far`). It renders `Reunion` (`components/plan/Reunion.tsx`, words from
-`reunionModel.ts`, every string in `lib/copy.ts`):
+The one way-back card under the map, whichever card the API put there (`meet`, `wait_return`, `meet_end`,
+`switch_platform` or `too_far`). It renders `Reunion` (`components/plan/Reunion.tsx`, words from `reunionModel.ts`,
+every string in `lib/copy.ts`). The recommended way is a numbered step list with New York times
+(`wayStepLines`, per kind: board, get off, cross to the platform toward, it arrives about, and last "When it pulls
+in" with what to do as it arrives), then walking directions where the rider walks, "Tell any staff you pass that it's
+yours.", and the other ways folded under "Other ways (n)" with "Why not other ways" inside:
 
 - **The best way now**: the API's `recommended` option, never a `low` one. The place, the time ("About 3:53 PM,
   between 3:48 PM and 4:01 PM" for an estimate; a live time alone; "by the timetable"), a Live / Estimate / Timetable
   chip, "Usually comes back (about 9 in 10)" for a bus wait, "Leave by 3:33 PM, in about 6 min" (then "Time to set
-  off, at an easy pace") on the server's or the replayed clock, minutes to get there, one plain sentence per kind,
-  then the steps (the train to take, where to step off, which platform), the platform hint (the API's, else the
-  car tap) and the notes. With the plan's meet, the meet card stays the main card.
+  off, at an easy pace") on the server's or the replayed clock, minutes to get there, then the numbered steps and
+  the notes. With the plan's meet, the meet card stays the main card.
 - **Walking directions** to the stop's own `stop_lat`, `stop_lon` and nothing else: Apple Maps
   (`https://maps.apple.com/?daddr=LAT,LON&dirflg=w`) on iPhone, iPad and Mac Safari, Google Maps
   (`https://www.google.com/maps/dir/?api=1&destination=LAT,LON&travelmode=walking`) elsewhere. Only for a place the
@@ -199,7 +212,7 @@ Motion tokens drop to zero under `prefers-reduced-motion` (the replay jumps to i
   "Freeze your cards" appears, then goes), and "Lost it somewhere else?" through "What did you lose?" (Phone) to its
   plan. `pwa.spec.ts` (export only), `smoke.spec.ts`, and
   `intake.spec.ts` / `plan.spec.ts`, which use the dev harnesses and skip themselves on the export.
-  `reunion.spec.ts`: "Ways to get it back" at 320x568, 375x667, 390x844 and 1280x800 (hero-rail with a reunion,
+  `reunion.spec.ts`: "Your best plan" at 320x568, 375x667, 390x844 and 1280x800 (hero-rail with a reunion,
   late-rail with none, Apple or Google directions by device), the recorded frames on a fake clock (updated, a changed
   way announced, paused while hidden), and live mode through route interception (the fix in the body, backoff, no
   coordinates stored).

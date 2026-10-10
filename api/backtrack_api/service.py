@@ -22,7 +22,7 @@ from .models import Intake
 from .resolver import PlaceIndex, _pretty_headsign
 from .store import PASSES_SQL, Store, new_session_id
 
-SESSION_PROMISE = timedelta(hours=24)
+SESSION_PROMISE = timedelta(hours=2)   # deleted 2 h after its last use (store.SESSION_IDLE); this is the first deadline
 
 
 class StoreLookups:

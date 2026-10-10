@@ -7,6 +7,7 @@
 // already carries (keep, report) or the bundled contacts the caller passes in.
 
 import type { Card, CardEvidence, CardKind, Dir, Line, Match, NearbyTrain, Plan, ReportFormFields, VehicleKey, VehicleNow } from '../../contracts/api.ts'
+import { formatDistance } from '../../lib/distance.ts'
 
 export type Taken = 'no' | 'maybe' | 'yes' | 'unsure'
 export type Car = 'front' | 'middle' | 'back'
@@ -386,7 +387,34 @@ export function meetWithdrawn(answers: readonly (VehicleNow | null)[]): boolean 
   return answers.some((v) => v?.meet_ok === false)
 }
 
-/** The evidence line's values ("Seen 22 m from Piedmont Ave SE @ Gilmer St SE at 1:18 PM."). */
-export function evidenceSlots(e: CardEvidence, clock: (t: string) => string): { distance: number; place: string; time: string } {
-  return { distance: e.distance_m, place: e.place_label, time: clock(e.at) }
+/** The evidence line's values ("Seen 70 ft from Piedmont Ave SE @ Gilmer St SE at 1:18 PM."). */
+export function evidenceSlots(e: CardEvidence, clock: (t: string) => string): { distance: string; place: string; time: string } {
+  return { distance: formatDistance(e.distance_m), place: e.place_label, time: clock(e.at) }
+}
+
+// ------------------------------------------------------------------------------------------- the plan's layout
+
+/**
+ * The plan screen's three parts, from the arranged cards: the theft safety card (above the map, only when taken is
+ * yes), the one way-back card ("Your best plan": the meet, the reunion card or too_far, whichever the API sent first),
+ * and everything else in the API's order behind "Didn't find it?" (tell staff, keep, report, call, the item extras),
+ * numbered 1..n on their own.
+ */
+export function planSections(cards: readonly Card[]): { safety: Card[]; way: Card | null; backup: Card[] } {
+  const safety = cards.filter((c) => c.kind === 'safety')
+  const way = cards.find((c) => WAY_KINDS.has(c.kind)) ?? null
+  const backup = cards.filter((c) => c.kind !== 'safety' && !WAY_KINDS.has(c.kind)).map((c, i) => (c.step === i + 1 ? c : { ...c, step: i + 1 }))
+  return { safety, way, backup }
+}
+
+const LINE_WORD: Record<Line, string> = { RED: 'Red', GOLD: 'Gold', BLUE: 'Blue', GREEN: 'Green' }
+
+/** The line under the plan's map: "Red Line train, now near Lakewood-Ft McPherson, heading to North Springs." */
+export function nowCaption(now: VehicleNow, t: (id: 'planmap.rail' | 'planmap.rail_plain' | 'planmap.bus', slots: Record<string, string | null>) => string): string {
+  const rail = now.vehicle_key.startsWith('rail:')
+  const near = now.state === 'at_terminus' ? (now.terminus_label ?? now.next_stops[0]?.label ?? null) : (now.next_stops[0]?.label ?? null)
+  const destination = now.destination_label || null
+  if (!rail) return t('planmap.bus', { route: now.route, near, destination })
+  const line = now.line ?? (now.route in LINE_WORD ? (now.route as Line) : null)
+  return line ? t('planmap.rail', { line: LINE_WORD[line], near, destination }) : t('planmap.rail_plain', { near, destination })
 }

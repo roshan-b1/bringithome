@@ -3,10 +3,11 @@
 import { useState, type ReactNode } from 'react'
 import { BigButton } from '@/components/ui/BigButton'
 import { Icon } from '@/components/ui/Icon'
-import type { NotOffered, Reunion, ReunionOption } from '@/contracts/api'
+import type { ItemCategory, NotOffered, Reunion, ReunionOption } from '@/contracts/api'
 import { t, tLoose, type CopyId } from '@/lib/copy'
 import { useVisibleInterval } from '@/lib/hooks'
 import {
+  arrivalLine,
   type CarHint,
   confidenceLine,
   directionsUrl,
@@ -14,7 +15,6 @@ import {
   leaveParts,
   mainOption,
   noteLines,
-  optionDetails,
   optionSentence,
   otherOptions,
   pastOption,
@@ -22,18 +22,21 @@ import {
   tellingReasonId,
   updatedLine,
   walksThere,
+  wayStepLines,
   whenParts,
   whenSentence,
   whyNotLines,
 } from './reunionModel'
+import { NoBreak } from './FactText'
 import { useAppleMaps } from './useAppleMaps'
 import styles from './plan.module.css'
 
-// "Ways to get it back" (the reunion planner, ARCHITECTURE 7.9): the recommended way as the main card (what to do in
-// one sentence, when, the window for an estimate, Live/Estimate/Timetable, "Leave by" with a calm countdown, the
-// platform hint, walking directions to the stop's own coordinates), the other feasible ways below it soonest first,
-// and "Why not other ways" folded away. With nothing to recommend it says so plainly and points at the report and
-// telling staff, which always stay in the plan. Every sentence is reunionModel's, from copy.ts.
+// "Your best plan" (the reunion planner, ARCHITECTURE 7.9): the recommended way as numbered steps with New York times
+// (reunionModel.wayStepLines: board, get off, cross, it arrives, when it pulls in), under a ticket with the place, the
+// time, the window for an estimate, Live/Estimate/Timetable and "Leave by" with a calm countdown; walking directions
+// to the stop's own coordinates; one line to tell staff. Every other way is folded under "Other ways (n)", with
+// "Why not other ways" folded inside it. With nothing to recommend it says so plainly with the most telling reason;
+// the screen then opens the backup steps. Every sentence is reunionModel's, from copy.ts.
 
 export interface WaysProps {
   reunion: Reunion | null
@@ -43,8 +46,10 @@ export interface WaysProps {
   failing: boolean
   /** polling is on (the line under the section says how often) */
   live: boolean
-  /** the rider's car tap, for the platform hint on a train */
+  /** the rider's car tap, for the platform hint and "When it pulls in" on a train */
   car: CarHint | null
+  /** the item tap, for "Your bag's train" */
+  item?: ItemCategory | null
   /** the meet card is the main card (the plan has a meet): show only the other ways and why not */
   meetShown?: boolean
   /** kinds the screen already rules out (a withdrawn meet): left out of the lists */
@@ -52,7 +57,7 @@ export interface WaysProps {
   /** the screen asks where the rider is ("Where are you now?" or "Use my location"): the assumed-location note may
    *  ask them to say; otherwise it only says what was assumed */
   whereAsked?: boolean
-  /** under the main card: the phone's "Show it on the map" */
+  /** under the main way's steps: "Which part of the train?" */
   extra?: ReactNode
 }
 
@@ -80,15 +85,32 @@ export function Ways(p: WaysProps) {
   // the reason said up front is not said again in the fold
   const why = whyNotLines(r, (n: NotOffered) => skipKind(n.kind) || n.reason === tellingId)
   const detail = { car: p.car, whereAsked: p.whereAsked ?? false }
+  const count = sure.length + low.length
+
+  const whyFold = why.length ? (
+    <details className={styles.details}>
+      <summary>{t('ways.why_not')}</summary>
+      <ul role="list" className={styles.whyList}>
+        {why.map((line, i) => (
+          <li key={i}>
+            {line.names ? <strong className={styles.whyName}>{line.names}</strong> : null}
+            <span>{line.reason}</span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  ) : null
 
   return (
     <div className={styles.ways}>
       {usable ? (
         <>
-          <MainWay option={usable} reunion={r} receivedAt={p.receivedAt} detail={detail} apple={apple} />
-          {p.extra}
+          <MainWay option={usable} reunion={r} receivedAt={p.receivedAt} detail={detail} apple={apple} item={p.item ?? null} extra={p.extra} />
+          <p className={styles.staffLine}>{t('steps.staff')}</p>
         </>
-      ) : p.meetShown ? null : expired ? (
+      ) : p.meetShown ? (
+        <p className={styles.staffLine}>{t('steps.staff')}</p>
+      ) : expired ? (
         <div className={styles.noWay}>
           <p className={styles.lead}>{t('ways.expired')}</p>
           <p>{t('ways.none')}</p>
@@ -101,24 +123,18 @@ export function Ways(p: WaysProps) {
         </div>
       )}
 
-      {sure.length ? <WayList heading={t('ways.others')} options={sure} reunion={r} apple={apple} detail={detail} /> : null}
-      {low.length ? <WayList heading={t('ways.others_low')} options={low} reunion={r} apple={apple} detail={detail} /> : null}
-      {/* with no main card the map comes after the ways it shows, not between the explanation and them */}
-      {usable ? null : p.extra}
-
-      {why.length ? (
-        <details className={styles.details}>
-          <summary>{t('ways.why_not')}</summary>
-          <ul role="list" className={styles.whyList}>
-            {why.map((line, i) => (
-              <li key={i}>
-                {line.names ? <strong className={styles.whyName}>{line.names}</strong> : null}
-                <span>{line.reason}</span>
-              </li>
-            ))}
-          </ul>
+      {count ? (
+        <details className={`${styles.details} ${styles.otherWays}`}>
+          <summary>{t('ways.others_count', { count })}</summary>
+          <div className={styles.otherWaysBody}>
+            {sure.length ? <WayList heading={t('ways.others')} options={sure} reunion={r} apple={apple} detail={detail} /> : null}
+            {low.length ? <WayList heading={t('ways.others_low')} options={low} reunion={r} apple={apple} detail={detail} /> : null}
+            {whyFold}
+          </div>
         </details>
-      ) : null}
+      ) : (
+        whyFold
+      )}
 
       {p.live ? <Updated receivedAt={p.receivedAt} failing={p.failing} /> : null}
     </div>
@@ -158,10 +174,28 @@ interface Detail {
   whereAsked: boolean
 }
 
-function MainWay({ option: o, reunion, receivedAt, detail, apple }: { option: ReunionOption; reunion: Reunion; receivedAt: number | null; detail: Detail; apple: boolean }) {
+function MainWay({
+  option: o,
+  reunion,
+  receivedAt,
+  detail,
+  apple,
+  item,
+  extra,
+}: {
+  option: ReunionOption
+  reunion: Reunion
+  receivedAt: number | null
+  detail: Detail
+  apple: boolean
+  item: ItemCategory | null
+  extra?: ReactNode
+}) {
   const when = whenParts(o)
   const confidence = confidenceLine(o)
-  const details = optionDetails(o, detail)
+  const steps = wayStepLines(o, { item, car: detail.car })
+  // the notes the steps don't already say (the assumed place, "other trains may stop first", the night line)
+  const notes = noteLines(o, detail)
   return (
     <section className={styles.wayMain} aria-labelledby="ways-best">
       <div className={styles.ticket}>
@@ -179,11 +213,38 @@ function MainWay({ option: o, reunion, receivedAt, detail, apple }: { option: Re
         {confidence ? <p className={styles.confidence}>{confidence}</p> : null}
         <LeaveBy option={o} reunion={reunion} receivedAt={receivedAt} />
       </div>
-      <p className={styles.lead}>{optionSentence(o)}</p>
-      {details.map((l, i) => (
-        <p key={i}>{l}</p>
-      ))}
+      <ol className={styles.waySteps} aria-label={t('steps.label')}>
+        {steps.map((s, i) => (
+          <li key={i} className={styles.wayStep}>
+            <span className={styles.wayStepNo} aria-hidden="true">
+              {i + 1}
+            </span>
+            <div className={styles.wayStepText}>
+              <p className={s.sub ? styles.wayStepTitle : undefined}>
+                <NoBreak text={s.text} />
+              </p>
+              {s.sub ? (
+                <ul role="list" className={styles.wayStepSub}>
+                  {s.sub.map((l, j) => (
+                    <li key={j}>
+                      <NoBreak text={l} />
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ol>
       {walksThere(o, reunion.rider_location) ? <Directions option={o} apple={apple} /> : null}
+      {notes.length ? (
+        <div className={styles.wayNotes}>
+          {notes.map((l, i) => (
+            <p key={i}>{l}</p>
+          ))}
+        </div>
+      ) : null}
+      {extra}
     </section>
   )
 }
@@ -230,6 +291,7 @@ function WayList({ heading, options, reunion, apple, detail }: { heading: string
               {notes.map((l, i) => (
                 <p key={i}>{l}</p>
               ))}
+              <p className={styles.arrivalShort}>{arrivalLine(o)}</p>
               {walksThere(o, reunion.rider_location) ? <Directions option={o} apple={apple} size="md" /> : null}
             </li>
           )

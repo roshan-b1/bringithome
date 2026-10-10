@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Mark } from '@/components/brand/Mark'
 import { ReplayBanner } from '@/components/ui/Banner'
 import { BigButton } from '@/components/ui/BigButton'
@@ -27,12 +27,12 @@ import { CallCard } from './CallCard'
 import { ClearNow } from './ClearNow'
 import { MeetCard, meetLines } from './MeetCard'
 import { PlanAside } from './PlanAside'
-import { PlanCards, type CardOverride, type CardSlots } from './PlanCards'
+import { OneCard, PlanCards, type CardOverride, type CardSlots } from './PlanCards'
 import { ProofFooter } from './ProofFooter'
 import { Answered, QuickChoice } from './QuickChoice'
 import { ReportCard } from './ReportCard'
 import { Ways } from './Reunion'
-import { changeSaid, mainOption, reunionBody, type PollFix } from './reunionModel'
+import { changeSaid, mainOption, reunionBody, walksThere, type PollFix } from './reunionModel'
 import { WhereNow } from './WhereNow'
 import { usePlaceCoords } from './placeCoords'
 import {
@@ -48,6 +48,7 @@ import {
   mailtoHref,
   minutesUntil,
   nowOf,
+  planSections,
   remainingWalkS,
   topCanceled,
   walkMinutes,
@@ -66,9 +67,10 @@ import { useReunion } from './useReunion'
 import styles from './plan.module.css'
 
 // The plan step (decision 10, CHANGES 1 and 2): POST /api/sessions/{id}/plan as soon as the screen opens, the
-// cards as a route, and the few optional questions only where they change something: "Think someone took it?"
-// (safety first), for a train "Where are you now?" (the meet), on a train meet "Which part of the train?" (the
-// platform hint). Each answer re-requests the plan. While a meet shows, /now is polled with the meet check and the
+// cards as a route, and the few optional questions only where they change something: for a train "Where are you
+// now?" (the meet), on a train meet "Which part of the train?" (the platform hint). Theft is not asked: a quiet
+// "Think someone took it?" link at the end (TakenLink) sends taken "yes" (safety first, freeze cards) and its Undo
+// sends "no"; never tapped, no taken is sent. Each answer re-requests the plan. While a meet shows, /now is polled with the meet check and the
 // rider's walk comes from the live position. The safety footer is on every view; "Clear now" deletes everything.
 //
 // Mounted by the integrator as SCREENS.plan; it reads only the session, the session id, the item tap and the
@@ -237,8 +239,9 @@ function PlanView({
   }, [mode, answers.where, answers.station, answers.train, near, flowWalk])
 
   const car: Car | null = answers.car && answers.car !== 'unsure' ? answers.car : null
-  // "Not sure" on taken is a tap the screen keeps, never a value sent: PlanRequest.taken is no, maybe or yes only
-  const taken = answers.taken && answers.taken !== 'unsure' ? answers.taken : null
+  // only the end link's two taps are sent ("yes", and "no" after its Undo); an older visit's stored "maybe" or
+  // "Not sure" from the question this link replaced counts as never tapped
+  const taken: 'yes' | 'no' | null = answers.taken === 'yes' || answers.taken === 'no' ? answers.taken : null
   const body = useMemo<PlanBody | null>(
     () =>
       loaded
@@ -342,8 +345,8 @@ function PlanView({
   const labels = useMemo(reportLabels, [])
   const askWhere = mode === 'rail' && keys.length > 0
   const cards = useMemo(
-    () => (result ? arrangeCards(result.data, { taken: answers.taken ?? null, withdrawn: watch.withdrawn, contacts, meetSlot: keys.length > 0 }) : []),
-    [result, answers.taken, watch.withdrawn, contacts, keys.length],
+    () => (result ? arrangeCards(result.data, { taken, withdrawn: watch.withdrawn, contacts, meetSlot: keys.length > 0 }) : []),
+    [result, taken, watch.withdrawn, contacts, keys.length],
   )
 
   // the email and call script: [[ITEM]] from the description typed here (memory only), else the item's own word.
@@ -366,25 +369,15 @@ function PlanView({
     noLocation: nearState === 'none',
   }
 
-  // the map: the best way back pinned beside the vehicle and the rider (laptop pane; on a phone, on a tap)
+  // the map: the best way back pinned beside the vehicle and the rider, with the walking line when they walk there
   const best = mainOption(reunion)
   const target: TargetPoint | null =
     showingMeet && meet?.place_label && placeAt
-      ? { lat: placeAt.lat, lon: placeAt.lon, label: t('ways.map_target'), place: meet.place_label }
+      ? { lat: placeAt.lat, lon: placeAt.lon, label: t('ways.map_target'), place: meet.place_label, walk: spot === 'walking' }
       : best && !skipKinds(best.kind)
-        ? { lat: best.stop_lat, lon: best.stop_lon, label: t('ways.map_target'), place: best.place_label }
+        ? { lat: best.stop_lat, lon: best.stop_lon, label: t('ways.map_target'), place: best.place_label, walk: reunion ? walksThere(best, reunion.rider_location) : false }
         : null
   const wide = useWide()
-  const canMap = named && !wide
-  const [mapOpen, setMapOpen] = useState(false)
-  const phoneMap = canMap ? (
-    <div className={styles.mapToggle}>
-      <BigButton variant="secondary" size="md" icon="pin" aria-expanded={mapOpen} onClick={() => setMapOpen((o) => !o)}>
-        {mapOpen ? t('ways.hide_map') : t('ways.show_map')}
-      </BigButton>
-      {mapOpen ? <PlanAside sessionId={sessionId} match={match} keys={keys} source={flow.session?.source ?? 'live'} rider={rider} target={target} compact /> : null}
-    </div>
-  ) : null
 
   // a live bus match: the meet and the waits need to know where the rider is
   const nearOffer =
@@ -422,29 +415,26 @@ function PlanView({
         failing={reunionLive.failing}
         live={view === 'plan' && named}
         car={mode === 'rail' && answers.car && answers.car !== 'unsure' ? answers.car : null}
+        item={tappedItem}
         meetShown={meetShown}
         skip={skipKinds}
         whereAsked={askWhere || nearOffer !== null}
-        extra={meetShown ? null : (
-          <>
-            {carAsk}
-            {phoneMap}
-          </>
-        )}
+        extra={meetShown ? null : carAsk}
       />
     </div>
   )
-  // "Ways to get it back": in the meet's place in the route, whichever card the API put there
+  // "Your best plan": the one way-back card, whichever the API sent (a reunion card or too_far)
   const waysCard = (): CardOverride | null =>
     reunion
       ? {
-          title: t('plan.card.ways'),
+          title: t('plan.card.best'),
           tone: 'accent',
+          // the steps first; "Where are you now?" under them (the plan assumed a place, and says so in its notes)
           body: (
             <>
+              {ways(false)}
               {askWhere ? <WhereNow {...whereProps} /> : null}
               {nearOffer}
-              {ways(false)}
             </>
           ),
         }
@@ -473,7 +463,6 @@ function PlanView({
             checking={showingMeet && !watch.withdrawn}
           />
           {reunion ? ways(true) : null}
-          {phoneMap}
         </>
       ),
     }),
@@ -539,10 +528,10 @@ function PlanView({
   }
   const [said, setSaid] = useState<string | null>(null)
   const firstPlan = useRef(true)
-  // "Yes" or "Maybe" to "Think someone took it?" puts the safety card above where the rider is reading: it is said
+  // "Think someone took it?" puts the safety card at the top, far above the link the rider tapped: it is said
   // straight away (the card shows before the plan comes back), and again with the plan that answered the change
   const safetyNew = useRef(false)
-  const wantsSafety = answers.taken === 'yes' || answers.taken === 'maybe'
+  const wantsSafety = taken === 'yes'
   const lastWantsSafety = useRef<boolean | null>(null)
   useEffect(() => {
     if (!loaded) return
@@ -610,8 +599,19 @@ function PlanView({
         : topCanceled(match)
           ? t('res_canceled')
           : t('plan.lead')
-  // laptop: the vehicles on the map beside the cards (a match with no named vehicle keeps the clue panel)
-  const aside = wide && named ? <PlanAside sessionId={sessionId} match={match} keys={keys} source={flow.session?.source ?? 'live'} rider={rider} target={target} /> : undefined
+  // the live map: the right pane on a laptop, the top of the plan on a phone (a match with no named vehicle keeps
+  // the clue panel on a laptop and has no map on a phone)
+  const planMap = named ? (
+    <PlanAside sessionId={sessionId} match={match} keys={keys} source={flow.session?.source ?? 'live'} rider={rider} target={target} item={tappedItem} wide={wide} />
+  ) : null
+  const aside = wide && planMap ? planMap : undefined
+
+  // the three parts: the theft safety card (above the map), "Your best plan", and "Didn't find it?" for the rest
+  const sections = planSections(cards)
+  const hasWay = (showingMeet && !watch.withdrawn) || Boolean(best && !skipKinds(best.kind))
+  // collapsed while there is a way back to try, open when there isn't; the rider's own tap wins, per session
+  const backupOpen = answers.backup ?? !hasWay
+  const wayOverride = sections.way ? (slots[sections.way.kind]?.(sections.way) ?? null) : null
   const banner = result && replay ? <ReplayBanner asOf={result.data.generated_at} withHint={false} /> : null
   const footer = (
     <>
@@ -660,8 +660,10 @@ function PlanView({
         ) : undefined
       }
     >
-      <TakenAsk taken={answers.taken} onTaken={(v) => update({ taken: v })} />
-      <ItemAsk item={itemAnswer} onItem={(v) => flow.setExtra({ what: v ?? null })} />
+      {result
+        ? sections.safety.map((c) => <OneCard key={`safety-${c.step}`} card={c} replay={replay} />)
+        : null}
+      {wide ? null : planMap}
 
       {plan.error && !plan.loading && plan.error.error === 'not_found' ? (
         // the session is gone (cleared in another tab, or past retention): the same request can only 404 again
@@ -685,7 +687,15 @@ function PlanView({
       ) : null}
 
       {result ? (
-        <PlanCards cards={cards} replay={replay} slots={slots} />
+        <>
+          {sections.way ? <OneCard card={sections.way} replay={replay} override={wayOverride} title={t('plan.card.best')} tone="accent" /> : null}
+          <ItemAsk item={itemAnswer} onItem={(v) => flow.setExtra({ what: v ?? null })} />
+          {sections.backup.length ? (
+            <Backup open={backupOpen} onToggle={() => update({ backup: !backupOpen })}>
+              <PlanCards cards={sections.backup} replay={replay} slots={slots} />
+            </Backup>
+          ) : null}
+        </>
       ) : plan.loading || !loaded ? (
         <div className={styles.loading}>
           <Spinner showLabel label={t('plan.loading')} />
@@ -704,39 +714,69 @@ function PlanView({
         </section>
       ) : null}
 
+      {result ? <TakenLink taken={taken} onTaken={(v) => update({ taken: v })} /> : null}
+
       <LiveRegion text={said} />
     </Screen>
   )
 }
 
-// --------------------------------------------------------------------------------------------- taken, up top
+// ------------------------------------------------------------------------------------- taken, quiet at the end
 
-function TakenAsk({ taken, onTaken }: { taken: Taken | undefined; onTaken: (v: Taken | undefined) => void }) {
-  if (taken)
-    return (
-      <Answered onChange={() => onTaken(undefined)} changeLabel={t('answer.change')}>
-        {t('wb_11_taken')} <strong>{taken === 'unsure' ? t('not_sure') : taken === 'maybe' ? t('wb_11_taken.maybe') : t(taken === 'yes' ? 'taken.yes' : 'taken.no')}</strong>
-      </Answered>
-    )
+/**
+ * "Think someone took it?": riders found it unnecessary as a question up top, so it is one small link at the end of
+ * the plan, just above the safety footer. A tap sends taken "yes" (the API puts MARTA Police and 911 first and adds
+ * freeze cards) and says what changed, with an Undo that sends "no". The swap keeps focus on the new control.
+ */
+function TakenLink({ taken, onTaken }: { taken: 'yes' | 'no' | null; onTaken: (v: Taken) => void }) {
+  const tapped = useRef(false)
+  const ref = useRef<HTMLButtonElement>(null)
+  const yes = taken === 'yes'
+  useEffect(() => {
+    // only after a tap here: a stored answer on load never pulls focus to the bottom of the page
+    if (tapped.current) ref.current?.focus({ preventScroll: true })
+  }, [yes])
+  const tap = (v: Taken) => {
+    tapped.current = true
+    onTaken(v)
+  }
   return (
-    <section className={styles.askPanel}>
-      <QuickChoice<Taken>
-        headingLevel={2}
-        question={t('wb_11_taken')}
-        hint={t('wb_11_taken.hint')}
-        options={[
-          { value: 'no', label: t('taken.no') },
-          { value: 'maybe', label: t('wb_11_taken.maybe') },
-          { value: 'yes', label: t('taken.yes') },
-          { value: 'unsure', label: t('not_sure'), quiet: true },
-        ]}
-        onChoose={onTaken}
-      />
+    <div className={styles.taken}>
+      {yes ? (
+        <p className={styles.takenAdded}>
+          <span>{t('taken.added')}</span>
+          <button ref={ref} type="button" className={styles.takenLink} onClick={() => tap('no')}>
+            {t('taken.undo')}
+          </button>
+        </p>
+      ) : (
+        <button ref={ref} type="button" className={styles.takenLink} onClick={() => tap('yes')}>
+          {t('taken.ask')}
+        </button>
+      )}
+    </div>
+  )
+}
+
+// --------------------------------------------------------------------------------------- "Didn't find it?"
+
+/** Everything for when the way back didn't work (tell staff, keep the details, the report, call, the item's own
+ *  steps), behind one full-width button; the steps follow the button when open. */
+function Backup({ open, onToggle, children }: { open: boolean; onToggle: () => void; children: ReactNode }) {
+  const id = useId()
+  return (
+    <section className={`${styles.backup} ${open ? styles.backupOpen : ''}`} aria-label={t('backup.label')}>
+      <BigButton variant="secondary" iconEnd="next" aria-expanded={open} aria-controls={id} onClick={onToggle}>
+        {t('backup.toggle')}
+      </BigButton>
+      <div id={id} hidden={!open}>
+        {children}
+      </div>
     </section>
   )
 }
 
-// ------------------------------------------------------------------------------------- the item, up top too
+// ------------------------------------------------------------------------------------- the item, small, after the plan
 
 const ITEM_ICON: Record<ItemCategory, IconName> = { phone: 'phone', wallet: 'wallet', bag: 'bag', keys: 'key', laptop: 'laptop', other: 'question' }
 
@@ -753,12 +793,12 @@ function ItemAsk({ item, onItem }: { item: ItemCategory | 'not_sure' | undefined
       </Answered>
     )
   return (
-    <section className={styles.askPanel}>
+    <section className={styles.itemSmall}>
       <QuickChoice<ItemCategory | 'not_sure'>
         headingLevel={2}
         question={t('wb_01_what')}
         hint={t('plan.item_hint')}
-        layout="tiles"
+        layout="grid"
         // optional, so no "Not sure": leaving it is the same answer, and the plan is already worded for any item
         options={ITEMS.map((v) => ({ value: v, label: t(`plan.item.${v}`), icon: ITEM_ICON[v] }))}
         onChoose={onItem}

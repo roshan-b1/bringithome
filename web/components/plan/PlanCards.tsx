@@ -61,6 +61,21 @@ export function PlanCards({ cards, replay, slots }: { cards: Card[]; replay: boo
   )
 }
 
+/** One card outside the numbered list: the theft safety card above the map, and "Your best plan". */
+export function OneCard({ card, replay, override, title, tone }: { card: Card; replay: boolean; override?: CardOverride | null; title?: string; tone?: CardTone }) {
+  return (
+    <CardShell
+      tone={tone ?? override?.tone ?? TONE[card.kind] ?? 'plain'}
+      title={title ?? override?.title ?? tLoose(`plan.card.${card.kind}` as CopyId)}
+      titleId={`plan-one-${card.kind}`}
+      className={styles.step}
+      footer={<CardMeta card={card} replay={replay} />}
+    >
+      {override ? override.body : <CardBody card={card} />}
+    </CardShell>
+  )
+}
+
 function Lines({ lines }: { lines: (string | null | undefined)[] }) {
   return (
     <>

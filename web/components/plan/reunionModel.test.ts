@@ -12,6 +12,8 @@ import { COPY } from '../../lib/copy.ts'
 import { lint } from '../../scripts/copylint.mjs'
 import {
   adviceKey,
+  arrivalLine,
+  arrivalLines,
   changeSaid,
   confidenceLine,
   directionsFromValue,
@@ -38,6 +40,7 @@ import {
   updatedLine,
   usableFix,
   walksThere,
+  wayStepLines,
   whenParts,
   whenSentence,
   whyNotLines,
@@ -398,4 +401,197 @@ test('the poll body: the live fix only while walking, only a fix the API trusts,
   assert.deepEqual(reunionBody(station, fix, { replaying: false }), station)
   const train: PlanBody = { vehicle_keys: ['rail:407'], user: { on_vehicle: { mode: 'rail', vehicle_key: 'rail:310' } } }
   assert.deepEqual(reunionBody(train, fix, { replaying: false }), train)
+})
+
+// ------------------------------------------------------------------------------------------ when it pulls in
+
+const railOption = (over: Partial<ReunionOption> = {}): ReunionOption => ({
+  kind: 'switch_platform',
+  rank: 1,
+  recommended: true,
+  vehicle_keys: ['rail:407'],
+  place_id: 'station:lakewood',
+  place_label: 'Lakewood-Ft McPherson',
+  direction: 'N',
+  platform_hint: null,
+  stop_lat: 33.7,
+  stop_lon: -84.4,
+  reunion_at: '2026-10-09T19:53:00Z',
+  window_from: '2026-10-09T19:48:00Z',
+  window_to: '2026-10-09T20:01:00Z',
+  leave_by: null,
+  walk_s: 0,
+  wait_s: 0,
+  margin_s: 300,
+  basis: 'estimate',
+  confidence: 'usual',
+  note_ids: [],
+  facts: { mode: 'rail', vehicle: 'Red Line train', train_run: '407', toward: 'North Springs' },
+  fact_sources: {},
+  ...over,
+})
+
+const busOption = (over: Partial<ReunionOption> = {}): ReunionOption =>
+  railOption({
+    kind: 'wait_on_return',
+    vehicle_keys: ['bus:2331'],
+    place_id: 'stop:210555',
+    place_label: 'Courtland St NE @ Auburn Ave NE',
+    direction: null,
+    reunion_at: '2026-10-09T17:55:00Z',
+    facts: { mode: 'bus', vehicle: 'Bus 49', label: '1631' },
+    ...over,
+  })
+
+test('when it pulls in, a train: which train, then the car the rider tapped, the check, the next station, never the doors', () => {
+  assert.deepEqual(arrivalLines(railOption(), { car: 'middle' }), [
+    'Your train: Red Line toward North Springs, due about 3:53 PM.',
+    'Let people off first, then get on the middle car, where you were.',
+    "Check the seat and the floor. If it isn't there, press the car's intercom to tell the operator, or tell station staff.",
+    'You can step off at the next station and come back.',
+    'Never hold the doors.',
+  ])
+  // no car tap: the car clause is left out; the API's hint (the same tap, sent with the plan) stands in for it
+  assert.equal(arrivalLines(railOption())[1], 'Let people off first, then get on.')
+  assert.equal(arrivalLines(railOption({ platform_hint: 'back' }))[1], 'Let people off first, then get on the back car, where you were.')
+  // an unnamed train or no toward: the line still reads
+  assert.equal(arrivalLines(railOption({ facts: { mode: 'rail', vehicle: 'Train' } }))[0], 'Your train is due about 3:53 PM.')
+  assert.equal(arrivalLines(railOption({ facts: { mode: 'rail', vehicle: 'Gold Line train' } }))[0], 'Your train: Gold Line, due about 3:53 PM.')
+  assert.equal(arrivalLine(railOption()), 'When it pulls in: Red Line toward North Springs. Let people off first, then check the seat and the floor.')
+})
+
+test('when it pulls in, a bus: which bus, front door and the driver, never chase it; with or without a car tap the same', () => {
+  const lines = [
+    'Your bus: Route 49, due about 1:55 PM.',
+    'Get on at the front and tell the driver you left something on this bus earlier. Check where you sat.',
+    'Never chase a bus or step in front of it.',
+  ]
+  assert.deepEqual(arrivalLines(busOption()), lines)
+  assert.deepEqual(arrivalLines(busOption(), { car: 'front' }), lines) // a car tap means nothing on a bus
+  assert.equal(arrivalLines(busOption({ facts: { mode: 'bus', vehicle: 'Bus 49', toward: 'Five Points' } }))[0], 'Your bus: Route 49 toward Five Points, due about 1:55 PM.')
+  assert.equal(arrivalLines(busOption({ facts: { mode: 'bus', vehicle: 'Bus' } }))[0], 'Your bus is due about 1:55 PM.')
+  assert.equal(arrivalLine(busOption()), 'When it pulls in: Route 49. Get on at the front and tell the driver you left something on it.')
+})
+
+test('when it pulls in, from the recorded hero answer: Red Line toward North Springs, and every line passes the lint', () => {
+  const hero = JSON.parse(readFileSync(new URL('../../public/fixtures/hero-rail/plan.json', import.meta.url), 'utf8')) as { reunion: Reunion }
+  const main = mainOption(hero.reunion)!
+  assert.match(arrivalLines(main)[0]!, /^Your train: Red Line toward North Springs, due about 3:53 PM\.$/)
+  const bus = JSON.parse(readFileSync(new URL('../../public/fixtures/backup-bus49/plan.json', import.meta.url), 'utf8')) as { reunion: Reunion }
+  assert.equal(arrivalLines(mainOption(bus.reunion)!)[0], 'Your bus: Route 49, due about 1:55 PM.')
+  for (const o of [...hero.reunion.options, ...bus.reunion.options])
+    for (const l of [...arrivalLines(o, { car: 'front' }), ...arrivalLines(o), arrivalLine(o)]) assert.deepEqual(lint(l), [], l)
+})
+
+// ------------------------------------------------------------------------------------------ your best plan
+
+const texts = (steps: { text: string }[]) => steps.map((s) => s.text)
+const PULLS_IN = 'When it pulls in'
+
+test('your best plan, switch_platform: board, get off, cross, arrives, when it pulls in (and on the train already)', () => {
+  const o = railOption({
+    facts: { mode: 'rail', vehicle: 'Red Line train', toward: 'North Springs', get_off_at: 'Lakewood-Ft McPherson', ride_run: '411', ride_toward: 'Airport', off_time: '3:42 PM', board_at: 'Garnett', board_time: '3:34 PM', leave_by: '3:33 PM' },
+  })
+  const steps = wayStepLines(o, { item: 'bag', car: 'middle' })
+  assert.deepEqual(texts(steps), [
+    'Take the 3:34 PM train toward Airport from Garnett. Leave by 3:33 PM.',
+    'Get off at Lakewood-Ft McPherson at about 3:42 PM.',
+    'Cross to the platform toward North Springs.',
+    "Your bag's train arrives about 3:53 PM (between 3:48 PM and 4:01 PM).",
+    PULLS_IN,
+  ])
+  assert.deepEqual(steps.at(-1)!.sub, arrivalLines(o, { car: 'middle' }))
+  // on the train already (no boarding facts), no toward, no off time, no item tap
+  assert.deepEqual(texts(wayStepLines(railOption({ facts: { mode: 'rail', vehicle: 'Red Line train', get_off_at: 'College Park' } }))), [
+    'Stay on your train.',
+    'Get off at College Park.',
+    'Cross to the platform for trains going the other way.',
+    "Your item's train arrives about 3:53 PM (between 3:48 PM and 4:01 PM).",
+    PULLS_IN,
+  ])
+})
+
+test('your best plan, wait_here and wait_on_return on a train; the keys read "keys\'"', () => {
+  const here = railOption({ kind: 'wait_here', place_label: 'Garnett', facts: { mode: 'rail', vehicle: 'Red Line train', toward: 'North Springs', walk_min: 4, leave_by: '3:50 PM' } })
+  assert.deepEqual(texts(wayStepLines(here, { item: 'keys' })), [
+    'Stay at Garnett.',
+    'Wait on the platform toward North Springs.',
+    "Your keys' train turns around at the end of the line and comes back.",
+    'It should arrive about 3:53 PM (between 3:48 PM and 4:01 PM).',
+    PULLS_IN,
+  ])
+  const back = railOption({ kind: 'wait_on_return', place_label: 'West End', facts: { mode: 'rail', vehicle: 'Red Line train', toward: 'North Springs', walk_min: 9, leave_by: '3:40 PM' } })
+  assert.equal(wayStepLines(back, { item: 'phone' })[0]!.text, 'Walk to West End (about 9 min). Leave by 3:40 PM.')
+  // without walk facts the walk step still names the place; a live time has no window
+  const live = railOption({ kind: 'wait_on_return', basis: 'live', place_label: 'West End', direction: 'N', facts: { mode: 'rail', vehicle: 'Red Line train' } })
+  assert.deepEqual(texts(wayStepLines(live)), [
+    'Walk to West End.',
+    'Wait on the northbound platform.',
+    "Your item's train turns around at the end of the line and comes back.",
+    'It should arrive about 3:53 PM.',
+    PULLS_IN,
+  ])
+})
+
+test('your best plan, a bus wait: walk, it comes back, the window, when it pulls in with the bus lines', () => {
+  const steps = wayStepLines(busOption({ facts: { mode: 'bus', vehicle: 'Bus 49', label: '1631', walk_min: 10, leave_by: '1:43 PM' } }), { item: 'wallet' })
+  assert.deepEqual(texts(steps), [
+    'Walk to Courtland St NE @ Auburn Ave NE (about 10 min). Leave by 1:43 PM.',
+    "Your wallet's bus turns around at the end of its route and comes back.",
+    'It should arrive about 1:55 PM (between 3:48 PM and 4:01 PM).',
+    PULLS_IN,
+  ])
+  assert.equal(steps.at(-1)!.sub![0], 'Your bus: Route 49, due about 1:55 PM.')
+})
+
+test('your best plan, walk_ahead (train and bus) and shared_track', () => {
+  const train = railOption({ kind: 'walk_ahead', basis: 'live', place_label: 'East Point', facts: { mode: 'rail', vehicle: 'Red Line train', toward: 'Airport', walk_min: 6, leave_by: '3:28 PM' } })
+  assert.deepEqual(texts(wayStepLines(train, { item: 'laptop' })), [
+    'Walk to East Point (about 6 min). Leave by 3:28 PM.',
+    'Wait on the platform toward Airport.',
+    "Your laptop's train arrives about 3:53 PM.",
+    PULLS_IN,
+  ])
+  const bus = busOption({ kind: 'walk_ahead', basis: 'live', facts: { mode: 'bus', vehicle: 'Bus 49', walk_min: 3 } })
+  assert.deepEqual(texts(wayStepLines(bus, { item: 'bag' })), ['Walk to Courtland St NE @ Auburn Ave NE (about 3 min).', "Your bag's bus arrives about 1:55 PM.", PULLS_IN])
+  const shared = railOption({ kind: 'shared_track', basis: 'live', place_label: 'East Point', facts: { mode: 'rail', vehicle: 'Red Line train', off_time: '3:31 PM' } })
+  assert.deepEqual(texts(wayStepLines(shared, { item: 'bag' })), [
+    'Stay on your train.',
+    'Get off at East Point at about 3:31 PM.',
+    'Wait on the same platform.',
+    "Your bag's train arrives about 3:53 PM.",
+    PULLS_IN,
+  ])
+  // no off time: the step still says where
+  assert.equal(wayStepLines(railOption({ kind: 'shared_track', place_label: 'East Point', facts: { mode: 'rail' } }))[1]!.text, 'Get off at East Point.')
+})
+
+test('your best plan, meet_at_end: a bus waits until it pulls out; a train ridden to the end leaves again', () => {
+  const bus = busOption({ kind: 'meet_at_end', place_label: 'Five Points', facts: { mode: 'bus', vehicle: 'Bus 49', walk_min: 7, leave_by: '1:40 PM', pulls_out: '2:05 PM' } })
+  assert.deepEqual(texts(wayStepLines(bus)), ['Walk to Five Points, the end of the line (about 7 min). Leave by 1:40 PM.', 'The bus waits there until about 2:05 PM.', PULLS_IN])
+  // no pull out time: that step is left out
+  assert.deepEqual(texts(wayStepLines(busOption({ kind: 'meet_at_end', place_label: 'Five Points', facts: { mode: 'bus', vehicle: 'Bus 49' } }))), ['Walk to Five Points, the end of the line.', PULLS_IN])
+  const train = railOption({ kind: 'meet_at_end', place_label: 'North Springs', facts: { mode: 'rail', vehicle: 'Red Line train', board_at: 'Garnett', board_time: '3:34 PM', departs: '4:12 PM' } })
+  assert.deepEqual(texts(wayStepLines(train)), ['Take the 3:34 PM train from Garnett to North Springs, the end of the line.', 'The train waits there until about 4:12 PM.', PULLS_IN])
+})
+
+test('your best plan from the recorded answers, and every step passes the copy lint', () => {
+  const hero = JSON.parse(readFileSync(new URL('../../public/fixtures/hero-rail/plan.json', import.meta.url), 'utf8')) as { reunion: Reunion }
+  assert.deepEqual(texts(wayStepLines(mainOption(hero.reunion)!, { item: 'bag' })).slice(0, 3), [
+    'Take the 3:34 PM train toward Airport from Garnett. Leave by 3:33 PM.',
+    'Get off at Lakewood-Ft McPherson at about 3:42 PM.',
+    'Cross to the platform toward North Springs.',
+  ])
+  for (const set of ['hero-rail', 'backup-bus49']) {
+    for (const file of ['plan.json', 'plan-on_vehicle.json', 'plan-at_station.json']) {
+      let r: Reunion | null = null
+      try {
+        r = (JSON.parse(readFileSync(new URL(`../../public/fixtures/${set}/${file}`, import.meta.url), 'utf8')) as { reunion: Reunion }).reunion
+      } catch {
+        continue
+      }
+      for (const o of r?.options ?? [])
+        for (const s of wayStepLines(o, { item: 'keys', car: 'back' })) for (const l of [s.text, ...(s.sub ?? [])]) assert.deepEqual(lint(l), [], l)
+    }
+  }
 })

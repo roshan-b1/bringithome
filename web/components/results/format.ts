@@ -4,7 +4,11 @@
 
 import type { Evidence, Level, Line, Match, MatchCandidate, MatchContext, ScheduleCandidate, VehicleKey, VehicleNow } from '../../contracts/api.ts'
 import { t } from '../../lib/copy.ts'
+import { formatDistance } from '../../lib/distance.ts'
 import { clock } from '../../lib/time.ts'
+
+// the one distance formatter (feet and miles), kept importable from here for the results components
+export { formatDistance }
 
 // LineBadge's names, repeated because LineBadge.tsx pulls in a CSS module that node:test can't load
 const LINE_NAME: Record<Line, string> = { RED: 'Red', GOLD: 'Gold', BLUE: 'Blue', GREEN: 'Green' }
@@ -73,7 +77,7 @@ export function countedNoun(counted: MatchContext['counted'], n: number): string
 export function contextLine(match: Pick<Match, 'status' | 'level' | 'context'>): { line: string; fits: string | null; where: string | null } {
   const c = match.context
   if (!c) return { line: '', fits: null, where: null }   // a match the API sent without its context: say nothing
-  const radius = c.radius_m ?? 400
+  const radius = formatDistance(c.radius_m ?? 400)
   const place = c.place_label.trim()
   const hasWindow = Date.parse(c.window.to) > Date.parse(c.window.from)
   const from = clock(c.window.from)
@@ -95,19 +99,12 @@ export function contextLine(match: Pick<Match, 'status' | 'level' | 'context'>):
   }
 }
 
-/** "Passed 22 m from Piedmont Ave SE @ Gilmer St SE at 1:18 PM" (New York time); without a place label, no place. */
+/** "Passed 70 ft from Piedmont Ave SE @ Gilmer St SE at 1:18 PM" (New York time); without a place label, no place. */
 export function evidenceLine(e: Pick<Evidence, 'distance_m' | 'place_label' | 'at'>): string {
   const place = e.place_label.trim()
   return place
-    ? t('candidate.passed', { distance: Math.round(e.distance_m), place, time: clock(e.at) })
+    ? t('candidate.passed', { distance: formatDistance(e.distance_m), place, time: clock(e.at) })
     : t('candidate.passed_near', { time: clock(e.at) })
-}
-
-/** "350 m" under a kilometre (to 10 m: a phone fix is no better), "1.2 km" above. */
-export function formatDistance(m: number): string {
-  if (!Number.isFinite(m)) return ''
-  if (m < 995) return `${Math.max(10, Math.round(m / 10) * 10)} m`
-  return `${(m / 1000).toFixed(m < 9950 ? 1 : 0)} km`
 }
 
 export interface LatLon {

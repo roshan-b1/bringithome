@@ -201,3 +201,10 @@
   height: min(52dvh, 560px);
   max-height: none;
 }
+
+/* the plan's map, at the top of the phone screen: about 42% of a 390x844 phone, never so tall the plan disappears */
+.planSize .frame {
+  aspect-ratio: auto;
+  height: clamp(240px, 42dvh, 380px);
+  max-height: none;
+}

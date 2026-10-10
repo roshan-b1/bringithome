@@ -7,6 +7,7 @@ import { BigButton } from '@/components/ui/BigButton'
 import { SourceChip } from '@/components/ui/Chip'
 import { ChoiceList, type Choice } from '@/components/ui/ChoiceList'
 import { lineColor } from '@/components/ui/LineBadge'
+import { NoBreak } from '@/components/plan/FactText'
 import { Screen } from '@/components/ui/Screen'
 import { createSession, directions, type ApiResult } from '@/lib/api'
 import { t } from '@/lib/copy'
@@ -202,7 +203,7 @@ export function Results({ session, intake, onSession, onContinue, onEdit, onBack
       return {
         value: c.vehicle_key,
         label: t('tie.option', { vehicle: vehicleName(c), direction: lowerFirst(c.direction_label) }),
-        sublabel: c.evidence[0] ? evidenceLine(c.evidence[0]) : undefined,
+        sublabel: c.evidence[0] ? <NoBreak text={evidenceLine(c.evidence[0])} /> : undefined,
         swatch: c.mode === 'rail' && line ? lineColor(line) : undefined,
         icon: c.mode === 'rail' ? (line ? undefined : 'train') : 'bus',
       }

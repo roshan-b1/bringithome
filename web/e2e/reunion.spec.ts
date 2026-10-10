@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { lint } from '../scripts/copylint.mjs'
 
-// "Ways to get it back" on the plan screen (the reunion planner), at four sizes: 320x568, 375x667, 390x844 and a
+// "Your best plan" on the plan screen (the reunion planner), at four sizes: 320x568, 375x667, 390x844 and a
 // 1280x800 laptop. Recorded sets, offline, so no API is needed (the sets are the deployed API's own answers under
 // as_of): hero-rail (Red 407; rider assumed at Garnett; ride to Lakewood and wait on the other platform; the same rider
 // at Five Points, whose recorded frames move the best way to Oakland City), late-rail (Red 402 after 9 PM: nothing to
@@ -35,7 +35,9 @@ async function clean(page: Page) {
   expect(lint(text)).toEqual([])
   expect(text).not.toMatch(/[‒-―⸺⸻]/)
   expect(text).not.toMatch(/(?<![A-Za-z0-9])A\.?I(?![A-Za-z0-9])/)
-  expect(text.replace(/\btrain runs? /gi, '')).not.toMatch(/\b(?:run|hurry|rush|chase|confront|catch|jump|door|doors)\b/i)
+  // the two negated safety lines of "When it pulls in" are the only place "doors" and "chase" may appear
+  const safe = text.replace(/\btrain runs? /gi, '').replace(/Never hold the doors\.|Never chase a bus or step in front of it\./g, '')
+  expect(safe).not.toMatch(/\b(?:run|hurry|rush|chase|confront|catch|jump|door|doors)\b/i)
   // no reason or note id ever shows raw
   expect(text).not.toMatch(/\b(?:may_leave_service|not_turned|no_location|watch_after_turn|assumed_location|switch_platform|wait_here|wait_on_return|meet_at_end|walk_ahead|shared_track)\b/)
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
@@ -54,7 +56,12 @@ async function toPlan(page: Page, set: string, _mode: 'Train' | 'Bus', hhmm: str
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your plan')
 }
 
-const waysCard = (page: Page) => page.getByRole('heading', { name: 'Ways to get it back' }).locator('xpath=ancestor::li[1]')
+const waysCard = (page: Page) => page.getByRole('heading', { level: 2, name: 'Your best plan' }).locator('xpath=ancestor::section[1]')
+/** "Other ways (n)", opened */
+async function openOthers(page: Page) {
+  const summary = waysCard(page).locator('summary', { hasText: /^Other ways \(\d+\)$/ })
+  if ((await summary.locator('xpath=..').getAttribute('open')) === null) await summary.click()
+}
 
 for (const size of SIZES) {
   test.describe(size.name, () => {
@@ -69,36 +76,57 @@ for (const size of SIZES) {
       await expect(best.getByText('About 3:53 PM', { exact: true })).toBeVisible()
       await expect(best.getByText('between 3:48 PM and 4:01 PM', { exact: true })).toBeVisible()
       await expect(best.getByText('Estimated from how it usually turns around')).toBeAttached()
-      await expect(best.getByText('Leave by 3:33 PM')).toBeVisible()
-      await expect(best.getByText('Ride to Lakewood-Ft McPherson, step off and wait on the other platform for it coming back.')).toBeVisible()
-      await expect(best.getByText('Take the 3:34 PM train from Garnett toward Airport, train run 411.')).toBeVisible()
+      await expect(best.getByText('Leave by 3:33 PM', { exact: true })).toBeVisible()
+      // the way as numbered steps with times, in order, the last one "When it pulls in"
+      const steps = best.getByRole('list', { name: 'Your best plan, step by step' }).locator(':scope > li')
+      await expect(steps).toHaveCount(5)
+      await expect(steps.nth(0)).toContainText('Take the 3:34 PM train toward Airport from Garnett. Leave by 3:33 PM.')
+      await expect(steps.nth(1)).toContainText('Get off at Lakewood-Ft McPherson at about 3:42 PM.')
+      await expect(steps.nth(2)).toContainText('Cross to the platform toward North Springs.')
+      await expect(steps.nth(3)).toContainText("Your item's train arrives about 3:53 PM (between 3:48 PM and 4:01 PM).")
+      await expect(steps.nth(4)).toContainText('When it pulls in')
+      await expect(steps.nth(4)).toContainText('Your train: Red Line toward North Springs, due about 3:53 PM.')
+      await expect(steps.nth(4)).toContainText('Never hold the doors.')
+      await expect(card.getByText("Tell any staff you pass that it's yours.")).toBeVisible()
       // a station the rider rides to gets no walking directions
       await expect(best.getByRole('link', { name: 'Walking directions' })).toHaveCount(0)
 
-      // the other way: waiting at Garnett, with walking directions to the station's own coordinates
+      // the other way, folded: waiting at Garnett, with walking directions to the station's own coordinates
+      await expect(card.getByRole('list', { name: 'Other ways' })).toBeHidden()
+      await openOthers(page)
       const others = card.getByRole('list', { name: 'Other ways' })
       await expect(others.getByText('About 3:59 PM, between 3:54 PM and 4:07 PM.')).toBeVisible()
       const href = await others.getByRole('link', { name: 'Walking directions' }).getAttribute('href')
       if (size.phone) expect(href).toMatch(/^https:\/\/maps\.apple\.com\/\?daddr=33\.\d{6},-84\.\d{6}&dirflg=w$/)
       else expect(href).toMatch(/^https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=33\.\d{6},-84\.\d{6}&travelmode=walking$/)
 
-      // why not other ways: folded, then plain sentences
-      const why = card.locator('details', { hasText: 'Why not other ways' })
+      await expect(others.getByText('When it pulls in: Red Line toward North Springs. Let people off first, then check the seat and the floor.')).toBeVisible()
+
+      // why not other ways: folded inside the other ways, then plain sentences
+      const why = card.locator('details', { hasText: 'Why not other ways' }).last()
       await expect(why.getByText("It hasn't turned around at the end of the line yet.", { exact: false })).toBeHidden()
       await why.locator('summary').click()
       const endLine = why.getByRole('listitem').filter({ hasText: 'Meet it at the end of the line' })
       await expect(endLine).toBeVisible()
       await expect(endLine).toContainText("It hasn't turned around at the end of the line yet.")
 
-      // the car tap becomes the platform hint
+      // the car tap: get on that car when it pulls in
       await card.getByRole('button', { name: 'Back car', exact: true }).click()
-      await expect(best.getByText('Wait near the back of the platform, back from the edge.')).toBeVisible()
+      await expect(steps.nth(4)).toContainText('Let people off first, then get on the back car, where you were.')
 
-      // the report, tell staff and the safety footer stay
-      await expect(page.getByRole('heading', { name: 'Tell staff now' })).toBeAttached()
-      await expect(page.getByRole('heading', { name: 'Fill in the lost item form' })).toBeAttached()
+      // the report and tell staff wait behind "Didn't find it?"; the safety footer stays
+      const more = page.getByRole('button', { name: "Didn't find it?" })
+      await expect(more).toHaveAttribute('aria-expanded', 'false')
+      await expect(page.getByRole('heading', { name: 'Fill in the lost item form' })).toBeHidden()
+      await more.click()
+      await expect(page.getByRole('heading', { name: 'Tell staff now' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Fill in the lost item form' })).toBeVisible()
       await expect(page.getByText(/In danger\? Call/).first()).toBeAttached()
-      if (!size.phone) await expect(page.getByText('Meet it here: Lakewood-Ft McPherson.')).toBeAttached() // the map, in words
+      await expect(page.getByText('Meet it here: Lakewood-Ft McPherson.')).toBeAttached() // the map, in words, on every size now
+      // the live map without a tap: in the first screen on a phone, the right pane on a laptop
+      const map = page.getByRole('region', { name: 'Where it is now' })
+      await expect(map).toBeAttached()
+      if (size.phone) expect((await map.boundingBox())!.y).toBeLessThan(size.height)
       await clean(page)
       await card.scrollIntoViewIfNeeded()
       await page.screenshot({ path: info.outputPath(`ways-${size.name}.png`), fullPage: true })
@@ -111,13 +139,15 @@ for (const size of SIZES) {
       const tonight = 'It may not come back tonight. The timetable has no more trips back, so the report is the safe step.'
       await expect(card.getByText(tonight, { exact: true })).toBeVisible()
       // said once, up front: the fold does not say it again
-      const why = card.locator('details', { hasText: 'Why not other ways' })
+      const why = card.locator('details', { hasText: 'Why not other ways' }).last()
       await why.locator('summary').click()
       await expect(why.getByText('It may not come back tonight', { exact: false })).toHaveCount(0)
       await expect(card.getByText('Tell staff and send the report below: those are your best steps.')).toBeVisible()
       await expect(card.getByRole('region', { name: 'Best way now' })).toHaveCount(0)
-      await expect(page.getByRole('heading', { name: 'Tell staff now' })).toBeAttached()
-      await expect(page.getByRole('heading', { name: 'Fill in the lost item form' })).toBeAttached()
+      // no way back: the backup steps are shown directly
+      await expect(page.getByRole('button', { name: "Didn't find it?" })).toHaveAttribute('aria-expanded', 'true')
+      await expect(page.getByRole('heading', { name: 'Tell staff now' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Fill in the lost item form' })).toBeVisible()
       await expect(page.getByRole('complementary', { name: 'Safety' }).first()).toBeAttached()
       await clean(page)
       await card.scrollIntoViewIfNeeded()
@@ -145,7 +175,7 @@ test.describe('live updates', () => {
     await card.getByRole('button', { name: 'At a station' }).click()
     await card.getByRole('button', { name: 'Five Points station' }).click()
     await expect(card.getByText('You are at Five Points station.')).toBeVisible()
-    await expect(best.getByText('Take the 3:32 PM train from Five Points toward Airport, train run 411.')).toBeVisible()
+    await expect(best.getByText(/^Take the 3:32\sPM train toward Airport from Five Points\./)).toBeVisible()
     await expect(best.getByText('Lakewood-Ft McPherson', { exact: true })).toBeVisible()
     await expect(card.getByText('Updated just now')).toBeVisible()
     await elapse(page, 12_000)
@@ -160,7 +190,7 @@ test.describe('live updates', () => {
     await elapse(page, 120_000)
     await expect.poll(() => frames.includes('007'), { timeout: 10_000 }).toBe(true)
     await expect(best.getByText('Lakewood-Ft McPherson', { exact: true })).toBeVisible()
-    await expect(best.getByText('Leave by 3:29 PM')).toBeVisible()
+    await expect(best.getByText('Leave by 3:29 PM', { exact: true })).toBeVisible()
     expect(await live()).not.toContain('New best way')
 
     // the recorded ride moves on: from frame 009 (3:30 PM) the 3:32 PM train can no longer be boarded in time and
@@ -305,7 +335,7 @@ test.describe('a kept answer', () => {
       const card = waysCard(page)
       const best = card.getByRole('region', { name: 'Best way now' })
       await elapse(page, 340_000) // leave by 3:33:31 PM; the answer is from 3:27 PM
-      const pill = best.locator('p', { hasText: 'Leave by 3:33 PM' })
+      const pill = best.locator('p').filter({ hasText: /^Leave by 3:33 PM,/ })
       await expect(pill).toHaveText('Leave by 3:33 PM, time to set off, at an easy pace')
       const icon = await pill.locator('svg').boundingBox()
       expect(icon?.width).toBe(20) // the clock keeps its shape when the words wrap
@@ -313,6 +343,7 @@ test.describe('a kept answer', () => {
       await expect(best).toHaveCount(0)
       await expect(card.getByText("That time has passed, so we're checking again.")).toBeVisible()
       await expect(card.getByText('Time to set off', { exact: false })).toHaveCount(0)
+      await openOthers(page)
       await expect(card.getByRole('list', { name: 'Other ways' }).getByText('Garnett', { exact: true })).toBeVisible()
       await clean(page)
     })

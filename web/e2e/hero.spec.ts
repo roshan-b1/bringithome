@@ -68,29 +68,47 @@ test('the hero path, offline: two taps, the match, the meet and the report card'
   await page.screenshot({ path: info.outputPath(`results-${info.project.name}.png`) })
   await page.getByRole('button', { name: 'See your plan' }).click()
 
-  // the plan: steps, the safety footer, the optional questions
+  // the plan: the live map first (no tap), "Your best plan", the rest behind "Didn't find it?", the safety footer
   await expect(h1(page)).toHaveText('Your plan')
-  await expect(page.getByText(/^Step 1 of \d+\./).first()).toBeVisible()
+  const map = page.getByRole('region', { name: 'Where it is now' })
+  await expect(map).toBeVisible()
+  const vp = page.viewportSize()!
+  const frame = (await map.locator('div[aria-hidden="true"]').first().locator('xpath=..').boundingBox())!
+  expect(frame.y).toBeLessThan(vp.height) // in the first screen, no tap needed
+  expect(frame.height / vp.height).toBeGreaterThan(0.3)
+  expect(frame.height / vp.height).toBeLessThan(0.5)
+  await expect(page.getByText('Your item is here', { exact: true })).toBeAttached()
+  await expect(map.getByText(/^Red Line train, now near .+, heading to .+\.$/)).toBeVisible({ timeout: 15_000 })
+  await expect(map.getByText(/^Updated \d+ (s|min) ago\.$/)).toBeVisible()
+  await expect(page.getByRole('heading', { level: 2, name: 'Your best plan' })).toBeVisible()
+  await expect(page.getByRole('button', { name: "Didn't find it?" })).toHaveAttribute('aria-expanded', 'false')
+  await expect(page.getByText(/^Step 1 of \d+\./).first()).toBeHidden()
   await expect(page.getByText(/In danger\? Call/).first()).toBeAttached()
-  await expect(page.getByRole('heading', { name: 'Do you think someone took it?' })).toBeVisible()
+  // theft is not asked up top any more: one quiet link at the end, above the safety footer, and nothing sent until tapped
+  await expect(page.getByRole('heading', { name: /someone took it/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Think someone took it?' })).toBeAttached()
   // the item, asked here and optional: until it is answered the plan is worded for any item, bag line included
   await expect(page.getByRole('heading', { name: 'What did you lose?' })).toBeVisible()
   await expect(page.getByText(/A bag left alone may be treated as a safety concern/).first()).toBeAttached()
   await page.getByRole('button', { name: 'Bag', exact: true }).click()
   await expect(page.getByText('What did you lose? Bag or backpack')).toBeVisible()
+  await expect(page.getByText('Your bag is here', { exact: true })).toBeAttached()
   await expect(page.getByText(/A bag left alone may be treated as a safety concern/).first()).toBeAttached()
   await page.getByRole('button', { name: 'On another train' }).click()
   await page.getByRole('button', { name: 'Gold to Airport, next stop East Point' }).click()
 
-  // the meet, from the plan recorded for a rider on Gold run 310
-  const meet = page.getByRole('heading', { name: 'Meet it' }).locator('xpath=ancestor::li[1]')
+  // the meet, from the plan recorded for a rider on Gold run 310: "Your best plan" is the meet now
+  const meet = page.getByRole('heading', { level: 2, name: 'Your best plan' }).locator('xpath=ancestor::section[1]')
   await expect(meet.getByText('East Point', { exact: true })).toBeVisible({ timeout: 10_000 })
   await expect(meet.getByText('3:34 PM')).toBeVisible()
   await expect(meet.getByText(/Get off at East Point/)).toBeVisible()
   await meet.getByRole('button', { name: 'Middle', exact: true }).click()
   await expect(meet.getByText('Wait at the middle of the platform, back from the edge.')).toBeVisible()
 
-  // the report card: the form's own labels, filled from the match
+  // "Didn't find it?" opens the rest; the report card: the form's own labels, filled from the match
+  await page.getByRole('button', { name: "Didn't find it?" }).click()
+  await expect(page.getByRole('button', { name: "Didn't find it?" })).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.getByText(/^Step 1 of \d+\./).first()).toBeVisible()
   const report = page.getByRole('heading', { name: 'Fill in the lost item form' })
   await report.scrollIntoViewIfNeeded()
   await expect(report).toBeVisible()
@@ -125,6 +143,8 @@ test('offline, "What did you lose?" on the plan adds the item\'s own steps from 
   await page.getByRole('button', { name: '10 to 30 min ago' }).click()
   await page.getByRole('button', { name: 'See your plan' }).click({ timeout: 15_000 })
   await expect(h1(page)).toHaveText('Your plan')
+  // the item's own steps live behind "Didn't find it?"
+  await page.getByRole('button', { name: "Didn't find it?" }).click()
   const freeze = page.getByRole('heading', { name: 'Freeze your cards' })
   await expect(page.getByText(/A bag left alone may be treated as a safety concern/).first()).toBeAttached()
   await expect(freeze).toHaveCount(0)
@@ -257,11 +277,15 @@ const liveText = (page: Page) => page.locator('[aria-live="polite"]').allInnerTe
 
 test('the plan keeps a screen reader\'s place: focus after each answer, the safety step and the train meet said', async ({ page }) => {
   await toPlan(page)
-  // "Yes, someone took it": the folded answer takes focus (never <body>), and the safety step is said
-  await page.getByRole('button', { name: 'Yes', exact: true }).click()
-  await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).not.toBe('BODY')
-  await expect(page.locator(':focus')).toContainText('Do you think someone took it?')
+  // "Think someone took it?" at the end: focus moves to its Undo (never <body>), and the safety step is said
+  await page.getByRole('button', { name: 'Think someone took it?' }).click()
+  await expect(page.locator(':focus')).toHaveText('Undo')
   await expect.poll(() => liveText(page)).toContain("Don't follow or confront anyone")
+  // Undo: the link comes back with focus, and the safety step leaves the top
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await expect(page.locator(':focus')).toHaveText('Think someone took it?')
+  await page.getByRole('button', { name: 'Think someone took it?' }).click()
+  await expect(page.locator(':focus')).toHaveText('Undo')
   // "On another train": focus moves to the picker's question; the train row then folds into its answer
   await page.getByRole('button', { name: 'On another train' }).click()
   await expect(page.locator(':focus')).toHaveText('Which train are you on now?')
@@ -277,6 +301,7 @@ test('the plan keeps a screen reader\'s place: focus after each answer, the safe
 test('phone numbers on buttons never break across lines, from 320 to 430 px; the safety footer is real buttons', async ({ page }) => {
   test.setTimeout(60_000)
   await toPlan(page)
+  await page.getByRole('button', { name: "Didn't find it?" }).click() // the call and report steps, with their numbers
   for (const width of [320, 375, 430]) {
     await page.setViewportSize({ width, height: 800 })
     // every tel link whose words hold a number: the number's own text sits on one line box
@@ -353,7 +378,7 @@ test('a live no_match with an empty place label and a zero-length window renders
   await page.getByRole('button', { name: /I lost something/ }).click()
   await page.getByRole('group', { name: 'Near you now' }).getByRole('button').first().click()
   await page.getByRole('button', { name: '10 to 30 min ago' }).click()
-  await expect(page.getByText('No buses passed within 400 m of your stop.')).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('No buses passed within 0.25 mi of your stop.')).toBeVisible({ timeout: 10_000 })
   await expect(h1(page)).toBeVisible()
   expect(errors).toEqual([])
   await clean(page)

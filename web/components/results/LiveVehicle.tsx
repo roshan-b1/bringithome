@@ -5,6 +5,7 @@ import type { NowQuery, VehicleKey, VehicleNow } from '@/contracts/api'
 import { BigButton } from '@/components/ui/BigButton'
 import { Card } from '@/components/ui/Card'
 import { Chip, chipKindFor } from '@/components/ui/Chip'
+import { NoBreak } from '@/components/plan/FactText'
 import { errorMessage } from '@/components/ui/ErrorState'
 import { Icon } from '@/components/ui/Icon'
 import { LiveRegion } from '@/components/ui/LiveRegion'
@@ -136,7 +137,7 @@ export function LiveVehicleView({ vehicleKey, result, error, loading, rider, rid
         {distance !== null ? (
           <p className={styles.rider}>
             <span className={styles.riderDot} aria-hidden="true" />
-            {t('rider.distance', { distance: formatDistance(distance) })}
+            <NoBreak text={t('rider.distance', { distance: formatDistance(distance) })} />
           </p>
         ) : riderStatus === 'prompt' && onShowMe ? (
           <div className={styles.riderAsk}>

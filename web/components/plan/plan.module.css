@@ -880,14 +880,209 @@
   background: currentColor;
 }
 
-.mapToggle {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-}
-
 @media (forced-colors: active) {
   .basis {
     border-color: CanvasText;
   }
+}
+
+/* "Think someone took it?": one quiet link at the end of the plan, just above the safety footer (PlanScreen
+   TakenLink); after a tap, what changed and an Undo. Both are full 44 px tap targets. */
+.taken {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--sp-2);
+}
+
+.takenAdded {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  column-gap: var(--sp-1);
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+.takenLink {
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: var(--sp-2) var(--sp-3);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--navy);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.takenLink:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+/* "When it pulls in": the last block of the main way (Reunion Arrival), and its one line under the other ways */
+.arrival {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  border-left: 4px solid var(--orange);
+  border-radius: var(--r-sm);
+  background: var(--orange-06);
+}
+
+.arrivalTitle {
+  margin: 0;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-snug);
+}
+
+.arrivalWhich {
+  margin: 0;
+  font-weight: var(--fw-semibold);
+}
+
+.arrivalSteps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+  padding-left: var(--sp-5);
+  list-style: disc;
+}
+
+.arrivalShort {
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+
+/* the plan's live map (PlanAside): first on a phone, the right pane on a laptop */
+.planMap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.mapCaption {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-snug);
+}
+
+.mapCaptionWhere {
+  font-weight: var(--fw-semibold);
+}
+
+.mapCaptionAge {
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+/* "Your best plan": the recommended way as numbered steps, each one short line, the last one "When it pulls in" */
+.waySteps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wayStep {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  align-items: start;
+  gap: var(--sp-3);
+}
+
+.wayStepNo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--navy);
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--navy);
+  font-weight: var(--fw-heavy);
+  font-size: var(--fs-sm);
+}
+
+.wayStep:last-child .wayStepNo {
+  border-color: var(--orange);
+  background: var(--orange);
+}
+
+.wayStepText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+  padding-top: 3px;
+}
+
+.wayStepText > p {
+  margin: 0;
+}
+
+.wayStepTitle {
+  font-weight: var(--fw-bold);
+}
+
+.wayStepSub {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin: 0;
+  padding-left: var(--sp-5);
+  list-style: disc;
+  color: var(--ink);
+}
+
+.wayNotes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+
+.staffLine {
+  margin: 0;
+  font-weight: var(--fw-semibold);
+}
+
+.otherWaysBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-3) var(--sp-3);
+}
+
+/* "Didn't find it?": everything for when the way back didn't work, behind one button */
+.backup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.backup > button svg:last-child {
+  transform: rotate(90deg);
+  transition: transform var(--dur) var(--ease);
+}
+
+.backupOpen > button svg:last-child {
+  transform: rotate(-90deg);
+}
+
+.itemSmall {
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-md);
+  background: var(--navy-04);
 }

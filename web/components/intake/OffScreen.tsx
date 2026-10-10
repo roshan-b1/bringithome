@@ -30,7 +30,7 @@ export function OffScreen({ flow }: IntakeProps) {
 
   const nearby = state.kind === 'ready' ? state.places : []
   // A recorded set's places-nearby was measured from where it was recorded (the set's own ?near), not from this
-  // rider: shown as "Near you now" with "16 m away" it would present a recorded fact as their own distance. So a
+  // rider: shown as "Near you now" with "50 ft away" it would present a recorded fact as their own distance. So a
   // recorded list says where it comes from and shows no distances.
   const recorded = fixtureData()
   const nearHeading = recorded ? t('off.recorded_heading') : t('off.near_heading')

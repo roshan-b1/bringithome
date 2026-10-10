@@ -9,9 +9,11 @@ import { Skeleton } from '@/components/ui/Spinner'
 import type { Line, NearbyTrain, Place, VehicleKey } from '@/contracts/api'
 import { fixtureData, placesNearby, placesSearch, runtime, trainsNearby } from '@/lib/api'
 import { t } from '@/lib/copy'
+import { formatDistance } from '@/lib/distance'
 import { getFix } from '@/lib/hooks'
 import type { PlanAnswers, WhereNow as Where } from './planStore'
 import { Answered, QuickChoice } from './QuickChoice'
+import { NoBreak } from './FactText'
 import { lineDirections, trainChoices } from './planModel'
 import styles from './plan.module.css'
 
@@ -187,16 +189,18 @@ function TrainPicker({
         <ChoiceList<VehicleKey>
           labelledBy={titleId}
           selected={recorded ? null : (trains.find((x) => x.preselect)?.vehicle_key ?? null)}
-          choices={trains.map((x) => ({
-            value: x.vehicle_key,
-            label: t('on_train.option', { line: lineWord(x.line), destination: x.destination_label, next_stop: x.next_station?.label ?? null }),
-            sublabel:
-              // a recorded set's distances and preselect were measured from where it was recorded, not this rider
-              [x.preselect && !recorded ? t('on_train.closest') : null, typeof x.distance_m === 'number' && !recorded ? t('wb_05_off.away', { distance: x.distance_m }) : null]
-                .filter(Boolean)
-                .join(', ') || undefined,
-            swatch: lineColor(x.line),
-          }))}
+          choices={trains.map((x) => {
+            // a recorded set's distances and preselect were measured from where it was recorded, not this rider
+            const sub = [x.preselect && !recorded ? t('on_train.closest') : null, typeof x.distance_m === 'number' && !recorded ? t('wb_05_off.away', { distance: formatDistance(x.distance_m) }) : null]
+              .filter(Boolean)
+              .join(', ')
+            return {
+              value: x.vehicle_key,
+              label: t('on_train.option', { line: lineWord(x.line), destination: x.destination_label, next_stop: x.next_station?.label ?? null }),
+              sublabel: sub ? <NoBreak text={sub} /> : undefined,
+              swatch: lineColor(x.line),
+            }
+          })}
           onChoose={(v) => {
             const pick = trains.find((x) => x.vehicle_key === v)
             if (pick) onPick(pick)
@@ -266,7 +270,7 @@ function StationPicker({ onPick, onNotSure, onBack }: { onPick: (p: { place_id: 
       choices={places.map((p) => ({
         value: p.place_id,
         label: p.label,
-        sublabel: typeof p.distance_m === 'number' && !recorded ? t('wb_05_off.away', { distance: p.distance_m }) : undefined,
+        sublabel: typeof p.distance_m === 'number' && !recorded ? <NoBreak text={t('wb_05_off.away', { distance: formatDistance(p.distance_m) })} /> : undefined,
         icon: 'train',
       }))}
       onChoose={(v) => {

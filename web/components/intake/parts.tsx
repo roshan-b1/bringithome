@@ -8,6 +8,7 @@ import { useSource } from '@/components/ui/Chip'
 import { Icon, type IconName } from '@/components/ui/Icon'
 import { lineColor, lineName } from '@/components/ui/LineBadge'
 import { t } from '@/lib/copy'
+import { formatDistance } from '@/lib/distance'
 import type { PlaceTap } from '@/lib/flow'
 import type { FlowSession } from '@/lib/useFlow'
 import styles from './intake.module.css'
@@ -88,9 +89,9 @@ export function Note({ icon = 'alert', warm = false, children, id }: { icon?: Ic
   )
 }
 
-/** "51 m away" or "1.2 km away". */
+/** "170 ft away" or "1.2 mi away" (the place row keeps it on one line). */
 export function distanceText(m: number): string {
-  return m < 1000 ? t('wb_05_off.away', { distance: Math.round(m) }) : t('off.away_km', { km: (m / 1000).toFixed(1) })
+  return t('wb_05_off.away', { distance: formatDistance(m) })
 }
 
 // The Atlanta Streetcar's route in the schedule feed: shown as "Streetcar", never as its feed id (flow.ts reads it too)

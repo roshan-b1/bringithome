@@ -489,7 +489,7 @@ def create_app(*, settings: Settings | None = None, index_loader: Callable[[], P
         sees a malformed id (its uuid cast would fail and read as 'database down')."""
         stored = run_store(lambda: get_store().get_session(session_id)) if _is_uuid(session_id) else None
         if stored is None:
-            raise ApiError(404, "not_found", "this session is gone (sessions are deleted within 24 hours)")
+            raise ApiError(404, "not_found", "this session is gone (sessions are deleted 2 hours after their last use)")
         return stored
 
     @app.get("/api/sessions/{session_id}", response_model=SessionResponse, response_model_by_alias=True)

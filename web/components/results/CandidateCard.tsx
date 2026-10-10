@@ -2,6 +2,7 @@ import type { Level, MatchCandidate } from '@/contracts/api'
 import { Card, type CardTone } from '@/components/ui/Card'
 import { Icon } from '@/components/ui/Icon'
 import { lineColor } from '@/components/ui/LineBadge'
+import { NoBreak } from '@/components/plan/FactText'
 import { clock } from '@/lib/time'
 import { busLabel, evidenceLine, isLine, levelWord, trainRun, vehicleName } from './format'
 import styles from './CandidateCard.module.css'
@@ -9,7 +10,7 @@ import { t, type CopyId } from '@/lib/copy'
 
 // One vehicle that passed the rider's stop, with everything the matcher knows about it: the line's colour beside its
 // name (never colour alone), the bus number or train run, which way it was going, how sure we are in words, and the
-// evidence ("Passed 22 m from Piedmont Ave SE @ Gilmer St SE at 1:18 PM"). Flags are the matcher's own soft
+// evidence ("Passed 70 ft from Piedmont Ave SE @ Gilmer St SE at 1:18 PM"). Flags are the matcher's own soft
 // penalties, said plainly so the rider can weigh them.
 
 const FLAG_COPY = {
@@ -96,7 +97,9 @@ export function CandidateCard({ c, tone = 'plain', compact = false, as = 'articl
         {c.evidence.map((ev, i) => (
           <li key={i}>
             <Icon name="pin" size={20} strokeWidth={2.5} />
-            <span>{evidenceLine(ev)}</span>
+            <span>
+              <NoBreak text={evidenceLine(ev)} />
+            </span>
           </li>
         ))}
       </ul>

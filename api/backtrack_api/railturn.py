@@ -78,13 +78,16 @@ SERVICE_DAY_CUT_H = 3           # a service day runs to about 1:30 AM; 3 AM sepa
 VANISH_GRACE_S = 600            # missing at T: still expected until the predicted departure + 10 min (53/252 > 5 min)
 VANISH_GRACE_S_AT_NIGHT = {"510024": 1500}   # Lindbergh at night: + 25 min (missing up to 1,240 s, n=12)
 WINDOW_EARLY_S = 300            # P3c signed p10 -279 s: open the window 5 min early
-# The late train. A train reaching T after a scheduled departure S (up to 10 min after it) mostly takes the next
-# slot (Sat Oct 10: 36 of 49), but some leave between the two, a median 297 s after arriving (n=7, p90 566 s),
-# and a few turn at once on S (0 to 175 s, n=3). In the Sat Oct 10 backtest those early turns were 86 of the 157
-# missed recommended train options. So for a late train the window opens as early as it could come back:
-# A' + 60 s plus the run, and a rider who can't be there by then gets no recommendation from it.
-LATE_SLOT_S = 600
-LATE_TURN_S = 60
+# The late train. A train reaching T just after a scheduled departure S may turn at once and take S (Sat Oct 10:
+# 401 started under 20 s after arriving, 407 after 113 s); every such early turn arrived 0 to about 2.5 min after
+# S, while trains 5 to 10 min late took the next slot 26 of 31 times and never S. In the Sat Oct 10 backtest those
+# early turns were 86 of the 157 missed recommended train options. A' itself runs about 100 s later than the real
+# arrival on those trains. So when S lies within 4 min before A', the
+# window opens as early as it could come back: A' plus the run, less a minute for the error in A' itself, and a
+# rider who can't be there by then gets no recommendation from it. (A 10 min range fired on half of all Saturday
+# estimates, since 15 min headways put the previous train's slot close behind most arrivals.)
+LATE_SLOT_S = 240
+LATE_EARLY_S = 60
 WINDOW_LATE_S = 480             # P3c |err| p90 474 s
 LIVE_WINDOW_EARLY_S = 60        # after the turn: p10 -26 s
 LIVE_WINDOW_LATE_S = 150        # after the turn: p90 +115 s
@@ -336,7 +339,7 @@ class TurnContext:
     vanished: bool                          # the train is not in the newest poll
     labels: dict[str, str] = field(default_factory=dict)
     skipped: tuple[datetime, RailTrip] | None = None   # a scheduled departure in [A', A' + m_T): it may take it
-    late: bool = False                      # a scheduled departure in [A' - 10 min, A'): the train is late
+    late: bool = False                      # a scheduled departure in [A' - 4 min, A'): the train is just late
 
     @classmethod
     def build(cls, *, terminus: str, line: str, direction: str, t0: datetime, eta_t: datetime | None, t: datetime,
@@ -399,8 +402,8 @@ class TurnContext:
                 confidence = "low"
                 notes.append("may_come_before_you")
         if self.in_effect and self.late:
-            # the late train may turn at once: the window opens at A' + 60 s plus the run (see LATE_SLOT_S)
-            window_from = min(window_from, self.arrival + timedelta(seconds=LATE_TURN_S + run))
+            # the late train may turn at once: the window opens at A' plus the run, less a minute (see LATE_SLOT_S)
+            window_from = min(window_from, self.arrival + timedelta(seconds=run - LATE_EARLY_S))
         if is_evening(self.arrival):
             confidence = "low"
             notes.append("after_midnight_unmeasured" if after_midnight(self.arrival) else "evening_not_certain")

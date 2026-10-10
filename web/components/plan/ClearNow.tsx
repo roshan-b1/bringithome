@@ -21,12 +21,11 @@ export function ClearNow({ deletesBy, onClear }: { deletesBy: string | null; onC
     confirmRef.current?.focus({ preventScroll: true })
   }, [asking])
 
-  // deletes_by is a real moment (retention runs on the wall clock, even for a replayed session), so it is compared
-  // with the phone's clock, not the replay's
-  const when = deletesBy ? (sameNyDay(deletesBy, new Date()) ? clock(deletesBy) : dayAndClock(deletesBy)) : null
+  // a session is deleted 2 hours after its last use (the API slides it on every read), so the note states the
+  // rule instead of a fixed time that would go stale while the rider keeps the page open
   return (
     <div className={styles.clear}>
-      {when ? <p className={styles.note}>{t('deletes_by', { time: when })}</p> : null}
+      {deletesBy ? <p className={styles.note}>{t('deletes_by')}</p> : null}
       {asking ? (
         <div className={styles.confirm} role="group" aria-labelledby="clear-confirm">
           <p id="clear-confirm" ref={confirmRef} tabIndex={-1} className={styles.confirmText}>

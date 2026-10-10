@@ -2,6 +2,7 @@ import { Chip } from '@/components/ui/Chip'
 import { Icon } from '@/components/ui/Icon'
 import type { Card } from '@/contracts/api'
 import { clock } from '@/lib/time'
+import { NoBreak } from './FactText'
 import { evidenceSlots } from './planModel'
 import styles from './plan.module.css'
 import { t } from '@/lib/copy'
@@ -26,7 +27,9 @@ export function CardMeta({ card, replay }: { card: Card; replay: boolean }) {
       {card.evidence.length ? (
         <ul role="list" className={styles.evidence} aria-label={t('plan.evidence_label')}>
           {card.evidence.map((e, i) => (
-            <li key={i}>{t('plan.evidence', evidenceSlots(e, clock))}</li>
+            <li key={i}>
+              <NoBreak text={t('plan.evidence', evidenceSlots(e, clock))} />
+            </li>
           ))}
         </ul>
       ) : null}

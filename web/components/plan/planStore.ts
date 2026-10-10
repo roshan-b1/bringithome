@@ -1,7 +1,8 @@
 'use client'
 
 // The plan screen's own tap answers ("Think someone took it?", "Where are you now?", the train or station tapped,
-// "Which part of the train?", "Saw a car number inside? No", and the vehicle the rider picked on the results screen),
+// "Which part of the train?", "Saw a car number inside? No", "Didn't find it?" open or closed, and the vehicle the
+// rider picked on the results screen),
 // kept beside lib/session.ts's flow state so a reload on the plan keeps them. sessionStorage only, keyed to the
 // server session id (a new visit never inherits them), dropped by "Clear now" and with the tab. Taps only, as the
 // flow's own storage: never a coordinate or anything derived from GPS (the stop nearest the rider is looked up again
@@ -22,6 +23,8 @@ export interface PlanAnswers {
   train?: { vehicle_key: VehicleKey; line: Line; destination: string }
   car?: Car | 'unsure'
   carNumberNo?: boolean
+  /** "Didn't find it?" opened or closed by the rider (unset: closed while there is a way back, open when not) */
+  backup?: boolean
   /** the rider's pick on the results screen (POST /plan's vehicle_keys), checked against the match on use */
   keys?: VehicleKey[]
 }

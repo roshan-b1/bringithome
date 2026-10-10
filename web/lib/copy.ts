@@ -32,7 +32,7 @@ export const COPY = {
   done: 'Done',
   clear_now: 'Clear now',
   cleared: 'Cleared. Nothing from this visit is left on this phone.',
-  deletes_by: 'Your answers are deleted automatically by {time}.',
+  deletes_by: 'Your answers delete themselves 2 hours after you stop using this page.',
   loading: 'Loading',
   skip_to_content: 'Skip to content',
 
@@ -52,7 +52,7 @@ export const COPY = {
   'error.offline': 'No connection right now. Your answers are still here.',
   'error.timeout': 'That took too long. Your answers are still here.',
   'error.db_unavailable': "Live data isn't answering right now. Here's a plan from your answers.",
-  'error.not_found': 'That visit has expired. Visits are deleted within 24 hours.',
+  'error.not_found': 'That visit has expired. Visits are deleted 2 hours after they were last used.',
   'error.rate_limited': 'Too many tries at once. Wait a few seconds, then try again.',
   'error.see_recorded': 'See a recorded example',
 
@@ -94,7 +94,7 @@ export const COPY = {
   'wb_05_off.search_label': 'Stop, street or station',
   'wb_05_off.search_hint': 'Like "Peachtree Center" or "North Ave"',
   'wb_05_off.no_results': 'No stop matches that yet. Try a nearby street or station name.',
-  'wb_05_off.away': '{distance} m away',
+  'wb_05_off.away': '{distance} away',
   'wb_05_off.confirm': 'Did you mean one of these?',
 
   wb_06_when: 'About when did you get off?',
@@ -136,12 +136,6 @@ export const COPY = {
   'car_number.type': 'Type it',
   'car_number.no': 'No',
   'car_number.label': 'Car number',
-
-  wb_11_taken: 'Do you think someone took it?',
-  'wb_11_taken.hint': 'Any answer is okay.',
-  'wb_11_taken.no': 'No, I left it',
-  'wb_11_taken.maybe': 'Maybe',
-  'wb_11_taken.yes': 'Yes, I think so',
 
   wb_12_safe: "Stay safe. Don't follow or confront anyone.",
   'wb_12_safe.call_police': 'Call MARTA Police {police_non_emergency}',
@@ -306,7 +300,6 @@ export const COPY = {
   'off.near_failed': "We couldn't load stops near you. Search for it instead.",
   'off.location_unavailable': "We couldn't get your location. That's okay, you can search for the stop instead.",
   'off.use_location': 'Use my location',
-  'off.away_km': '{km} km away',
   'off.routes': 'Routes {routes}',
   'off.routes_more': 'Routes {routes} and {more} more',
   'off.your_answer': 'Your answer',
@@ -396,11 +389,12 @@ export const COPY = {
   // decision 7's streetcar line (the streetcar has no live data and always takes the schedule path)
   'results.streetcar_title': "The streetcar doesn't share its location.",
   'results.streetcar_lead': "Here's a plan from its schedule.",
-  // ContextLine's second line: decision 7's "within 400 m of {place} between {T1} and {T2}", shortened
-  'context.where': 'Within {radius} m of {place}, {from} to {to}.',
-  'context.none': 'No {counted} passed within {radius} m of {place} from {from} to {to}.',
-  'context.none_window': 'No {counted} passed within {radius} m of your stop from {from} to {to}.',
-  'context.none_bare': 'No {counted} passed within {radius} m of your stop.',
+  // ContextLine's second line: decision 7's "within 400 m of {place} between {T1} and {T2}", shortened; every
+  // distance slot takes formatDistance()'s text ("0.25 mi", "350 ft"), never metres
+  'context.where': 'Within {radius} of {place}, {from} to {to}.',
+  'context.none': 'No {counted} passed within {radius} of {place} from {from} to {to}.',
+  'context.none_window': 'No {counted} passed within {radius} of your stop from {from} to {to}.',
+  'context.none_bare': 'No {counted} passed within {radius} of your stop.',
 
   // the vehicle, named the way the plan's cards name it ("Bus 49", "Red Line train")
   'vehicle.bus': 'Bus {route}',
@@ -435,7 +429,7 @@ export const COPY = {
   'refine.failed': "We couldn't check again just now. Tap your answer to try again.",
 
   // --------------------------------------------------------------------------------------------- candidate card
-  'candidate.passed': 'Passed {distance} m from {place} at {time}',
+  'candidate.passed': 'Passed {distance} from {place} at {time}',
   'candidate.passed_near': 'Passed nearby at {time}',
   'candidate.continuing': 'Route {route}, continuing as {continuing_as}',
   'candidate.label_bus': 'Vehicle {label}',
@@ -492,15 +486,30 @@ export const COPY = {
   'map.credit_osm': '© OpenStreetMap contributors',
   'map.loading': 'Loading the map',
   'map.gesture': 'Use two fingers to move the map.',
-  'map.mirror_stop': 'Your stop: {place}. The circle shows {radius} m around it.',
-  'map.mirror_circle': 'The circle shows {radius} m around your stop.',
+  'map.mirror_stop': 'Your stop: {place}. The circle shows {radius} around it.',
+  'map.mirror_circle': 'The circle shows {radius} around your stop.',
   'map.mirror_window': 'The replay shows {from} to {to}.',
-  'map.mirror_vehicle': '{vehicle} passed {distance} m from it at {time}.',
+  'map.mirror_vehicle': '{vehicle} passed {distance} from it at {time}.',
   'map.mirror_others': '{count} other {counted} moved through the replay area.',
   'map.mirror_now': 'Now: {state}',
   'map.mirror_next': 'Next stop: {stop} at {time}.',
   'map.mirror_you': "You: about {distance} from it.",
   'map.mirror_target': 'Meet it here: {place}.',
+  'map.mirror_here': '{here}: the orange dot on the map.',
+  // the plan's map: the one named vehicle's label, from the item tap
+  'here.bag': 'Your bag is here',
+  'here.phone': 'Your phone is here',
+  'here.wallet': 'Your wallet is here',
+  'here.keys': 'Your keys are here',
+  'here.laptop': 'Your laptop is here',
+  'here.other': 'Your item is here',
+  // the line under the plan's map, from the latest /now (every 10 s)
+  'planmap.rail': '{line} Line train[, now near {near}][, heading to {destination}].',
+  'planmap.rail_plain': 'The train[, now near {near}][, heading to {destination}].',
+  'planmap.bus': 'Route {route} bus[, now near {near}][, heading to {destination}].',
+  'planmap.updated_s': 'Updated {seconds} s ago.',
+  'planmap.updated_min': 'Updated {minutes} min ago.',
+  'planmap.label': 'Where it is now',
   'map.no_replay': 'There is no replay for this one, so there is no map.',
 
   // ===== Plan screens (components/plan): the cards, the optional questions, the meet, the report and call. Not in PREP section 10: for team review.
@@ -535,14 +544,16 @@ export const COPY = {
   'near.use_location': 'Use my location',
   'near.looking': 'Finding the stop nearest you',
 
-  // "Think someone took it?" answers, short enough for one row
-  'taken.no': 'No',
-  'taken.yes': 'Yes',
+  // "Think someone took it?": not a question any more (riders found it unnecessary), one quiet link at the end of the
+  // plan; a tap sends taken "yes" (MARTA Police and 911 first, freeze cards), Undo sends "no"
+  'taken.ask': 'Think someone took it?',
+  'taken.added': 'Safety steps are now at the top of your plan.',
+  'taken.undo': 'Undo',
 
   // where a card's facts come from (card.source); live and schedule use the chip's own words
   'source.static': 'Published info',
   'source.static_label': "From MARTA's published contacts, not live data",
-  'plan.evidence': 'Seen {distance} m from {place} at {time}.',
+  'plan.evidence': 'Seen {distance} from {place} at {time}.',
   'plan.evidence_label': 'Evidence',
 
   // the meet card (decision 9, CHANGES 2: the rider's walk from the live position)
@@ -616,7 +627,6 @@ export const COPY = {
   'plan.card.wait_return': 'Wait for it to come back',
   'plan.card.meet_end': 'Meet it at the end of the line',
   'plan.card.switch_platform': 'Ride on and wait for it',
-  'plan.card.ways': 'Ways to get it back',
   reunion_wait: 'Wait for it at {stop}. It should come back around {time}[, between {window_from} and {window_to}].',
   reunion_end: 'Meet it at the end of the line at {stop}[, before it pulls out at {pulls_out}][, before it leaves at {departs}].',
   reunion_switch: 'Ride to {get_off_at}, step off and wait on the other platform. It should come back around {time}.',
@@ -624,6 +634,7 @@ export const COPY = {
   // the section
   'ways.best': 'Best way now',
   'ways.others': 'Other ways',
+  'ways.others_count': 'Other ways ({count})',
   'ways.others_low': 'Might work, not certain',
   'ways.why_not': 'Why not other ways',
   'ways.none_title': "We can't time a way back right now.",
@@ -640,8 +651,6 @@ export const COPY = {
   'ways.last_updated_min': 'Last updated {minutes} min ago.',
   'ways.changed': 'New best way to get it back.',
   'ways.gone': "We can't time a way back right now. The report is your best step.",
-  'ways.show_map': 'Show it on the map',
-  'ways.hide_map': 'Hide the map',
   'ways.map_target': 'Meet it here',
   'ways.list_label': 'Other ways, soonest first',
 
@@ -699,6 +708,58 @@ export const COPY = {
   'way.departs': 'It leaves around {departs}.',
   'way.vehicle': 'Look for {vehicle}[, vehicle {label}][, train run {train_run}].',
 
+  // "When it pulls in": what to do as the bag's train or bus arrives, from the option's own facts (its line or
+  // route, toward, time) and the rider's car tap. Checks, never promises: "check the seat", not "it will be there".
+  'arrive.title': 'When it pulls in',
+  'arrive.train': 'Your train: {line}[ toward {toward}], due about {time}.',
+  'arrive.train_plain': 'Your train is due about {time}[, toward {toward}].',
+  'arrive.train_board': 'Let people off first, then get on[ the {car} car, where you were].',
+  'arrive.train_check': "Check the seat and the floor. If it isn't there, press the car's intercom to tell the operator, or tell station staff.",
+  'arrive.train_step_off': 'You can step off at the next station and come back.',
+  'arrive.train_safe': 'Never hold the doors.',
+  'arrive.bus': 'Your bus: Route {route}[ toward {toward}], due about {time}.',
+  'arrive.bus_plain': 'Your bus is due about {time}[, toward {toward}].',
+  'arrive.bus_board': 'Get on at the front and tell the driver you left something on this bus earlier. Check where you sat.',
+  'arrive.bus_safe': 'Never chase a bus or step in front of it.',
+  // the one-line version on the other ways
+  'arrive.short_train': 'When it pulls in: {line}[ toward {toward}]. Let people off first, then check the seat and the floor.',
+  'arrive.short_train_plain': 'When it pulls in, let people off first, then check the seat and the floor.',
+  'arrive.short_bus': 'When it pulls in: Route {route}. Get on at the front and tell the driver you left something on it.',
+  'arrive.short_bus_plain': 'When it pulls in, get on at the front and tell the driver you left something on it.',
+
+  // "Your best plan": the recommended way as numbered steps, from the option's own facts (reunionModel wayStepLines).
+  // {item_pos} is the item tap's possessive ("bag's", "keys'", else "item's"). A step whose facts are missing is left out.
+  'plan.card.best': 'Your best plan',
+  'backup.toggle': "Didn't find it?",
+  'backup.label': 'If it was not there',
+  'steps.label': 'Your best plan, step by step',
+  'steps.stay_at': 'Stay at {stop}.',
+  'steps.walk_to': 'Walk to {stop}[ (about {walk_min} min)].[ Leave by {leave_by}.]',
+  'steps.wait_on': 'Wait on {platform}.',
+  'steps.wait_bus': 'Wait at the stop.',
+  'steps.turns_back_train': "Your {item_pos} train turns around at the end of the line and comes back.",
+  'steps.turns_back_bus': "Your {item_pos} bus turns around at the end of its route and comes back.",
+  'steps.should_arrive': 'It should arrive about {time}[ (between {window_from} and {window_to})].',
+  'steps.take_train': 'Take the {board_time} train[ toward {ride_toward}] from {board_at}.[ Leave by {leave_by}.]',
+  'steps.stay_on': 'Stay on your train.',
+  'steps.get_off': 'Get off at {stop}[ at about {off_time}].',
+  'steps.cross': 'Cross to the platform toward {toward}.',
+  'steps.cross_plain': 'Cross to the platform for trains going the other way.',
+  'steps.same_platform': 'Wait on the same platform.',
+  'steps.train_arrives': "Your {item_pos} train arrives about {time}[ (between {window_from} and {window_to})].",
+  'steps.bus_arrives': "Your {item_pos} bus arrives about {time}[ (between {window_from} and {window_to})].",
+  'steps.walk_to_end': 'Walk to {stop}, the end of the line[ (about {walk_min} min)].[ Leave by {leave_by}.]',
+  'steps.ride_to_end': 'Take the {board_time} train from {board_at} to {stop}, the end of the line.[ Leave by {leave_by}.]',
+  'steps.bus_waits': 'The bus waits there until about {pulls_out}.',
+  'steps.train_waits': 'The train waits there until about {departs}.',
+  'steps.staff': "Tell any staff you pass that it's yours.",
+  'item_pos.bag': "bag's",
+  'item_pos.phone': "phone's",
+  'item_pos.wallet': "wallet's",
+  'item_pos.keys': "keys'",
+  'item_pos.laptop': "laptop's",
+  'item_pos.other': "item's",
+
   // short names, for "Why not other ways"
   'way.name.walk_ahead': 'Walk ahead and meet it',
   'way.name.shared_track': 'Get off where both trains stop',
@@ -754,7 +815,7 @@ export const COPY = {
   // ===== Laptop layout (components/screens/ClueAside): the right pane beside the questions. For team review.
   'aside.label': 'Your clue so far',
   'aside.title': 'Your clue so far',
-  'aside.lead': 'Each tap narrows it down. Your answers are deleted within 24 hours.',
+  'aside.lead': 'Each tap narrows it down. Your answers delete themselves 2 hours after you stop.',
   'aside.what': 'What',
   'aside.ride': 'Ride',
   'aside.stop': 'Got off at',

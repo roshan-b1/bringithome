@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import type { Match, NearbyTrain, Plan, VehicleNow } from '../../contracts/api.ts'
 import { PlanCheck, VehicleNowCheck, checkValue } from '../../contracts/api.ts'
+import { tLoose } from '../../lib/copy.ts'
 import {
   arrangeCards,
   chosenKeys,
@@ -17,7 +18,9 @@ import {
   mailtoHref,
   meetWithdrawn,
   minutesUntil,
+  nowCaption,
   nowOf,
+  planSections,
   planVehicleKeys,
   remainingWalkS,
   reportCopyText,
@@ -202,4 +205,40 @@ test('"Which train are you on now?": the list the bag train is in, without it, p
   assert.deepEqual(trainChoices([north, south], ['rail:407']).map((t) => t.vehicle_key), ['rail:310', 'rail:309'])
   // the bag train isn't live: both directions, deduplicated
   assert.deepEqual(trainChoices([north, [tr('rail:309', 'S'), tr('rail:402', 'N')]], ['rail:999']).map((t) => t.vehicle_key), ['rail:402', 'rail:309'])
+})
+
+// ------------------------------------------------------------------------------------------- the plan's layout
+
+test('the plan in three parts: the theft safety card, the one way back, and the rest behind "Didn\'t find it?"', () => {
+  // the order the API sends now: the way back first, then bag_staff, then the rest
+  const ordered: Plan = { ...garnett, cards: [...garnett.cards.filter((c) => c.kind === 'meet'), ...garnett.cards.filter((c) => c.kind !== 'meet')] }
+  const plain = planSections(arrangeCards(ordered, { taken: null, withdrawn: false, contacts }))
+  assert.deepEqual(plain.safety, [])
+  assert.equal(plain.way?.kind, 'meet')
+  assert.deepEqual(plain.backup.map((c) => c.kind), ['bag_staff', 'keep', 'report', 'call'])
+  assert.deepEqual(plain.backup.map((c) => c.step), [1, 2, 3, 4]) // numbered on their own
+  // taken yes: the safety card on its own, above the map; a withdrawn meet's too_far is the way card
+  const taken = planSections(arrangeCards(garnett, { taken: 'yes', withdrawn: true, contacts }))
+  assert.deepEqual(taken.safety.map((c) => c.kind), ['safety'])
+  assert.equal(taken.way?.kind, 'too_far')
+  assert.deepEqual(taken.backup.map((c) => c.kind), ['bag_staff', 'tell_staff', 'keep', 'report', 'call'])
+  // the wallet: the item's extras stay in the backup, in the API's order
+  assert.ok(planSections(arrangeCards(wallet, { taken: null, withdrawn: false, contacts })).backup.some((c) => c.kind === 'freeze_cards'))
+  // nothing to name (not reporting): no way card, everything in the backup
+  const none = planSections(arrangeCards({ ...garnett, cards: garnett.cards.filter((c) => c.kind !== 'meet') }, { taken: null, withdrawn: false, contacts }))
+  assert.equal(none.way, null)
+})
+
+test('the line under the plan\'s map, for a train and a bus, from /now', () => {
+  const tt = (id: string, slots: Record<string, string | null>) => `${id} ${JSON.stringify(slots)}`
+  const rail: VehicleNow = { ...nowOk, line: 'RED', destination_label: 'Airport', next_stops: [{ place_id: 'x', label: 'East Point', eta: nowOk.at, source: 'live' }], state: 'live' }
+  assert.equal(nowCaption(rail, tt), 'planmap.rail {"line":"Red","near":"East Point","destination":"Airport"}')
+  assert.equal(nowCaption({ ...rail, line: null, route: 'GOLD' }, tt), 'planmap.rail {"line":"Gold","near":"East Point","destination":"Airport"}')
+  assert.equal(nowCaption({ ...rail, line: null, route: '?' }, tt), 'planmap.rail_plain {"near":"East Point","destination":"Airport"}')
+  assert.equal(nowCaption({ ...rail, state: 'at_terminus', terminus_label: 'Airport', next_stops: [] }, tt), 'planmap.rail {"line":"Red","near":"Airport","destination":"Airport"}')
+  const bus: VehicleNow = { ...rail, vehicle_key: 'bus:2331', route: '49', line: null, destination_label: null, next_stops: [] }
+  assert.equal(nowCaption(bus, tt), 'planmap.bus {"route":"49","near":null,"destination":null}')
+  // in words
+  assert.equal(nowCaption(rail, tLoose), 'Red Line train, now near East Point, heading to Airport.')
+  assert.equal(nowCaption({ ...bus, destination_label: 'Five Points' }, tLoose), 'Route 49 bus, heading to Five Points.')
 })

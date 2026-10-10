@@ -70,6 +70,8 @@ export interface TargetPoint {
   label: string
   /** the place's name, for the map in words */
   place: string
+  /** the rider walks there: with their blue dot on the map, a dashed walking line joins the two */
+  walk?: boolean
 }
 
 export interface Engine {
@@ -286,6 +288,16 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
     type: 'line',
     source: 'bih-circle',
     paint: { 'line-color': ORANGE, 'line-width': 2, 'line-dasharray': [2, 1.5], 'line-opacity': 0.8 },
+  })
+  // the plan's walking line: a straight dashed line from the rider's blue dot to the meet pin (never a route: we
+  // only know the two points), drawn under the dots
+  map.addSource('bih-walk', { type: 'geojson', data: emptyFC() })
+  map.addLayer({
+    id: 'bih-walk',
+    type: 'line',
+    source: 'bih-walk',
+    layout: { 'line-cap': 'round' },
+    paint: { 'line-color': RIDER, 'line-width': 3, 'line-dasharray': [1, 1.6], 'line-opacity': 0.85 },
   })
   map.addSource('bih-rider-acc', { type: 'geojson', data: emptyFC() })
   map.addLayer({ id: 'bih-rider-acc', type: 'fill', source: 'bih-rider-acc', paint: { 'fill-color': RIDER, 'fill-opacity': 0.12 } })
@@ -506,9 +518,17 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
     }
   }
 
+  const drawWalk = () => {
+    const src = map.getSource('bih-walk') as GeoJSONSource | undefined
+    if (!src) return
+    if (!rider || !target?.walk) src.setData(emptyFC())
+    else src.setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [[rider.lon, rider.lat], [target.lon, target.lat]] } })
+  }
+
   const setRider = (fix: RiderPoint | null) => {
     rider = fix
     if (destroyed) return
+    drawWalk()
     const src = map.getSource('bih-rider-acc') as GeoJSONSource | undefined
     if (!fix) {
       riderMarker?.remove()
@@ -531,6 +551,7 @@ export async function createEngine(init: EngineInit): Promise<Engine> {
     const moved = !target || !next || target.lat !== next.lat || target.lon !== next.lon
     target = next
     if (destroyed) return
+    drawWalk()
     if (!next) {
       targetMarker?.remove()
       targetMarker = null

@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Line, Match, MatchCandidate, Replay, VehicleKey, VehicleNow } from '@/contracts/api'
 import { BigButton } from '@/components/ui/BigButton'
 import { errorMessage } from '@/components/ui/ErrorState'
 import { Icon } from '@/components/ui/Icon'
+import { NoBreak } from '@/components/plan/FactText'
 import { Skeleton } from '@/components/ui/Spinner'
 import { ApiError, replay as fetchReplay, runtime, type ApiResult } from '@/lib/api'
 import { t } from '@/lib/copy'
@@ -40,6 +41,12 @@ export interface MatchMapProps {
   target?: TargetPoint | null
   /** open on where things are now (the plan: the rider has already watched the replay on results) */
   skipReplay?: boolean
+  /** the plan: the one named vehicle's chip reads this ("Your bag is here") instead of its run or fleet number */
+  hereLabel?: string | null
+  /** the plan's map: a fixed share of a phone screen, no "Watch again" and no "Show both" under it */
+  plan?: boolean
+  /** a line right under the map (the plan: where the vehicle is now and how fresh that is) */
+  caption?: ReactNode
 }
 
 type Load =
@@ -67,7 +74,24 @@ function chipFor(c: MatchCandidate): string {
   return [c.route, c.label].filter(Boolean).join(' · ')
 }
 
-export function MatchMap({ sessionId, match, vehicleKeys, tone, now, nowSource = 'live', rider, riderStatus, onShowMe, className, tall = false, target = null, skipReplay = false }: MatchMapProps) {
+export function MatchMap({
+  sessionId,
+  match,
+  vehicleKeys,
+  tone,
+  now,
+  nowSource = 'live',
+  rider,
+  riderStatus,
+  onShowMe,
+  className,
+  tall = false,
+  target = null,
+  skipReplay = false,
+  hereLabel = null,
+  plan = false,
+  caption = null,
+}: MatchMapProps) {
   const reducedMotion = useReducedMotion()
   const online = useOnline()
   const [load, setLoad] = useState<Load>({ kind: 'loading' })
@@ -131,7 +155,9 @@ export function MatchMap({ sessionId, match, vehicleKeys, tone, now, nowSource =
     if (!replayData || !webgl || !style || !container.current) return
     let alive = true
     let made: Engine | null = null
-    const highlights: Highlight[] = candidates.map((c) => ({ key: c.vehicle_key, chip: chipFor(c), tone }))
+    // one named vehicle on the plan: "Your bag is here"; on a tie each keeps its own name (it can't be both)
+    const here = hereLabel && candidates.length === 1 && tone === 'match' ? hereLabel : null
+    const highlights: Highlight[] = candidates.map((c) => ({ key: c.vehicle_key, chip: here ?? chipFor(c), tone }))
     const lines = [...new Set(candidates.map((c) => c.line ?? (isLine(c.route) ? c.route : null)).filter((l): l is Line => !!l))]
     import('./mapEngine')
       .then(({ createEngine }) =>
@@ -177,7 +203,7 @@ export function MatchMap({ sessionId, match, vehicleKeys, tone, now, nowSource =
       setDrawn(false)
       setPhase('ready')
     }
-  }, [replayData, webgl, style, tone, candidates])
+  }, [replayData, webgl, style, tone, candidates, hereLabel])
 
   // live positions and the rider, pushed into the engine as they change
   const nowList = useMemo(() => Object.values(now ?? {}).filter((n): n is VehicleNow => !!n), [now])
@@ -187,7 +213,7 @@ export function MatchMap({ sessionId, match, vehicleKeys, tone, now, nowSource =
   useEffect(() => {
     engine.current?.setRider(rider ? { lat: rider.lat, lon: rider.lon, accuracy_m: rider.accuracy_m } : null)
   }, [rider, phase])
-  const targetKey = target ? `${target.lat},${target.lon},${target.label},${target.place}` : ''
+  const targetKey = target ? `${target.lat},${target.lon},${target.label},${target.place},${target.walk ? 1 : 0}` : ''
   useEffect(() => {
     engine.current?.setTarget(target)
     // compared by value: a new object for the same place is the same target
@@ -210,31 +236,36 @@ export function MatchMap({ sessionId, match, vehicleKeys, tone, now, nowSource =
       nowSource={nowSource}
       rider={rider ?? null}
       target={target}
+      hereLabel={hereLabel && candidates.length === 1 ? hereLabel : null}
     />
   )
 
-  if (load.kind === 'none') return null
+  // no replay to draw on (nothing matched one): the plan still says where it is now, in words
+  if (load.kind === 'none') return caption ? <section className={`${styles.wrap} ${className ?? ''}`}>{caption}</section> : null
+  const sizeClass = tall ? styles.tall : plan ? styles.planSize : ''
   if (load.kind === 'error') {
     return (
-      <section className={`${styles.wrap} ${tall ? styles.tall : ''} ${className ?? ''}`}>
+      <section className={`${styles.wrap} ${sizeClass} ${className ?? ''}`}>
         <div className={styles.failed} role="alert">
           <p>{errorMessage(load.error)}</p>
           <BigButton variant="quiet" size="md" icon="replay" onClick={() => setAttempt((n) => n + 1)}>
             {t('try_again')}
           </BigButton>
         </div>
+        {caption}
       </section>
     )
   }
 
   return (
-    <section className={`${styles.wrap} ${tall ? styles.tall : ''} ${className ?? ''}`}>
+    <section className={`${styles.wrap} ${sizeClass} ${className ?? ''}`}>
       {textOnly ? (
         <div className={styles.textOnly}>
           <p className={styles.unavailable}>
             <Icon name="alert" size={20} strokeWidth={2.5} />
             {t('map.unavailable')}
           </p>
+          {caption}
           {mirror}
         </div>
       ) : (
@@ -260,6 +291,7 @@ export function MatchMap({ sessionId, match, vehicleKeys, tone, now, nowSource =
               </div>
             ) : null}
           </div>
+          {caption}
           {style === 'positron' && drawn ? (
             <p className={styles.credit}>
               {t('map.credit')}{' '}
@@ -276,21 +308,21 @@ export function MatchMap({ sessionId, match, vehicleKeys, tone, now, nowSource =
               </a>
             </p>
           ) : null}
-          {phase === 'done' ? (
+          {phase === 'done' && !plan ? (
             // the replay clock turns into its own control once the window has played: under the map, full size,
             // where it covers no station label and is a 56 px target like every other button
             <BigButton variant="secondary" size="md" icon="replay" onClick={play}>
               {t('map.watch_again')}
             </BigButton>
           ) : null}
-          {rider ? (
+          {rider && plan ? null : rider ? (
             <BigButton
               variant="secondary"
               size="md"
               icon="locate"
               onClick={fitRider}
               disabled={phase !== 'done'}
-              sublabel={riderDistance !== null ? t('rider.distance_short', { distance: formatDistance(riderDistance) }) : undefined}
+              sublabel={riderDistance !== null ? <NoBreak text={t('rider.distance_short', { distance: formatDistance(riderDistance) })} /> : undefined}
             >
               {t('rider.fit')}
             </BigButton>
@@ -326,6 +358,7 @@ function MapInWords({
   nowSource,
   rider,
   target,
+  hereLabel,
 }: {
   replay: Replay | null
   match: Match
@@ -334,8 +367,9 @@ function MapInWords({
   nowSource: 'live' | 'as_of' | 'fixture'
   rider: RiderFix | null
   target: TargetPoint | null
+  hereLabel: string | null
 }) {
-  const radius = replay?.focus.radius_m ?? match.context.radius_m ?? 400
+  const radius = formatDistance(replay?.focus.radius_m ?? match.context.radius_m ?? 400)
   // an empty label never reaches a required slot (a throw in render blanks the page)
   const place = (replay?.anchors[0]?.label || match.context.place_label).trim()
   const others = replay ? replay.vehicles.filter((v) => v.role === 'other').length : 0
@@ -346,10 +380,11 @@ function MapInWords({
     if (!e) continue
     // named the way the headline names it: "Bus 49, vehicle 1631", "Red Line train, train run 407"
     const name = t('results.found_name', { vehicle: vehicleName(c), label: busLabel(c), train_run: trainRun(c) })
-    items.push(t('map.mirror_vehicle', { vehicle: name, distance: Math.round(e.distance_m), time: clock(e.at) }))
+    items.push(t('map.mirror_vehicle', { vehicle: name, distance: formatDistance(e.distance_m), time: clock(e.at) }))
   }
   if (others > 0) items.push(t('map.mirror_others', { count: others, counted: countedNoun(match.context.counted, others) }))
   for (const n of now) {
+    if (hereLabel) items.push(t('map.mirror_here', { here: hereLabel }))
     items.push(t('map.mirror_now', { state: stateLine(n, nowSource) }))
     const next = n.next_stops[0]
     if (next) items.push(t('map.mirror_next', { stop: next.label, time: clock(next.eta) }))

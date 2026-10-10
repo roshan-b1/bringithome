@@ -30,7 +30,7 @@ test('two taps from "Where did you get off?" to the match (recorded set): a bus 
   // a recorded set says where its places come from, and shows no distance measured from somewhere else
   const near = page.getByRole('group', { name: 'From the recorded ride' }).getByRole('button')
   await expect(near).toHaveCount(3)
-  await expect(near.first()).not.toContainText(/\d+ m away/)
+  await expect(near.first()).not.toContainText(/[\d.,]+ (ft|mi) away/)
   await expect(near.first()).toContainText(/Routes 49, 55/)
   const first = near.first()
   expect((await first.boundingBox())!.height).toBeGreaterThanOrEqual(56)
@@ -229,7 +229,7 @@ test.describe('live API (dev proxy)', () => {
     await page.goto(`${H}?screen=off&set=backup-bus49`)
     const near = page.getByRole('group', { name: 'Near you now' }).getByRole('button')
     await expect(near.first()).toBeVisible({ timeout: 10_000 })
-    await expect(near.first()).toContainText(/\d+ m away/)
+    await expect(near.first()).toContainText(/[\d.,]+ (ft|mi) away/)
     await near.first().click()
     await page.getByRole('button', { name: '10 to 30 min ago' }).click()
     await expect(page.getByRole('heading', { name: 'Reached: results' })).toBeVisible({ timeout: 15_000 })

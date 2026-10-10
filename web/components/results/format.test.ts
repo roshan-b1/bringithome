@@ -43,7 +43,7 @@ test('vehicles are named the way the plan names them; trains by run, never "vehi
 })
 
 test('the evidence line is in New York time with the API distance', () => {
-  assert.equal(evidenceLine(bus().evidence[0]!), 'Passed 22 m from Piedmont Ave SE @ Gilmer St SE at 1:18 PM')
+  assert.equal(evidenceLine(bus().evidence[0]!), 'Passed 70 ft from Piedmont Ave SE @ Gilmer St SE at 1:18 PM')
 })
 
 test('ContextLine says "One fits." only for a High or Medium match', () => {
@@ -51,19 +51,19 @@ test('ContextLine says "One fits." only for a High or Medium match', () => {
   assert.equal(contextLine(match()).fits, 'One fits.')
   assert.equal(contextLine(match({ level: 'low' })).fits, null)
   assert.equal(contextLine(match({ status: 'ambiguous', level: 'medium' })).fits, null)
-  assert.equal(contextLine(match()).where, 'Within 400 m of Piedmont Ave SE @ Gilmer St SE, 1:05 PM to 1:31 PM.')
+  assert.equal(contextLine(match()).where, 'Within 0.25 mi of Piedmont Ave SE @ Gilmer St SE, 1:05 PM to 1:31 PM.')
   const none = contextLine(match({ status: 'no_match', level: null, candidates: [], context: { ...match().context, vehicles_near: 0 } }))
   assert.equal(none.line, '')
-  assert.match(none.where ?? '', /^No buses passed within 400 m/)
+  assert.match(none.where ?? '', /^No buses passed within 0\.25 mi/)
 })
 
 test('an empty place label or a zero-length window drops that part of the line, never throws (a live no_match)', () => {
   const at = '2026-10-10T05:12:18Z'
   const empty = match({ status: 'no_match', level: null, candidates: [], context: { vehicles_near: 0, counted: 'buses', place_label: '', window: { from: at, to: at } } })
-  assert.equal(contextLine(empty).where, 'No buses passed within 400 m of your stop.')
+  assert.equal(contextLine(empty).where, 'No buses passed within 0.25 mi of your stop.')
   const noPlace = match({ context: { ...match().context, place_label: ' ' } })
   assert.equal(contextLine(noPlace).where, null)
-  assert.equal(contextLine({ ...noPlace, context: { ...noPlace.context, vehicles_near: 0 } }).where, 'No buses passed within 400 m of your stop from 1:05 PM to 1:31 PM.')
+  assert.equal(contextLine({ ...noPlace, context: { ...noPlace.context, vehicles_near: 0 } }).where, 'No buses passed within 0.25 mi of your stop from 1:05 PM to 1:31 PM.')
   assert.equal(evidenceLine({ ...bus().evidence[0]!, place_label: '' }), 'Passed nearby at 1:18 PM')
 })
 
@@ -90,9 +90,10 @@ test('timetable trips read naturally, in the feed’s own words', () => {
 })
 
 test('distances and the walk rule match the API meet logic', () => {
-  assert.equal(formatDistance(3), '10 m')
-  assert.equal(formatDistance(347), '350 m')
-  assert.equal(formatDistance(1940), '1.9 km')
+  // feet and miles for the rider (lib/distance.test.ts holds every rounding rule)
+  assert.equal(formatDistance(3), '10 ft')
+  assert.equal(formatDistance(100), '350 ft')
+  assert.equal(formatDistance(1940), '1.2 mi')
   // one degree of latitude is about 111.2 km
   assert.ok(Math.abs(haversineM({ lat: 33, lon: -84 }, { lat: 34, lon: -84 }) - 111195) < 50)
   assert.equal(walkSeconds(500), Math.round(1.3 * 500 + 60))

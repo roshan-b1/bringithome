@@ -1,4 +1,5 @@
 import type { Match } from '@/contracts/api'
+import { NoBreak } from '@/components/plan/FactText'
 import { contextLine } from './format'
 import styles from './Results.module.css'
 
@@ -14,7 +15,11 @@ export function ContextLine({ match, className }: { match: Pick<Match, 'status' 
           {c.fits ? <strong> {c.fits}</strong> : null}
         </p>
       ) : null}
-      {c.where ? <p className={styles.contextWhere}>{c.where}</p> : null}
+      {c.where ? (
+        <p className={styles.contextWhere}>
+          <NoBreak text={c.where} />
+        </p>
+      ) : null}
     </div>
   )
 }

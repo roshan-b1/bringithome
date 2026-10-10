@@ -29,7 +29,8 @@ MAX_GAP_S = 600
 DWELL_S = 90
 RADIUS_M = 400
 EARTH_R = 6371008.8
-SESSION_TTL = timedelta(hours=22, minutes=30)
+SESSION_TTL = timedelta(hours=22, minutes=30)   # the backstop: no session lives longer, however much it is used
+SESSION_IDLE = timedelta(hours=2)               # a session is deleted 2 hours after its last use (migration 009)
 ROUTE_TYPES = {"bus": "3", "rail": "1", "streetcar": "0"}
 
 
@@ -252,6 +253,7 @@ class MemoryStore:
         self._archive = archive
         self.gaps = gaps or []
         self.sessions: dict[str, dict] = {}
+        self._used: dict[str, datetime] = {}       # last use per session, on the same clock
         # sessions expire on the app's clock (the one MatchService stamps created_at with), so a
         # replayed or fixed clock never loses a session to the real date
         self.clock = clock or _wall_clock
@@ -351,18 +353,25 @@ class MemoryStore:
     def save_session(self, session):
         self._purge()
         self.sessions[session["id"]] = session
+        self._used[session["id"]] = self.clock()
 
     def get_session(self, session_id):
         self._purge()
-        return self.sessions.get(session_id)
+        session = self.sessions.get(session_id)
+        if session is not None:
+            self._used[session_id] = self.clock()   # every read is a use: idle time starts again
+        return session
 
     def delete_session(self, session_id):
+        self._used.pop(session_id, None)
         return self.sessions.pop(session_id, None) is not None
 
     def _purge(self):
-        cutoff = self.clock() - SESSION_TTL
-        for sid in [k for k, v in self.sessions.items() if v["created_at"] < cutoff]:
+        now = self.clock()
+        for sid in [k for k, v in self.sessions.items()
+                    if v["created_at"] < now - SESSION_TTL or self._used.get(k, v["created_at"]) < now - SESSION_IDLE]:
             del self.sessions[sid]
+            self._used.pop(sid, None)
 
 
 # ----------------------------------------------------------------------------- Tiger
@@ -518,13 +527,18 @@ class PgStore:
         from psycopg.types.json import Jsonb
 
         with self.db.connection() as conn:
+            conn.execute("DELETE FROM sessions WHERE last_used < now() - %s", (SESSION_IDLE,))   # idle 2 h: gone
             conn.execute("INSERT INTO sessions (created_at, id, as_of, record, intake, result) "
                          "VALUES (%s, %s, %s, %s, %s, %s)",
                          (session["created_at"], session["id"], session.get("as_of"), session.get("record", False),
                           Jsonb(session["intake"]), Jsonb(session["result"])))
 
     def get_session(self, session_id):
-        rows = self._q("SELECT created_at, id, as_of, record, intake, result FROM sessions WHERE id = %s", (session_id,))
+        """The session if it was used in the last 2 hours; reading it is a use, so its idle time starts again."""
+        with self.db.connection() as conn:
+            rows = conn.execute("UPDATE sessions SET last_used = now() WHERE id = %s AND last_used >= now() - %s "
+                                "RETURNING created_at, id, as_of, record, intake, result",
+                                (session_id, SESSION_IDLE)).fetchall()
         if not rows:
             return None
         r = rows[0]

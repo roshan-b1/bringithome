@@ -190,6 +190,115 @@ export function optionDetails(o: ReunionOption, opts: DetailOpts = {}): string[]
   return [...new Set(lines.filter((l): l is string => Boolean(l)))]
 }
 
+// ------------------------------------------------------------------------------------------ when it pulls in
+
+/** The bag's vehicle as the option names it: "Red Line" from "Red Line train", route "49" from "Bus 49"; null when
+ *  the API could only say "Train" or "Bus" (a line or route fact, if the API ever sends one, comes first). */
+export function arrivalName(o: ReunionOption): { line: string | null; route: string | null; toward: string | null } {
+  const f = o.facts
+  const vehicle = text(f.vehicle) ?? ''
+  const line = text(f.line) ? `${text(f.line)} Line`.replace(/ Line Line$/, ' Line') : (/^(.+ Line) train$/.exec(vehicle)?.[1] ?? null)
+  const route = text(f.route) ?? /^Bus (.+)$/.exec(vehicle)?.[1] ?? null
+  const toward = text(f.toward) ?? text(f.destination) ?? text(f.headsign)
+  return { line, route, toward }
+}
+
+/** The car the rider was in: their tap, else the API's hint (which is that same tap, sent with the plan). */
+const carOf = (o: ReunionOption, car: CarHint | null | undefined): CarHint | null =>
+  car ?? o.platform_hint ?? ((text(o.facts.platform_hint) as CarHint | null) || null)
+
+/**
+ * The main card's "When it pulls in" block, in reading order. A train: which train and when, let people off then
+ * get on (the rider's car when known), check the seat and floor or tell the operator or staff, the next station
+ * fallback, and never hold the doors. A bus: which bus and when, get on at the front and tell the driver, and never
+ * chase it. Built only from the option's facts and the car tap.
+ */
+export function arrivalLines(o: ReunionOption, opts: Pick<DetailOpts, 'car'> = {}): string[] {
+  const { line, route, toward } = arrivalName(o)
+  const time = clock(o.reunion_at)
+  if (wayMode(o) === 'rail') {
+    const car = carOf(o, opts.car)
+    return [
+      line ? t('arrive.train', { line, toward, time }) : t('arrive.train_plain', { toward, time }),
+      t('arrive.train_board', { car }),
+      t('arrive.train_check'),
+      t('arrive.train_step_off'),
+      t('arrive.train_safe'),
+    ]
+  }
+  return [route ? t('arrive.bus', { route, toward, time }) : t('arrive.bus_plain', { toward, time }), t('arrive.bus_board'), t('arrive.bus_safe')]
+}
+
+/** The one-line version under each of the other ways. */
+export function arrivalLine(o: ReunionOption): string {
+  const { line, route, toward } = arrivalName(o)
+  if (wayMode(o) === 'rail') return line ? t('arrive.short_train', { line, toward }) : t('arrive.short_train_plain')
+  return route ? t('arrive.short_bus', { route }) : t('arrive.short_bus_plain')
+}
+
+// ------------------------------------------------------------------------------------------ your best plan
+
+export interface WayStep {
+  text: string
+  /** lines under the step (the "When it pulls in" details) */
+  sub?: string[]
+}
+
+type ItemWord = 'phone' | 'wallet' | 'bag' | 'keys' | 'laptop' | 'other'
+
+/**
+ * "Your best plan": the recommended way as numbered steps with New York times, built only from the option's own
+ * data (its kind, facts, times and window) plus the item tap and the car tap. A step whose facts are missing is left
+ * out, never shown with a hole. The last step is always "When it pulls in", with arrivalLines under it.
+ */
+export function wayStepLines(o: ReunionOption, opts: { item?: ItemWord | null; car?: CarHint | null } = {}): WayStep[] {
+  const f = o.facts
+  const rail = wayMode(o) === 'rail'
+  const stop = o.place_label || text(f.stop)
+  const item_pos = t(`item_pos.${opts.item ?? 'other'}` as `item_pos.${ItemWord}`)
+  const time = clock(o.reunion_at)
+  // the window for an estimate or a timetable time; a live time stands alone
+  const win = o.basis === 'live' ? {} : { window_from: clock(o.window_from), window_to: clock(o.window_to) }
+  const walk = { stop, walk_min: text(f.walk_min), leave_by: text(f.leave_by) }
+  const board = text(f.board_at) && text(f.board_time)
+  const platform = t('steps.wait_on', { platform: platformWords(o) })
+  const arrives = tFacts(rail ? 'steps.train_arrives' : 'steps.bus_arrives', { item_pos, time, ...win })
+  const lines: (string | null)[] = []
+  switch (o.kind) {
+    case 'wait_here':
+    case 'wait_on_return':
+      lines.push(o.kind === 'wait_here' ? tFacts('steps.stay_at', { stop }) : tFacts('steps.walk_to', walk))
+      if (rail) lines.push(platform)
+      lines.push(t(rail ? 'steps.turns_back_train' : 'steps.turns_back_bus', { item_pos }))
+      lines.push(tFacts('steps.should_arrive', { time, ...win }))
+      break
+    case 'switch_platform':
+      lines.push(board ? tFacts('steps.take_train', { ...f, leave_by: text(f.leave_by) }) : t('steps.stay_on'))
+      lines.push(tFacts('steps.get_off', { stop: text(f.get_off_at) ?? stop, off_time: text(f.off_time) }))
+      lines.push(text(f.toward) ? t('steps.cross', { toward: text(f.toward)! }) : t('steps.cross_plain'))
+      lines.push(arrives)
+      break
+    case 'walk_ahead':
+      lines.push(tFacts('steps.walk_to', walk))
+      if (rail) lines.push(platform)
+      lines.push(arrives)
+      break
+    case 'shared_track':
+      lines.push(t('steps.stay_on'))
+      lines.push(tFacts('steps.get_off', { stop, off_time: text(f.off_time) }))
+      lines.push(t('steps.same_platform'))
+      lines.push(arrives)
+      break
+    case 'meet_at_end':
+      lines.push(rail && board ? tFacts('steps.ride_to_end', { ...f, stop, leave_by: text(f.leave_by) }) : tFacts('steps.walk_to_end', walk))
+      lines.push(rail ? tFacts('steps.train_waits', { departs: text(f.departs) }) : tFacts('steps.bus_waits', { pulls_out: text(f.pulls_out) }))
+      break
+  }
+  const steps: WayStep[] = lines.filter((l): l is string => Boolean(l)).map((l) => ({ text: l }))
+  steps.push({ text: t('arrive.title'), sub: arrivalLines(o, { car: opts.car }) })
+  return steps
+}
+
 /** The confidence line: "Usually comes back (about 9 in 10)" for a bus wait, "Not certain" for a low option. */
 export function confidenceLine(o: ReunionOption): string | null {
   if (o.confidence === 'low') return t('confidence.low')

@@ -388,9 +388,9 @@ def test_a_scheduled_departure_inside_the_minimum_turn_opens_the_window_for_it_a
 
 
 def test_a_late_train_may_turn_at_once_so_the_window_opens_from_its_arrival(tmp_path, feed, index):
-    """The late train. Red 405 reaches North Springs at A' of about 16:21, after its 16:20 slot. P3c still picks
-    16:30 (most late trains take the next slot: 36 of 49 on Sat Oct 10), but some turn at once, so the window opens
-    at A' + 60 s plus the run back to Buckhead, not 5 min before the 16:32 estimate. Daytime, no skipped slot: the
+    """The late train. Red 405 reaches North Springs at A' of about 16:21, just after its 16:20 slot. P3c still picks
+    16:30 (most late trains take the next slot), but one just late may turn at once, so the window opens at A' plus
+    the run back to Buckhead less a minute, not 5 min before the 16:32 estimate. Daytime, no skipped slot: the
     option keeps its usual confidence; it just asks the rider to be there that early."""
     rpoll(tmp_path, at(15, 45), train("499", "RED", "S", "Airport", [("510028", at(15, 50, 10)),
                                                                      ("510036", at(15, 52, 10))],
@@ -406,7 +406,7 @@ def test_a_late_train_may_turn_at_once_so_the_window_opens_from_its_arrival(tmp_
     here = option(body, "wait_here")
     assert here["reunion_at"] == at(16, 32)                          # still the 16:30 trip
     run = (at(16, 32) - at(16, 30)).total_seconds()
-    assert abs((here["window_from"] - (arrival + (railturn.LATE_TURN_S + run) * S)).total_seconds()) < 1
+    assert abs((here["window_from"] - (arrival + (run - railturn.LATE_EARLY_S) * S)).total_seconds()) < 1
     assert here["confidence"] == "usual" and "may_come_before_you" not in here["note_ids"]
 
 

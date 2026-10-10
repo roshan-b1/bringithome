@@ -30,7 +30,7 @@ test('results slots fill and optional phrases drop', () => {
 
 test('plan slots fill like the cards use them; a missing required slot throws', () => {
   assert.equal(t('meet.you_walk', { minutes: 4 }), 'You: 4 min walk')
-  assert.equal(t('plan.evidence', { distance: 22, place: 'Piedmont Ave SE @ Gilmer St SE', time: '1:18 PM' }), 'Seen 22 m from Piedmont Ave SE @ Gilmer St SE at 1:18 PM.')
+  assert.equal(t('plan.evidence', { distance: '70 ft', place: 'Piedmont Ave SE @ Gilmer St SE', time: '1:18 PM' }), 'Seen 70 ft from Piedmont Ave SE @ Gilmer St SE at 1:18 PM.')
   assert.throws(() => (t as (id: string) => string)('meet.in_minutes'))
 })
 

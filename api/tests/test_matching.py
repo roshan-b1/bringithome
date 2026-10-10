@@ -332,7 +332,7 @@ def test_sessions_api_round_trip_and_delete(tmp_path, feed, index):
         assert r.status_code == 200, r.text
         s = SessionResponse.model_validate(r.json())
         assert s.match.status == "matched" and s.source == "live"
-        assert s.deletes_by - local(12) == timedelta(hours=24)
+        assert s.deletes_by - local(12) == timedelta(hours=2)
         assert r.json()["match"]["context"]["window"]["from"]          # "from", not "from_"
         again = c.get(f"/api/sessions/{s.session_id}")
         assert again.status_code == 200 and again.json()["match"]["candidates"][0]["vehicle_key"] == "bus:1401"
@@ -342,16 +342,24 @@ def test_sessions_api_round_trip_and_delete(tmp_path, feed, index):
         assert bad.status_code == 400 and bad.json()["error"] == "bad_request"
 
 
-def test_sessions_expire_by_the_stores_clock_never_the_wall_clock(feed, index):
-    """22 h 30 min after created_at on the store's clock. With the wall clock instead, every test that
-    makes a session on its fixed Oct 9 clock failed from Oct 10, 14:30 UTC on."""
+def test_sessions_expire_2_hours_after_last_use_by_the_stores_clock(feed, index):
+    """2 hours after its last use on the store's clock (a read is a use), and never past 22 h 30 min after
+    created_at however much it is used. With the wall clock instead, every test that makes a session on its fixed
+    Oct 9 clock failed from Oct 10, 14:30 UTC on."""
     clock = {"now": local(12)}
     store = MemoryStore(Schedule(feed), rows=drive("1401", local(8, 58), STOP), clock=lambda: clock["now"])
     sid = MatchService(store, index, lambda: local(12)).create(bus_intake(local(9)), None)["session_id"]
-    clock["now"] = local(12) + timedelta(hours=22, minutes=29)
+    clock["now"] = local(12) + timedelta(hours=1, minutes=59)
+    assert store.get_session(sid) is not None                      # used: idle time starts again
+    clock["now"] += timedelta(hours=1, minutes=59)
     assert store.get_session(sid) is not None
-    clock["now"] = local(12) + timedelta(hours=22, minutes=31)
+    clock["now"] += timedelta(hours=2, minutes=1)                  # idle over 2 h: gone
     assert store.get_session(sid) is None
+    sid = MatchService(store, index, lambda: local(12)).create(bus_intake(local(9)), None)["session_id"]
+    for _ in range(12):                                            # used every 1 h 55 min: the backstop still ends it
+        clock["now"] += timedelta(hours=1, minutes=55)
+        got = store.get_session(sid)
+    assert got is None
 
 
 def test_sessions_never_store_location_or_free_text(feed, index):
