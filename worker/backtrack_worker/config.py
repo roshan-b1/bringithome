@@ -6,12 +6,14 @@ import os
 import re
 import socket
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .redact import register_secret
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"   # measured Oct 9: 0.65 to 0.73 s for a structured call
+DEFAULT_GEMINI_DAILY_CAP = 200
 
 
 def _parse_value(raw: str) -> str:
@@ -66,13 +68,20 @@ class Settings:
     rail_poll_s: float
     http_timeout_s: float
     recorder_id: str = "local"
+    # The API's Gemini settings (ARCHITECTURE.md decision 11). The recorders read the same Settings and never use
+    # them, so a bad value here warns and falls back instead of stopping a recorder. The key stays out of repr().
+    gemini_api_key: str | None = field(default=None, repr=False)
+    gemini_model: str = DEFAULT_GEMINI_MODEL
+    gemini_daily_cap: int = DEFAULT_GEMINI_DAILY_CAP
 
     @classmethod
     def from_env(cls) -> Settings:
         load_dotenv(Path(os.environ.get("BACKTRACK_ENV_FILE", REPO_ROOT / ".env")))
         key = (os.environ.get("MARTA_RAIL_API_KEY") or "").strip() or None
         db_url = (os.environ.get("DATABASE_URL") or "").strip() or None
+        gemini_key = (os.environ.get("GEMINI_API_KEY") or "").strip() or None
         register_secret(key)
+        register_secret(gemini_key)
         _register_db_password(db_url)
         if key and re.search(r"\s", key):
             print("warning: MARTA_RAIL_API_KEY contains whitespace (an inline comment?); "
@@ -85,6 +94,9 @@ class Settings:
             rail_poll_s=_seconds("RAIL_POLL_SECONDS", 20),
             http_timeout_s=_seconds("HTTP_TIMEOUT_SECONDS", 15),
             recorder_id=(os.environ.get("RECORDER_ID") or socket.gethostname() or "local").strip()[:64],
+            gemini_api_key=gemini_key,
+            gemini_model=(os.environ.get("GEMINI_MODEL") or "").strip() or DEFAULT_GEMINI_MODEL,
+            gemini_daily_cap=_daily_cap("GEMINI_DAILY_CAP", DEFAULT_GEMINI_DAILY_CAP),
         )
 
 
@@ -99,6 +111,19 @@ def _seconds(name: str, default: float) -> float:
     if not 1 <= value <= 3600:
         raise SystemExit(f"{name} must be between 1 and 3600 seconds")
     return value
+
+
+def _daily_cap(name: str, default: int) -> int:
+    """A whole number of calls, 0 or more (0 turns the calls off). A bad value warns and keeps the default: unlike
+    the poll settings, it must never stop a recorder that happens to share the .env."""
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        return max(0, int(raw.strip()))
+    except ValueError:
+        print(f"warning: {name} is not a whole number; using {default}", file=sys.stderr)
+        return default
 
 
 def _register_db_password(url: str | None) -> None:

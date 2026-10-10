@@ -13,7 +13,12 @@ Per train:
   - eta = that file's poll time + WAITING_SECONDS, never now + WAITING_SECONDS, so a poll that
     is 40 s old still gives the right clock time;
   - the list ends at DESTINATION (a short turn ends early), then drops anything before t;
-  - DELAY is never read.
+  - DELAY is never read;
+  - two flags ride along for the reunion planner (reunion.py, railturn.py): HAS_STARTED_TRIP (true once
+    the train has physically left its first station; keyed rows only) and the IS_FIRST_STOP row, which is
+    the train's departure row at the station its trip starts from: poll time + WAITING_SECONDS is the
+    departure the feed shows (docs/reunion-measurements.json: it equals a GTFS slot in 168 of 201, and
+    trains start 56 s after it at the median, n=173).
 
 Names go through rail_station_map (the loaded schedule, via the place index), then the
 connector's own normalizer. A name neither knows becomes place_id "rail_name:<slug>" (for
@@ -118,6 +123,8 @@ class TrainPrediction:
     destination_place_id: str | None
     destination_label: str | None
     stops: tuple[RailStop, ...]  # upcoming, soonest first, ending at DESTINATION
+    has_started: bool | None = None   # HAS_STARTED_TRIP (keyed rows); None when no row said
+    departs: RailStop | None = None   # the IS_FIRST_STOP row: where the trip starts and the departure shown
 
     @property
     def next_stop(self) -> RailStop | None:
@@ -139,6 +146,13 @@ class _ParsedTrain:
     direction: str | None
     destination: str | None
     waits: tuple[tuple[str, int], ...]   # (raw STATION, WAITING_SECONDS), soonest first, one per station
+    started: bool | None = None          # HAS_STARTED_TRIP, true if any row says so
+    first_stop: tuple[str, int] | None = None   # the IS_FIRST_STOP row: (raw STATION, WAITING_SECONDS)
+
+
+def _flag(value) -> bool | None:
+    text = str(value or "").strip().lower()
+    return True if text == "true" else False if text == "false" else None
 
 
 def _int(value) -> int | None:
@@ -153,6 +167,8 @@ def parse_rail_payload(payload: bytes) -> dict[str, _ParsedTrain]:
     doc = json.loads(payload)
     attrs: dict[str, tuple[str | None, str | None, str | None]] = {}
     waits: dict[str, dict[str, tuple[str, int]]] = {}
+    started: dict[str, bool] = {}
+    first: dict[str, tuple[str, int]] = {}
     for kind in ("open", "keyed"):   # open first: its LINE/DIRECTION/DESTINATION win, as in the connector
         for r in doc.get(kind) or []:
             if not isinstance(r, dict) or str(r.get("IS_REALTIME", "")).strip().lower() != "true":
@@ -168,7 +184,13 @@ def parse_rail_payload(payload: bytes) -> dict[str, _ParsedTrain]:
             key = norm_api_name(station)
             if key not in per_station or wait < per_station[key][1]:
                 per_station[key] = (station, wait)
-    return {tid: _ParsedTrain(*attrs[tid], tuple(sorted(per_station.values(), key=lambda sw: (sw[1], sw[0]))))
+            has = _flag(r.get("HAS_STARTED_TRIP"))
+            if has is not None:
+                started[tid] = started.get(tid, False) or has
+            if _flag(r.get("IS_FIRST_STOP")) and (tid not in first or wait < first[tid][1]):
+                first[tid] = (station, wait)
+    return {tid: _ParsedTrain(*attrs[tid], tuple(sorted(per_station.values(), key=lambda sw: (sw[1], sw[0]))),
+                              started.get(tid), first.get(tid))
             for tid, per_station in waits.items()}
 
 
@@ -236,8 +258,38 @@ def _prediction(tid: str, p: _ParsedTrain, polled_at: datetime, t: datetime, nam
                               polled_at + timedelta(seconds=wait), station))
         if p.destination and _same_station(names, station, p.destination):
             break   # valid up to DESTINATION: anything after it is the next trip's guess
+    departs = None
+    if p.first_stop is not None:
+        station, wait = p.first_stop
+        departs = RailStop(names.place_id(station), names.label(station) or station,
+                           polled_at + timedelta(seconds=wait), station)
     return TrainPrediction(
         train_id=tid, line=p.line, direction=p.direction, destination=p.destination,
         destination_place_id=names.place_id(p.destination) if p.destination else None,
         destination_label=names.label(p.destination),
-        stops=tuple(s for s in stops if s.eta >= t))
+        stops=tuple(s for s in stops if s.eta >= t), has_started=p.started, departs=departs)
+
+
+def rail_polls_between(data_dir: Path, since: datetime, t: datetime, *, names: StationNames | None = None,
+                       cache: RailFileCache | None = None) -> Iterable[RailSnapshot]:
+    """Every archived rail poll with since <= polled_at <= t, newest first, each as the prediction table
+    at its own poll time (stops at or after that poll). The reunion planner reads recent history with it:
+    where a train that left the feed was last seen, and which departures the feed showed at a terminus
+    (railturn.py). Under as_of t is the replayed moment, so no later poll is ever read. Unreadable files
+    are skipped."""
+    if t.tzinfo is None or since.tzinfo is None:
+        raise ValueError("since and t must be timezone-aware")
+    names = names or StationNames()
+    cache = cache or _FILES
+    archive = RawArchive(Path(data_dir))
+    files = list(archive.iter_files(SOURCE, since=since, until=t + timedelta(microseconds=1)))
+    for path in reversed(files):
+        try:
+            parsed = cache.get(path, _load)
+        except Exception:  # noqa: BLE001  the sync thread logs unreadable payloads
+            continue
+        polled_at = archive.polled_at_of(path)
+        if not since <= polled_at <= t:
+            continue
+        yield RailSnapshot(polled_at, path, {tid: _prediction(tid, p, polled_at, polled_at, names)
+                                             for tid, p in parsed.items()})

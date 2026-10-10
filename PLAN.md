@@ -416,6 +416,14 @@ ORDER BY vehicle_id, ts DESC;
     lines split*, check user arrival + 2 min ≤ bag train arrival. Pick the earliest, preferring staffed stations.
     Output: "Get off at X, stand at [front/back], it arrives at HH:MM."
   - If it's **ahead:** "You can't catch it from behind." → contact staff for the terminus, or meet it on its way back.
+- **Reunion planner (built Oct 10, ARCHITECTURE.md 7.9):** every way back to the item, soonest first: walk ahead
+  (the meet above), ride on and change platforms, wait for it to come back where you are or nearby, or meet it at
+  the end of the line during its layover. Trains come back on the bag train's own run number, timed from the
+  schedule's next departure at the terminus once its turn is due, and live once the turn shows; buses come back on
+  their block's next trip with the layover absorbing part of the delay. Every constant is measured
+  (`docs/reunion-measurements.json`). After 7 PM a train's return is never promised until it turns, and a bus whose
+  block ends or continues elsewhere is never waited for. Walking ahead of a bus now needs 5 min to spare and the bus
+  at most 10 min away (measured). `POST /api/sessions/{id}/reunion` serves it for polling; the plan carries it too.
 - **Tiger Data bonus:** continuous aggregate of last-known position per vehicle per minute, to show off for the prize.
 
 ### 6.6 Gemini's role (grounded, with fallbacks)

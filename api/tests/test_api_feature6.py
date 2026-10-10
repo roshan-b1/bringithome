@@ -190,10 +190,11 @@ def bus_rows(vid="1401"):
 
 
 def live_bus(tmp_path, *, now=T):
-    """TripUpdates for bus 1401: stop 3 in 1 min, stop 4 in 5, stop 5 in 7.5, stop 6 in 10."""
+    """TripUpdates for bus 1401: stop 3 in 1 min, stop 4 in 7, stop 5 in 7.5, stop 6 in 10. Stop 4 is within the
+    bus walk-ahead rule's 10 min horizon and clears its 5 min margin (meet.py, walk_ahead_intermediate)."""
     status(tmp_path, "bus", now - 5 * S)
     entity = {"trip": "b49", "vehicle": "1401",
-              "stops": [(BUS_STOPS[i][0], i + 1, now + s * S) for i, s in ((2, 60), (3, 300), (4, 450), (5, 600))]}
+              "stops": [(BUS_STOPS[i][0], i + 1, now + s * S) for i, s in ((2, 60), (3, 420), (4, 450), (5, 600))]}
     return StubTripUpdates(parse_trip_updates(feed_bytes(now, [entity]), now))
 
 
@@ -212,11 +213,11 @@ def test_a_matched_bus_meets_at_the_riders_stop_with_its_cards_in_order(api, tmp
     p, r = plan(c, sid, ["bus:1401"], {"place_id": "stop:300004"})
     assert r.headers["X-Backtrack-Source"] == "live" and p["source"] == "live"
     assert p["meet"] == {"possible": True, "reason": "meet", "vehicle_keys": ["bus:1401"], "place_id": "stop:300004",
-                         "place_label": "Main St @ 4 St", "eta": [(T + 300 * S).isoformat().replace("+00:00", "Z")],
-                         "walk_s": 60, "margin_min": 4}
+                         "place_label": "Main St @ 4 St", "eta": [(T + 420 * S).isoformat().replace("+00:00", "Z")],
+                         "walk_s": 60, "margin_min": 6}
     assert kinds(p) == ["bag_staff", "meet", "keep", "report", "call"]
     m = card_of(p, "meet")
-    assert m["facts"] == {"mode": "bus", "stop": "Main St @ 4 St", "time": "3:53 PM", "minutes": 5}
+    assert m["facts"] == {"mode": "bus", "stop": "Main St @ 4 St", "time": "3:55 PM", "minutes": 7}
     assert m["fact_sources"] == {"mode": "rules", "stop": "static_gtfs", "time": "db", "minutes": "db"}
     assert m["source"] == "live" and m["evidence"][0]["place_label"] == STOP2
     keep = card_of(p, "keep")
@@ -576,9 +577,10 @@ def test_now_meet_knows_a_train_that_turned_has_passed_the_platform(api, tmp_pat
 
 def test_now_meet_states_for_a_bus(api, tmp_path):
     c = api(bus_rows(), tripupdates=live_bus(tmp_path))
-    stop4 = f"stop:{BUS_STOPS[3][0]}"                                        # due in 300 s
-    assert now_get(c, "1401", "bus", meet_place_id=stop4, remaining_walk_s=120).json()["meet_reason"] == "ok"
-    assert now_get(c, "1401", "bus", meet_place_id=stop4, remaining_walk_s=121).json()["meet_reason"] == "margin"
+    stop4 = f"stop:{BUS_STOPS[3][0]}"                                        # due in 420 s
+    # the withdraw floor stays 180 s while the rider walks (the 2 min buffer is for deciding, meet.py)
+    assert now_get(c, "1401", "bus", meet_place_id=stop4, remaining_walk_s=240).json()["meet_reason"] == "ok"
+    assert now_get(c, "1401", "bus", meet_place_id=stop4, remaining_walk_s=241).json()["meet_reason"] == "margin"
     assert now_get(c, "1401", "bus", meet_place_id=f"stop:{BUS_STOPS[0][0]}", remaining_walk_s=0).json()[
         "meet_reason"] == "passed"
     down = api(bus_rows())                                                   # TripUpdates down: only the timetable

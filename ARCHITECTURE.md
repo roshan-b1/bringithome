@@ -13,6 +13,14 @@ Sources of truth: `PLAN.md`, `CLAUDE.md` and `PREP-REPORT.md` (the verified feed
 > - **Gemini over REST** with hard deadlines (4 s text), model `gemini-3.5-flash-lite` (measured 0.65 to 0.73 s);
 >   no `google-genai` dependency.
 > - **Migration 007** gives `vehicle_passes` an `as_of` horizon; 005 and 006 stay reserved.
+> - **Reunion planner (Oct 10):** every way back to the item, soonest first, from tonight's measurements of real
+>   MARTA behavior (`docs/reunion-measurements.json`): section 7.9, `api/backtrack_api/reunion.py`, and
+>   `POST /api/sessions/{id}/reunion` (6.2 endpoint 10a). The plan carries it as `reunion`. The bus walk-ahead meet
+>   is tightened to the measured rule: margin at least 180 + 120 s and the bus at most 10 min away (decision 9, 7.8).
+>   After review and an Oct 9 backtest: a walk to a bus stop ahead on its current trip is only that meet, the evening
+>   rule goes by the train's arrival at its turn, a skipped GTFS slot is low, a turned train is never estimated via a
+>   second turn, a train session is never planned on a later service day, boarding a train keeps the station margin,
+>   loop routes are not "at the end" at their start, and the meet never runs on an assumed place (7.9).
 
 Conventions:
 - H0 = Fri Oct 9, 8:30 PM ET. All times are Eastern.
@@ -733,8 +741,8 @@ Shorter runs of repeated rail coordinates are stale reports and count at their f
 **Bus.**
 - The rider's location is a fresh, accurate fix or a chosen stop.
 - For each upcoming stop of a live bus within 1.5 km straight line: walk_s = 1.3 × distance / v + 60 s, where v = 1.0 m/s, or 0.7 m/s with "I walk slowly or use a mobility aid".
-- Feasible if ETA − now − walk_s ≥ 180 s and walk_s ≤ 15 min. Pick the earliest feasible stop.
-- **The 3 min margin is a judgment call, not a measured TripUpdates error.** It gets measured on Saturday only if bus meet survives the H18.5 checkpoint. Otherwise bus meet is cut, as PLAN's cut order allows.
+- Feasible if ETA − now − walk_s ≥ 180 s + 120 s, ETA − now ≤ 10 min and walk_s ≤ 15 min. Pick the earliest feasible stop.
+- **Measured on Oct 9 (`docs/reunion-measurements.json`, bus `walk_ahead_intermediate`, n=62,772 rider moments).** Walking ahead to a stop on the current trip was truly possible in only 0.8% of moments. With the 3 min margin alone, predicted-feasible walks failed 14 to 19% of the time (optimistic predictions win the pick). The 2 min buffer and the 10 min horizon together gave 14 recommendations and 0 misses. The withdraw check below keeps the 180 s floor: the buffer is for deciding. For buses the walk that works is to the end of the line during the layover (7.9).
 
 **Two candidates.** `/plan` takes up to two vehicle_keys and offers a meet only at a station and time that work for both: "Wait at West End southbound for the 3:58 or the 4:05." For two trains that means one platform: both heading the same way, and both lines stopping at the same `platform_stop_id` there (never Lindbergh, or the Airport southbound, for a Red and Gold tie). Otherwise the tell-staff card names both trains.
 
@@ -809,21 +817,24 @@ Shorter runs of repeated rail coordinates are stale reports and count at their f
 
 ### Decision 11. Gemini usage
 
-**Choice.** At most 3 calls per session (`/parse`, `/findmy`, and one wording call that returns both strings), all server-side through `google-genai`.
+**Choice.** At most 2 calls per session (`/parse`, and one wording call that returns both strings), all server-side over Gemini's REST API with the standard library and a hard deadline. No `google-genai` dependency.
 
-**Model.** `GEMINI_MODEL`, default `gemini-3.5-flash-lite` (an investigator-only fact, confirmed by the kickoff smoke test). Output is structured JSON.
+**Model.** `GEMINI_MODEL`, default `gemini-3.5-flash-lite`. It answered a structured JSON call in 0.65 to 0.73 s on Oct 9 and kept the `[[TOKENS]]` intact; `gemini-3.5-flash` took 5 to 9 s. Output is structured JSON: `responseMimeType` `application/json` plus a `responseSchema`, and the server checks each answer against that schema again.
 
 **Reliability.**
-- Timeouts: 4 s for text, 8 s for images. No retry on a 429.
-- A 60 s circuit breaker after a 429 or two timeouts.
+- One client per API process (`create_app` builds it from the settings; `None` without a key). Every failure is `None`, never an exception, and every caller has a rule-based fallback.
+- A hard 4 s deadline per call: the request runs in a helper thread we stop waiting for. The key goes in the `x-goog-api-key` header, never a URL, and is registered with the redactor.
+- No retry on a 429. A 60 s circuit breaker after a 429, or after two calls in a row with no answer (a timeout or a network error), so an offline server stops spending its cap.
 - **Two caches.**
-  - Wording-template entries only: an LRU keyed by `sha256(model + prompt + template)`, **persisted** to `/var/lib/backtrack/gemini-cache.json` and loaded at startup. The tokenized templates hold no values, so nearly every wording call hits the cache.
-  - `/parse` and `/findmy` results: memory only, 1 h TTL, never written to disk.
+  - Wording-template entries only: an LRU keyed by `sha256(model + prompt + template)`, **persisted** to `gemini-cache.json` in the data dir and loaded at startup. The tokenized templates hold no values, so nearly every wording call hits the cache. Each entry is checked by the validator when it is stored, when it is loaded and when it is served.
+  - `/parse` results: memory only, 1 h TTL (every access sweeps out expired entries, and the app sweeps every 5 minutes), never written to disk.
   - A pytest loads `gemini-cache.json` and asserts it holds only template-wording keys.
-- `GEMINI_DAILY_CAP`, counted in a file, so a restart doesn't reset it.
+- `GEMINI_DAILY_CAP` (default 200), counted per New York day in `gemini-daily.json` in the data dir, so a restart doesn't reset it. `/parse` never takes the last fifth of it, which stays for wording.
+- With a key, a background thread warms the wording cache at startup, richest templates first. It never blocks startup, stops at the breaker or after two templates in a row get no answer, and never takes the half of the daily cap kept for `/parse`.
+- `/parse` is rate-limited per client address by a small in-memory token bucket (`429 rate_limited`).
 - `make preflight` calls `/plan` once on a stage session to prove the cache is warm.
 
-**The three uses.**
+**The two uses.**
 1. **`/parse`,** only for typed or spoken clues.
    - TellMe asks only for where and when: "Tell us where and when. You'll pick what you lost on the next screen."
    - The schema is enums plus verbatim phrases.
@@ -831,26 +842,19 @@ Shorter runs of repeated rail coordinates are stale reports and count at their f
    - Phrases go to the resolver and the time parser, and the rider confirms by tap.
    - Before anything is logged or cached, the server removes every phrase the validator didn't map to a place, time, route, line, direction or car field.
    - The fallback is a regex parser. Taps never call Gemini.
-2. **`/findmy`,** opt-in after a one-line notice.
-   - The phone downsizes the image to 1280 px through a canvas, which strips EXIF.
-   - Gemini returns `{is_tracker_screen, item_name_text, location_text, last_seen_text}`.
-   - Code turns the last-seen text into minutes and compares it with the loss time.
-   - `location_text` is for display only.
-   - The fallback is "How old is the dot?" buttons.
-3. **Wording** of the report email and call script around tokens, in one call that returns both.
+2. **Wording** of the report email and call script around tokens, in one call that returns both under the 2.5 s budget (decision 10). Each string is validated on its own (section 8 item 4) and falls back to its own template.
 
 **Data sent.**
-- Sent: where-and-when clue text from TellMe, with emails and digit runs of 7 or more redacted; tokenized templates with no values; the screenshot, only after the tap.
+- Sent: where-and-when clue text from TellMe, with emails (typed or dictated forms too) and digit runs of 7 or more (across spaces, dots, dashes, commas, slashes and invisible characters) redacted; tokenized templates with no values.
 - Never sent: coordinates, session ids, item text typed on the item screens, or contact details.
 
-**Stage hook.** Right after the field test, a standalone script, `python -m api.tools.read_findmy`, sends the real airport screenshot to Gemini if it exists (decision 21). It saves the raw response with its timestamp into the hero set, whether or not `/findmy` ships, and retries through the evening on a 429.
-
-**On stage, nothing calls Gemini.**
+**On stage, nothing calls Gemini.** The persisted wording cache serves plans even with no key.
 
 **Why.**
-- Three distinct, visible uses for the Gemini prize.
+- Two visible uses for the Gemini prize, each with a fallback.
+- REST with our own deadline: the SDK's timeouts bound socket reads, not the whole call, and it is one more dependency for two calls.
 - Free-tier inputs may be read by people, and limits are unpublished, so data is minimal and nothing on the critical path waits on Gemini.
-- An in-memory-only wording cache would have been wiped by any restart right before judging (ops red team). Rider-derived results stay in memory, so nothing a rider typed or uploaded outlives the 24 h rule.
+- An in-memory-only wording cache would have been wiped by any restart right before judging (ops red team). Rider-derived results stay in memory, so nothing a rider typed outlives the 24 h rule.
 
 **Rejected.**
 - Gemini for matching, ranking or coordinates.
@@ -858,7 +862,7 @@ Shorter runs of repeated rail coordinates are stale reports and count at their f
 - Agent loops.
 - Streaming.
 - Retries on a 429.
-- A live vision call on stage.
+- The `google-genai` SDK.
 
 ### Decision 12. Frontend
 
@@ -1844,6 +1848,24 @@ type ErrorBody = { error: "db_unavailable" | "not_found" | "bad_request" | "rate
 // except [[ITEM]], which the phone fills.
 ```
 
+**10a. `POST /api/sessions/{id}/reunion`** (the `/plan` request body; both also take `taken` and `car`, the plan
+screen's taps, for that answer only; section 7.9)
+```jsonc
+// Response: every way back to the item, soonest first. The plan carries the same object as "reunion".
+{ "options": [ { "kind": "walk_ahead" | "shared_track" | "switch_platform" | "wait_here" | "wait_on_return" | "meet_at_end",
+                 "rank": int, "recommended": boolean, "vehicle_keys": VehicleKey[],
+                 "place_id": string, "place_label": string, "direction"?: Dir, "platform_hint"?: "front" | "middle" | "back",
+                 "stop_lat": number, "stop_lon": number,          // the place's own public coordinates, never the rider's
+                 "reunion_at": ISO, "window_from": ISO, "window_to": ISO, "leave_by": ISO | null,
+                 "walk_s": int, "wait_s": int, "margin_s": int,
+                 "basis": "live" | "estimate" | "timetable", "confidence": "high" | "usual" | "low",
+                 "note_ids": string[], "facts": { [slot: string]: string | number },
+                 "fact_sources": { [slot: string]: "db" | "static_gtfs" | "contacts" | "rules" } } ],
+  "not_offered": [ { "kind": string, "reason": string } ],     // value-free reason ids: ahead, block_ends, ...
+  "rider_location": "gps" | "chosen" | "assumed_alight" | "on_train" | "none",
+  "computed_at": ISO, "source": Source }
+```
+
 **11. `POST /api/findmy`** (multipart: `image`, at most 6 MB, downsized to 1280 px on the phone; plus `session_id`)
 ```jsonc
 { "is_tracker_screen": boolean, "item_name_text"?: string, "location_text"?: string, "last_seen_text"?: string,
@@ -2079,7 +2101,8 @@ TRAIN, rider on another train R (on_vehicle)
 BUS, rider at P (fix with accuracy <= 100 m and age < 30 s, or a chosen stop)
   for each upcoming stop X of a LIVE bus with |P X| <= 1500 m (passed stops already dropped):
     walk_s   = 1.3 * |P X| / v + 60     (v = 1.0, or 0.7 with the mobility toggle)
-    feasible if ETA(X) - now - walk_s >= 180  and  walk_s <= 900
+    feasible if ETA(X) - now - walk_s >= 180 + 120  and  ETA(X) - now <= 600  and  walk_s <= 900
+             (measured: walk_ahead_intermediate, n=62,772; without the 10 min cap 14 to 19% failed)
   pick     earliest feasible X
 
 TWO candidates (tie)  offer S only if feasible for both; card names both times; else tell_staff names both
@@ -2094,6 +2117,138 @@ WITHDRAW (every /now poll while a meet card shows)
 ```
 
 **Hero example.** The rider's Gold train is next at West End at 3:52:30, and the bag Red is due at West End at 3:59:40. The margin is 3:59:40 − (3:52:30 + 60 s) − 30 s = 5 min 40 s, which clears the 2 min floor, and 3:59:40 is 11.7 min from now (3:48). West End lies between Airport and Arts Center, so the platform is shared. **Meet at West End.**
+
+### 7.9 Reunion planner
+
+The rider asked one thing: what do I do now to get it back fastest, walk ahead or wait for it to come back?
+`api/backtrack_api/reunion.py` answers it in code, deterministically (never Gemini), for the session's vehicle (or
+both on a tie). It computes every way back, keeps the feasible ones and ranks them. Every constant comes from
+tonight's measurements of real MARTA behavior, `docs/reunion-measurements.json` (one weekday, Fri Oct 9; rail: 365
+terminus arrivals, 33 trains; bus: 187,340 rows, 248 vehicles), named below with its n. The rail estimators live in
+`railturn.py`, the bus ones in `busturn.py`.
+
+**The kinds.** Each kind of the session's mode is either an option or, with a value-free reason id, in `not_offered`.
+
+| Kind | Rule |
+|---|---|
+| `walk_ahead` | Go to a stop or station the vehicle has not reached. Exactly decision 9's meet (`meet.plan_meet`), so the meet card and this option can never disagree |
+| `shared_track` | Decision 9's on-board rule: the bag train is behind the rider's on shared platforms |
+| `switch_platform` | Trains. The rider is on, or boards at their station, a train heading the same way as the bag train toward its terminus T. Ride to X, change to the opposite platform, wait. rider_ready(X) = ETA_R(X) + 60 + 120; feasible if ETA_back(X) − rider_ready(X) − 30 ≥ 120; the X with the earliest ETA_back wins (preferring stations where the rider is ready before the window opens). A train boarded at the rider's station must clear decision 9's station rule (ETA − now − need − 30 ≥ 120), `leave_by` keeps that margin, and `margin_s` is the tighter of boarding and the return; the same holds for the following train of a `meet_at_end` |
+| `wait_here` | Wait where the rider is for it to come back: their own station (120 s to the opposite platform) or the nearest stop of the bus's return trip within 400 m. A stop still ahead on the bus's current trip is a wait only for a rider already at it (50 m): walking there is the bus walk-ahead, `walk_ahead` alone (7.8: n=62,772, and in the Oct 9 backtest of this planner such on-trip waits failed 25% of the time, 12.5% of the recommended ones missed, while the 6 that met 7.8's rule all worked) |
+| `wait_on_return` | The same at another station within a 15 min walk, or another stop of the return trip within 400 m |
+| `meet_at_end` | Bus: meet it at the end of the line during its layover (terminal_pullout). Train: only from a following train, only after the bag train has turned at a dead-end terminus and shows its departure row |
+
+Waits count the window's early side: the rider must be in place by `window_from`, and the ETA must clear the mode's
+margin (train: ETA − now − need − 30 ≥ 120; bus: ETA − now − need ≥ 180). A rider already in place whose estimate
+has run late keeps waiting while the window lasts (`late_still_expected`).
+
+**Trains: when does it come back?** Keyed on the bag train's own TRAIN_ID, never "the first train heading back" (the
+bag train only 3.6% of the time, n=15,674; a median of 3 other trains pass the platform first). Short ID gaps are
+tolerated (the newest poll in the past 45 min that listed it), never across a service day.
+
+```
+BEFORE THE TURN IS SEEN (estimator P3c, backtest n=15,674: |err| median 85 s, p90 474 s; daytime median 44 to 72 s)
+  A'   = t0 + 1.055 (ETA_T - t0)            live ETAs to a terminus run 5.5% short (n=5,329)
+  if the last departure the feed showed at T in the past 60 min matched GTFS within 30 s (168 of 201 do):
+       D = first GTFS departure of a trip STARTING at T (same line, the way back) at or after A' + m_T
+           m_T = 90 s (150 s North Springs); a departure more than 45 min after A' is not this train's
+       ETA_back(S) = D + that trip's scheduled dep_T -> arr_S
+  else (P2b, |err| median 132 s, p90 412 s):
+       ETA_back(S) = A' + L_T + median scheduled dep_T -> arr_S
+  window: ETA - 5 min (signed p10 -279 s) to ETA + 8 min (p90 474 s)
+  a GTFS departure in [A', A' + m_T) (the skipped slot): the train often takes it, a whole headway sooner. In the
+  Oct 9 backtest of this planner (5,137 rail calls) those 143 options had |err| p50 522 s and 35 of their 99
+  recommended were missed (all of the recommended rail misses), against p50 37 s, p90 106 s, 0 missed without one.
+  So the window opens as it would for that slot and the estimate is low (may_come_before_you)
+  no ETA to T in the poll: nothing is assumed (never A' = t0): not_live
+AFTER THE TURN IS SEEN (same TRAIN_ID listed the other way; n=1,234: p50 +37 s, p90 +115 s)
+  ETA_back(S) = poll time + WAITING_SECONDS(S), + 40 s while HAS_STARTED_TRIP is false; window -1 min to +2.5 min
+  from a poll over 90 s old, or across a short ID gap: the same pass as an estimate, on the platform it is coming
+  to; a turned train is never estimated through a second turn at the far end of its line
+MEET AT A DEAD-END TERMINUS FROM A FOLLOWING TRAIN (same line 2 of 178, Airport Red and Gold 2 of 36)
+  feasible iff D_bag - (A_follower + 60) - 30 >= 120, A_follower = t0 + 1.055 (ETA_R(T) - t0)
+```
+
+L_T in seconds (day before 19:00 / evening): Airport Gold 365/232, Airport Red 354/423, Doraville 384/393, North
+Springs 324/620, H E Holmes 291/429, Indian Creek 604/285, Bankhead 454/254, Edgewood-Candler Park 518/839, Vine
+City (night only) 402, Lindbergh (night only) 1653; elsewhere the pooled arrival-to-departure median, 400 s, at low
+confidence. Dead-end termini: Airport, Doraville, North Springs, H E Holmes, Indian Creek (the train sits at the
+platform, 155 of 155). Everything else turns in a pocket or tail track and leaves the feed for 260 s at the median
+(n=86, p90 394 s).
+
+**What is never promised.** The GTFS trip picked for D decides it: no departure left after A' (`may_leave_service`:
+574 of 808 such cases left service), or a picked trip that never reaches the rider's station (`night_short_turn`:
+caught all 735 night short-turn failures, Red back only to Lindbergh, Green only to Vine City, with 175 false
+alarms). For a train reaching T from 19:00 to 5:00 New York time a return before the turn is seen is low confidence
+and never recommended: 0 of 136 arrivals from 12:30 to 19:00 left service, 8 of 54 from 19:00 to 21:00 and 4 of 64
+from 21:00 to 24:00 did, and no feed flag predicts it. The band, the L_T column and the vanish grace go by A' (the
+arrival the rates count), never by when the rider asks: a 18:52 question about a 19:00 arrival is an evening one.
+A train session asked about on a later rail service day than its loss gets nothing (`not_live`, and no meet): a
+TRAIN_ID is a run number reassigned between days, and a session lives 24 h. A train that vanished at T is still expected until its predicted departure plus 10 min
+(25 min at Lindbergh at night: 53 of 252 turnarounds that came back were missing over 5 min, up to 21 min), then
+`not_seen`. Which arriving train to watch for is said only once the turn is seen (`watch_train`; before it,
+`watch_after_turn`: other trains reach a platform every 6.5 min at the median).
+
+**Buses: when does it come back?** Track the vehicle, not the trip: A is the trip the bus reports, B the block's
+next trip (same service_id and block_id).
+
+```
+L_NOW    actual pass at the last passed stop k >= 1 of A - sched(k), floored by now - sched(k+1) while k+1 is not
+         reached; rows polled by now only (progress from the shape, the pass from the closest approach of its fixes)
+COMES BACK (comes_back_absorb, n=2,561: |err| p50 113 s, p90 458 s; back as scheduled 91.7% of 2,794)
+         ETA(S') = sched_B(S') + max(90, L_now - (lay_sched - 120)),  lay_sched = B first dep - A last arr
+         S' = a stop of B within 400 m of the rider; window ETA - 3 min to ETA + 7 min
+END OF THE LINE (terminal_pullout, n=5,764: |err| p50 80 s, p90 301 s; recommended meets failed 1.7%)
+         pull_out = sched_dep_B(first stop) + max(90, L - (lay_sched - 120)), L = L_arr at the terminal, else L_now
+         recommend if (pull_out - now) - walk_s >= 180 + 120
+ON THE CURRENT TRIP (on_trip_live, n=94,075 at 0 to 5 min: p50 34 s, p90 99 s)
+         ETA(U) = sched(U) + L_now
+```
+
+On a loop route (last stop = first stop: 583 trips, routes 187, 67 and 800) a bus waiting at the start is not at
+the end of the line: the end counts only once its fixes on this trip passed the second-to-last stop, and the arrival
+is taken from fixes after that pass.
+
+Never a wait when B is missing (`block_ends`: 99.2% of those buses vanished, n=368) or B has no stop within 400 m of
+the rider (`interline_away`: an interlined trip passes p50 20% of the outbound stops; the bus usually returns only on
+its 3rd trip, about 2.6 h later). L_now over 20 min is low confidence (7.3% of cases).
+
+**Labels.** `basis`: `live` (on-trip from a fix at most 120 s old and at most 15 min ahead, a train's live
+predictions, a train seen heading back), `estimate` (anything that crosses a layover or a turn, or on-trip beyond 15
+min), `timetable` (no fresh fix, or the vehicle can't be tied to its block). `confidence`: `high` (live, and the
+end-of-the-line bus meet), `usual` (a measured estimate in daytime, or a turned train read from a stale poll), `low`
+(a train reaching its turn from 19:00, a skipped slot, an unmeasured layover, a bus over 20 min late, the timetable
+alone, a platform switch that leaves the rider ready inside the window's measured early side).
+
+**Ranking.** Soonest `reunion_at` first; reunions under a minute apart are a tie (finer than any estimate here),
+which goes to live before estimate before timetable, then less walking. One option per kind. `recommended` marks the
+best-ranked option that is not low confidence; with only low ones nothing is recommended. When the plan has a meet,
+that option is rank 1 by construction.
+
+**The rider.** A chosen place, else a phone fix with accuracy ≤ 100 m and age < 30 s (decision 9's rule and
+precedence), else the train they are on, else, only when the request sent no coordinates at all, where they got off
+(the session's alight anchor, at the station for a train: `rider_location: "assumed_alight"`), else `none`.
+Coordinates sent but too coarse or too old give `none`, never the alight place (they may be kilometres away). The
+assumed place is for the reunion's waits only: the plan's meet runs on the request's own user, so an assumed place
+never makes a meet card and `tell_staff` stays. Walking: 1.3 × straight
+line / v + 60 s, v = 1.0 m/s (0.7 slow), at most 1.5 km and 15 min; platform 90 s at the station, 120 s to change
+platforms, 60 s to step off a train. Coordinates are used for that one call: an option carries its place's own public
+coordinates (`stop_lat`, `stop_lon`, for a Directions button), times and seconds, never the rider's.
+
+**Ties.** Two candidate vehicles keep only options of the same kind at the same place that work for both: the later
+reunion, the window spanning both, the smaller margin, the weaker label, both numbers ("405 or 407"). Otherwise
+`tie`.
+
+**The endpoint.** `POST /api/sessions/{id}/reunion` takes the `/plan` body and returns the `Reunion` alone, cheap
+enough to poll every 20 s with a live fix (about 60 ms on Oct 9's archive after the first call; the static rail
+timetable is built once at startup). No wording and no Gemini. `as_of` reads the store through its horizon and the
+rail archive at or before that moment. In the plan, a recommended `wait_here` or `wait_on_return` becomes a
+`wait_return` card, `meet_at_end` a `meet_end` card (both with a Directions action, `"lat,lon"` of the stop), and
+`switch_platform` a `switch_platform` card, in the meet's slot when there is no meet; `tell_staff` and the report
+steps stay.
+
+**Checked on Oct 9's recordings** (as_of, then what the train or bus actually did): see `api/README.md`, "The
+reunion planner".
 
 ---
 
@@ -2114,19 +2269,21 @@ WITHDRAW (every /now poll while a meet card shows)
    Every card's `facts` come with `fact_sources`, and every card has `source: live | schedule | static`.
 2. **Intake.** Taps produce ids, never text. Free text goes to Gemini, which returns enums and verbatim phrases only. The validator then:
    - drops any phrase that is not a substring of the normalized input;
-   - drops any number not present verbatim;
-   - drops any route not in `gtfs_routes`;
+   - drops any number not present verbatim, or not said as a route ("the 2 kids" is a count, "5" alone may be a time or route 5);
+   - drops any route not in `gtfs_routes`, a line the input never names as a line or that none of the named stations is on, and a car or taken the input never states;
+   - drops a time phrase about something other than the loss ("I need it by 5");
    - removes every phrase it didn't map to a place, time, route, line, direction or car field before anything is logged or cached.
 
    Surviving phrases go to the deterministic resolver and time parser, and the rider confirms each by tap. Coordinates only ever come from the resolver.
 3. **Cards.** Card text is rendered on the phone from `copy.ts` (the reviewed prep section 10 table) with slot values filled in. Gemini never sees or writes card text. Safety and bag cards are never reworded.
 4. **Email and call script.** The server builds a template with opaque tokens (`[[VEHICLE]]`, `[[ROUTE]]`, `[[STOP]]`, `[[TIME]]`, `[[DIRECTION]]`, `[[DATE]]`, `[[ITEM]]`) and no values. Gemini may only rephrase around the tokens. The output must pass every check:
    - the same token set, each token present exactly as many times as in the template;
-   - zero digits outside tokens;
+   - zero digits or other numerals outside tokens;
    - no clock or am/pm patterns, no weekday or month names;
-   - no number words, ordinals, time-of-day or duration words, and no relative word (before, after, later, next, past ...) within 4 words of a token, since "the stop after [[STOP]]" or "an hour before [[TIME]]" keeps the token but moves its fact;
+   - no number or count words, ordinals, time-of-day, meal or duration words, and no relative word (before, after, later, next, past, further, away ...) or negation (not, never, n't) within 4 words of a token, since "the stop after [[STOP]]", "an hour before [[TIME]]" or "I never got off at [[STOP]]" keeps the token but moves its fact;
+   - "got off" or "got on", the kind of vehicle (bus, train, streetcar), "[[ITEM]] on" the vehicle, and the word that names each number ("bus [[VEHICLE]]", "route [[ROUTE]]", "train run [[VEHICLE]]") kept as the template says them; `[[DIRECTION]]` only after a verb of travel (heading, going, traveling, moving), and no compass or bound word of the model's own;
    - no phone, email or URL patterns;
-   - no stop, station, alias, line color or route name from our tables;
+   - no stop, station, alias, line color, street or route name from our tables, no bay or gate letter, no item, and no capitalized name inside a sentence that no template uses (a person, or a landmark the tables lack);
    - the copy lint (no em or en dashes, no "--", none of the banned words matched as whole words, with the negated safety allowlist, "running on Vultr" and "train run");
    - a length of at most 1.5 times the template.
 

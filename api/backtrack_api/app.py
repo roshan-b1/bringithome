@@ -13,20 +13,33 @@ rider's GPS as query parameters. The app installs a filter that drops every acce
 the rider is heading, and on which train), should anyone turn the first one off while debugging
 (RedactRiderLocation). The plan's user block travels in the POST body, which no access log
 prints, and is used for that one request only.
+
+Gemini (decision 11 as amended after kickoff: two uses, over REST): one GeminiClient per app, built
+from the settings (None without GEMINI_API_KEY) or injected through create_app(gemini=...), on
+app.state.gemini for preflight. POST /api/parse reads a typed or spoken clue through it (parse.py),
+rate-limited per client address by a small in-memory token bucket; the clue travels in the POST body
+and is never logged, stored or echoed in an error. The plan's report email and call script go through
+app.state.rephrase_hook (wordcache.WordingHook), which wording.render waits on for at most 2.5 s. The
+hook serves the persisted wording cache even with no key, so a stage laptop with a warm cache words
+plans without a single call. With a key, a background thread warms that cache at startup, within the
+daily cap's warm-up share; startup never waits on it.
 """
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import math
 import os
 import re
 import subprocess
 import threading
 import time
 import uuid
+from collections import OrderedDict
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta, timezone
-from typing import Callable
+from typing import Any, Callable
 from urllib.parse import unquote_plus
 
 from fastapi import FastAPI, Path, Query, Request, Response
@@ -36,13 +49,18 @@ from fastapi.responses import JSONResponse
 from backtrack_worker.config import REPO_ROOT, Settings
 from backtrack_worker.static_gtfs import DEFAULT_ZIP, build_feed
 
+from . import gemini as gemini_mod
 from . import health as health_mod
 from . import meet as meet_mod
+from . import parse as parse_mod
 from . import plan as plan_mod
 from . import trains as trains_mod
 from . import where as where_mod
-from .models import (Directions, Health, PlacesNearby, PlacesSearch, Plan, PlanRequest, Replay, SessionRequest,
-                     SessionResponse, TrainsNearby, VehicleNow)
+from . import wordcache
+from . import wording
+from . import railturn
+from .models import (Directions, Health, ParseRequest, ParseResponse, PlacesNearby, PlacesSearch, Plan, PlanRequest,
+                     Replay, Reunion, SessionRequest, SessionResponse, TrainsNearby, VehicleNow)
 from .replay import ReplayError, build_replay, parse_vehicle_keys
 from .resolver import PlaceIndex
 from .service import MatchService
@@ -62,11 +80,23 @@ REDACTED_PARAMS = RIDER_LOCATION_PARAMS | RIDER_TRIP_PARAMS
 # as_of outside these years is a typo, and years near 1 or 9999 overflow the date arithmetic downstream
 AS_OF_FROM = datetime(2000, 1, 1, tzinfo=timezone.utc)
 AS_OF_UNTIL = datetime(2101, 1, 1, tzinfo=timezone.utc)
+# POST /api/parse per client address: a burst of PARSE_BURST clues, then one more every PARSE_REFILL_S. A rider
+# sends one or two; this slows a script down, but one address could still spend /parse's share of the day's Gemini
+# calls in about half an hour. What bounds the cost is the daily cap, which never lets /parse take the last fifth
+# of the day's calls (gemini.WORDING_SHARE): those stay for the plan's report wording.
+PARSE_BURST = 6
+PARSE_REFILL_S = 10.0
+LIMITER_MAX_CLIENTS = 10_000
+# /parse results live 1 h in memory (decision 11). Each lookup and put sweeps out the expired ones; this sweeps a
+# quiet server too, so a rider's phrases never outlive their hour by more than this.
+PARSE_SWEEP_S = 300.0
+
+log = logging.getLogger("backtrack_api.app")
 
 
 class ApiError(Exception):
-    def __init__(self, status: int, error: str, message: str):
-        self.status, self.error, self.message = status, error, message
+    def __init__(self, status: int, error: str, message: str, headers: dict[str, str] | None = None):
+        self.status, self.error, self.message, self.headers = status, error, message, headers
 
 
 class Database:
@@ -146,6 +176,61 @@ def install_access_log_filters(logger_name: str = "uvicorn.access") -> None:
             logger.addFilter(kind())
 
 
+# ----------------------------------------------------------------------------- /parse: who is asking, how often
+
+
+class TokenBuckets:
+    """A token bucket per client: `burst` tokens, one back every `refill_s`. In memory only, keyed by a salted
+    hash of the client's address (the address itself is never kept), at most `max_clients` buckets with the least
+    recently seen dropped first (a dropped client just starts full again). Thread safe."""
+
+    def __init__(self, burst: int = PARSE_BURST, refill_s: float = PARSE_REFILL_S, *,
+                 max_clients: int = LIMITER_MAX_CLIENTS, clock: Callable[[], float] = time.monotonic):
+        self.burst, self.refill_s, self.max_clients, self._clock = max(1, burst), refill_s, max(1, max_clients), clock
+        self._salt = os.urandom(16)
+        self._buckets: OrderedDict[str, tuple[float, float]] = OrderedDict()   # key -> (tokens, at)
+        self._lock = threading.Lock()
+
+    def take(self, client: str) -> float:
+        """0.0 when the client may go ahead (a token is spent), else the seconds until its next token."""
+        key = hashlib.sha256(self._salt + client.encode("utf-8", "replace")).hexdigest()[:32]
+        with self._lock:
+            now = self._clock()
+            tokens, at = self._buckets.get(key, (float(self.burst), now))
+            tokens = min(float(self.burst), tokens + max(0.0, now - at) / self.refill_s)
+            allowed = tokens >= 1.0
+            self._buckets[key] = (tokens - 1.0 if allowed else tokens, now)
+            self._buckets.move_to_end(key)
+            while len(self._buckets) > self.max_clients:
+                self._buckets.popitem(last=False)
+            return 0.0 if allowed else (1.0 - tokens) * self.refill_s
+
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._buckets)
+
+
+def client_address(request: Request) -> str:
+    """The client's address, for the /parse rate limit only (never logged or stored). Behind Caddy on the same box
+    the peer is loopback and the last X-Forwarded-For entry is the address Caddy saw. The header is read only from
+    a loopback peer, so a client that reaches the API directly can't pick its own bucket by sending one."""
+    peer = request.client.host if request.client else ""
+    if peer in ("127.0.0.1", "::1", "localhost"):
+        forwarded = request.headers.get("x-forwarded-for", "").split(",")[-1].strip()
+        if forwarded:
+            return forwarded
+    return peer or "unknown"
+
+
+class _FromSettings:
+    def __repr__(self) -> str:
+        return "<from settings>"
+
+
+FROM_SETTINGS: Any = _FromSettings()
+StartWarmUp = Callable[[wordcache.WordingHook], tuple[threading.Thread, threading.Event]]
+
+
 def _git_sha() -> str:
     if os.environ.get("GIT_SHA"):
         return os.environ["GIT_SHA"]
@@ -165,9 +250,17 @@ def default_index_loader() -> PlaceIndex:
 def create_app(*, settings: Settings | None = None, index_loader: Callable[[], PlaceIndex] | None = None,
                db: Database | None = None, now: Callable[[], datetime] = health_mod.utcnow,
                git_sha: str | None = None, store: Store | None = None,
-               tripupdates: TripUpdatesCache | None = None) -> FastAPI:
+               tripupdates: TripUpdatesCache | None = None,
+               gemini: gemini_mod.GeminiClient | None = FROM_SETTINGS,
+               warm_up: bool | StartWarmUp = True,
+               parse_limiter: TokenBuckets | None = None) -> FastAPI:
+    """gemini: the app's one GeminiClient. By default it is built from the settings (gemini.from_settings: None
+    without a key); tests pass a fake, or None for "no key". warm_up: whether a client starts the wording cache
+    warm-up at startup (True: wordcache.start_warm_up; or a callable to use instead). parse_limiter: the /parse
+    token buckets (tests pass one with their own clock)."""
     install_access_log_filters()
     settings = settings or Settings.from_env()
+    client = gemini_mod.from_settings(settings) if gemini is FROM_SETTINGS else gemini
     if db is None and settings.database_url:
         db = Database(settings.database_url)
     loader = index_loader or default_index_loader
@@ -185,23 +278,67 @@ def create_app(*, settings: Settings | None = None, index_loader: Callable[[], P
             state["index_error"] = f"{type(e).__name__}: {e}"
         finally:
             ready.set()
+        # the reunion planner's rail timetable (one 4 s pass over stop_times), off the request path. Only for the
+        # app's own schedule: an injected index (tests) builds it on its first /reunion instead
+        if state["index"] is not None and index_loader is None:
+            try:
+                railturn.warm(state["index"])
+            except Exception as e:  # noqa: BLE001  the first /reunion builds it instead
+                log.warning("rail timetable not warmed (%s)", type(e).__name__)
+
+    def place_names() -> wording.PlaceNames | None:
+        """What the wording hook checks rewordings against: every place name in the index, once it has loaded."""
+        idx = state["index"]
+        return wording.PlaceNames.from_index(idx) if idx is not None else None
+
+    def start_wording_warm_up() -> tuple[threading.Thread, threading.Event] | None:
+        """Decision 11: fill the persisted wording cache in the background, only with a key. warm_up waits for the
+        place index, stops at the breaker and never takes the half of the daily cap kept for /parse."""
+        if app.state.gemini is None or warm_up is False:
+            return None
+        starter = wordcache.start_warm_up if warm_up is True else warm_up
+        try:
+            return starter(app.state.rephrase_hook)
+        except Exception as e:  # noqa: BLE001  best effort: plans still get the template or the cache
+            log.warning("wording warm-up not started (%s)", type(e).__name__)
+            return None
+
+    def sweep_parse_cache(stop: threading.Event) -> None:
+        while not stop.wait(PARSE_SWEEP_S):
+            try:
+                app.state.parse_cache.sweep()
+            except Exception as e:  # noqa: BLE001  the next sweep, or the next lookup, tries again
+                log.warning("parse cache sweep failed (%s)", type(e).__name__)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         threading.Thread(target=load_index, name="place-index", daemon=True).start()
+        app.state.wording_warm_up = start_wording_warm_up()   # a daemon thread: startup never waits on it
+        sweeping = threading.Event()
+        threading.Thread(target=sweep_parse_cache, args=(sweeping,), name="parse-cache-sweep", daemon=True).start()
         yield
+        sweeping.set()
+        if app.state.wording_warm_up is not None:
+            app.state.wording_warm_up[1].set()                 # stops it between calls
         if db is not None:
             db.close()
 
     app = FastAPI(title="Backtrack API", lifespan=lifespan, docs_url="/api/docs",
                   openapi_url="/api/openapi.json", redoc_url=None)
     app.state.tripupdates = trip_updates   # preflight reads its status; tests inject a stub
-    # the plan's wording model (decision 11): None until Gemini is plugged in, so both strings are templates
-    app.state.rephrase_hook = None
+    # Gemini (decision 11): the client (None without a key) and what preflight reads from it: gemini.status_of(),
+    # counters(), remaining_today(), and the wording cache's coverage() on the hook
+    app.state.gemini = client
+    # the plan's wording model: one call for both strings, through the persisted cache; with no client it serves
+    # the cache only, and with an empty cache both strings are the templates
+    app.state.rephrase_hook = wordcache.hook_from_settings(settings, client, names=place_names)
+    app.state.wording_warm_up = None
+    app.state.parse_cache = parse_mod.ParseCache()            # memory only, 1 h (decision 11)
+    app.state.parse_limiter = parse_limiter if parse_limiter is not None else TokenBuckets()
 
     @app.exception_handler(ApiError)
     async def _api_error(_req: Request, e: ApiError):
-        return JSONResponse({"error": e.error, "message": e.message}, status_code=e.status)
+        return JSONResponse({"error": e.error, "message": e.message}, status_code=e.status, headers=e.headers)
 
     @app.exception_handler(RequestValidationError)
     async def _bad_request(_req: Request, e: RequestValidationError):
@@ -317,6 +454,26 @@ def create_app(*, settings: Settings | None = None, index_loader: Callable[[], P
             raise ApiError(404, "not_found", f"unknown place {place_id!r}")
         out = idx.directions(place, mode, route=route, line=line)
         return {**out, "source": src}
+
+    # 6 ---------------------------------------------------------------------------------
+    @app.post("/api/parse", response_model=ParseResponse, response_model_exclude_none=True)
+    def parse_clue(body: ParseRequest, request: Request, response: Response):
+        """A typed or spoken where-and-when clue -> fields the rider confirms by tap (decision 11 use 1, 6.2
+        endpoint 6). Sync on purpose: it may wait up to parse.PARSE_DEADLINE_S on Gemini, in the threadpool. The
+        clue is never logged, stored or echoed; a failure answers with no fields, and the rider taps instead."""
+        at = check_as_of(body.as_of)
+        wait = app.state.parse_limiter.take(client_address(request))
+        if wait:
+            raise ApiError(429, "rate_limited", "Too many clues in a row. Try again in a few seconds, or tap your "
+                           "answers instead.", headers={"Retry-After": str(max(1, math.ceil(wait)))})
+        response.headers["X-Backtrack-Source"] = "as_of" if at is not None else "live"
+        idx = index()
+        try:
+            return parse_mod.parse_clue(body.text, now=at or now(), index=idx, client=app.state.gemini,
+                                        cache=app.state.parse_cache)
+        except Exception as e:  # noqa: BLE001  never a 500 with the clue in a traceback
+            log.warning("parse failed (%s); answered with no fields", type(e).__name__)
+            return {"fields": {}, "dropped": [], "source": "rules"}
 
     # 7, 7a, 12 ---------------------------------------------------------------------------
     @app.post("/api/sessions", response_model=SessionResponse, response_model_by_alias=True)
@@ -435,6 +592,27 @@ def create_app(*, settings: Settings | None = None, index_loader: Callable[[], P
                 get_store(), idx, stored, body, t=at or now(), as_of=at is not None, data_dir=settings.data_dir,
                 tripupdates=None if at is not None else trip_updates, hook=app.state.rephrase_hook))
         except ValueError as e:   # plan.PlanError, and meet's malformed-key ValueError
+            raise ApiError(400, "bad_request", str(e)) from None
+
+    # 10a -------------------------------------------------------------------------------
+    @app.post("/api/sessions/{session_id}/reunion", response_model=Reunion, response_model_exclude_unset=True)
+    def create_reunion(session_id: str, body: PlanRequest, response: Response):
+        """Every way back to the item, soonest first (reunion.py), and nothing else: no cards, no wording, no
+        Gemini, so a phone can poll it every 20 s with a live fix. Same body, as_of rules and privacy as /plan:
+        the user block is used for this one answer and never logged, stored or echoed."""
+        at = check_as_of(body.as_of)
+        stored = stored_session(session_id)
+        try:
+            at = at or plan_mod.session_as_of(stored)
+        except ValueError:
+            at = None
+        response.headers["X-Backtrack-Source"] = "as_of" if at is not None else "live"
+        idx = index()
+        try:
+            return run_store(lambda: plan_mod.build_reunion(
+                get_store(), idx, stored, body, t=at or now(), as_of=at is not None, data_dir=settings.data_dir,
+                tripupdates=None if at is not None else trip_updates))
+        except ValueError as e:
             raise ApiError(400, "bad_request", str(e)) from None
 
     return app

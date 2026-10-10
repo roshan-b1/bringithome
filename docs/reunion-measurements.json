@@ -1,0 +1,613 @@
+{
+ "rail": {
+  "summary": "Trains, measured from one weekday of rail data: Thu Oct 8 23:58 to Fri Oct 9 01:25 ET, then 12:27 PM to 00:15 ET. The laptop archive has full predictions until 22:22. After that only Tiger's next-station rows exist. Windows near any recorder gap are excluded. 365 terminus arrivals and 33 trains.\n\n1) Turnaround. There are two kinds of terminus:\n- Dead-end termini (Airport, Doraville, North Springs, H E Holmes, Indian Creek): the train shows the opposite direction 34 s after arriving (median, n=194, p90 71 s). It then holds one track circuit until it starts (155/155), so it sits at the platform.\n- Turnback sidings (Bankhead, Edgewood-Candler Park, and at night Vine City and Lindbergh): the train leaves the feed and reappears heading back after 260 s (median, n=86, p90 394 s).\n- Time from arrival to actually starting out is 7.5 min median (p90 13.7 min) at dead-end termini. Lindbergh at night is about 27 min.\n- The feed's departure row equals a GTFS departure in 168 of 201 cases. Most of the 33 misses come after 19:30, when the operated evening schedule differs from GTFS. Trains start 56 s after that shown time (median, p90 110 s).\n\n2) Not coming back. Same TRAIN_ID not back within 45 min:\n- 0/136 from 12:30 to 19:00.\n- 8/54 from 19:00 to 21:00 and 4/64 from 21:00 to 24:00. All 12 were trains leaving service for the night and never reappeared.\n- 0/39 after midnight, but the recording stops at 01:25, so end of service was never seen.\n- No feed flag predicts it. GTFS block ends match the rate: 2 to 3 of 9 evening arrivals end their block.\n- TRAIN_ID stayed the same through every turnaround that came back. One 40 s ID flicker was seen (109 showed as 101). IDs are run numbers that are reassigned between days. Physical cars cannot be verified.\n\n3) Run times. Observed minus scheduled is +3% median and +11 to 14% at p90 over 7+ stops. A single stop pair can be off by up to \u00b1130 s because GTFS times are rounded to whole minutes. Schedule run times work as a stand-in for the return leg if multiplied by 1.03.\n\n4) \"Comes back\" backtest: 18,770 cases (moment, train, station), including an independent sample of 256 (one case per train per terminus visit).\n- Best estimator before the turn: the next scheduled GTFS departure after the corrected arrival, used only when the schedule is visibly in effect. Error: median 85 s, p90 474 s. In daytime: median 44 to 72 s, p90 about 5 min.\n- Fallback layover constant: median 132 s, p90 412 s. Assuming no layover is always about 8 min early.\n- Failure rate 16.5% of cases (10.2% in the independent sample): 0% in daytime, about 28% from 19:00 to 21:00, about 21% from 21:00 to 22:22. Causes are trains leaving service and night short turns (Red returns only to Lindbergh, Green only to Vine City).\n- The \"first train of any id heading back\" variant is wrong. The first train back is the bag train only 3.6% of the time, and a median of 3 other trains pass S first. It must be the same physical train.\n- Once railpred shows the train heading back, live ETAs take over. Error is median 35 to 72 s, p90 95 to 220 s, running about +40 s late while the train still sits at the terminus.\n\n5) Meeting the bag train at the terminus from a following train on the same line almost never works: 2/178 cases have a 210 s margin. The follower arrives one headway later, about 11 to 15 min, while layovers are 5 to 9 min. At the Airport, a Red or Gold follower is there before departure in 26/36 cases, but with a 210 s margin in only 2/36. Before the bag train turns, 13 of 29 \"yes\" decisions would have missed it.\n\nHousekeeping: I wrote only under /tmp/reunion-measure and used read-only database sessions. I overwrote helper modules (db.py, common.py, events.py, sched.py) left there by an earlier run, so its q1_turnaround.py, load_tiger.py and sched_index.py no longer run as-is. Its q1_out.txt is intact and agrees with these numbers. Separately, a `sed -i` over *.py in that folder updated the timestamps of those three files without changing their content.",
+  "measurements": [
+   {
+    "name": "Arrival to first poll heading back (when railpred starts showing the turn), stub termini pooled (Airport, Doraville, North Springs, H E Holmes, Indian Creek)",
+    "n": 194,
+    "p10": 16,
+    "p50": 34,
+    "p75": 50,
+    "p90": 71,
+    "unit": "s",
+    "note": "per terminus p50: North Springs 27 (n=34), Airport Gold 28 (n=32), Airport Red 43 (n=21), Doraville 23 (n=36), H E Holmes 62 (n=35), Indian Creek 38 (n=36)"
+   },
+   {
+    "name": "Arrival to first poll heading back, pocket/tail-track turns pooled (Bankhead, Edgewood-Candler Park, Vine City, Lindbergh)",
+    "n": 86,
+    "p10": 205,
+    "p50": 260,
+    "p75": 324,
+    "p90": 394,
+    "unit": "s",
+    "note": "Bankhead p50 256 (n=38), Edgewood-Candler Park 215 (n=22), Vine City night short turn 366 (n=14), Lindbergh night short turn 343 (n=12); Five Points short turn n=1 (27 s); Kensington short turns never observed"
+   },
+   {
+    "name": "Arrival to physical start (first HAS_STARTED_TRIP=true poll), stub termini pooled",
+    "n": 155,
+    "p10": 257,
+    "p50": 450,
+    "p75": 596,
+    "p90": 821,
+    "unit": "s",
+    "note": "per terminus p50/p90: Airport Gold 386/589 (n=28), Airport Red 441/542 (n=20), North Springs 560/899 (n=26), Doraville 435/1305 (n=28, after-midnight layovers ~25 min), H E Holmes 464/605 (n=27), Indian Creek 547/955 (n=26); pockets: Bankhead 508/750 (n=31), Edgewood-Candler Park 674/1061 (n=20), Vine City 424/502 (n=7), Lindbergh night 595/1699 (n=6)"
+   },
+   {
+    "name": "Arrival to the feed's departure time (outbound IS_FIRST_STOP row drops; equals a GTFS slot in 168/201)",
+    "n": 225,
+    "p10": 172,
+    "p50": 400,
+    "p75": 540,
+    "p90": 660,
+    "unit": "s",
+    "note": "pooled approximation of per-terminus rows: Airport Gold p50 341 (n=25), Airport Red 400 (n=17), North Springs 517 (n=27), Doraville 278 (n=26), H E Holmes 418 (n=30), Indian Creek 293 (n=25), Bankhead 446 (n=29), Edgewood-Candler Park 612 (n=20); p10/p75/p90 here are the medians of the per-terminus values"
+   },
+   {
+    "name": "Physical start minus feed departure time (hold past the shown departure)",
+    "n": 173,
+    "p10": 27,
+    "p50": 56,
+    "p75": 80,
+    "p90": 110,
+    "unit": "s",
+    "note": "HAS_STARTED_TRIP is polled every ~20 s, so this is an upper bound by up to one poll"
+   },
+   {
+    "name": "Arrival at terminus to arrival back at the next station on the way back (A -> S2)",
+    "n": 271,
+    "p10": 300,
+    "p50": 553,
+    "p75": 728,
+    "p90": 967,
+    "unit": "s",
+    "note": "pooled from per-terminus rows (medians of per-terminus percentiles): Airport Gold 445, Airport Red 494, North Springs 653, Doraville 573, HEH 553, Indian Creek 504, Bankhead 572, ECP 717, Vine City 462, Lindbergh night 1893"
+   },
+   {
+    "name": "Same TRAIN_ID not back (no opposite-direction poll) within 45 min of arriving at a terminus, 12:30-19:00",
+    "n": 136,
+    "p50": 0,
+    "unit": "count of 136",
+    "note": "0/136"
+   },
+   {
+    "name": "Same TRAIN_ID not back within 45 min, 19:00-21:00",
+    "n": 54,
+    "p50": 8,
+    "unit": "count of 54",
+    "note": "8/54 = 15%; all permanent (train left service); 21:00-24:00: 4/64; 00:00-01:25: 0/39 but the end of service is censored by the 01:25 recorder outage. GTFS block ends predict 2-3 of 9 evening arrivals per terminus"
+   },
+   {
+    "name": "Longest absence from the feed during a turnaround that DID come back",
+    "n": 252,
+    "p10": 40,
+    "p50": 100,
+    "p75": 260,
+    "p90": 400,
+    "unit": "s",
+    "note": ">5 min in 53/252, >10 min in 14/252; Lindbergh at night up to 1240 s"
+   },
+   {
+    "name": "Live ETA to the terminus, actual arrival minus ETA, lead 10-20 min",
+    "n": 5329,
+    "p10": -9,
+    "p50": 53,
+    "p75": 103,
+    "p90": 153,
+    "unit": "s",
+    "note": "lead 5-10: p50 +37 p90 +103 (n=3502); 20-30: p50 +77 p90 +225 (n=3875); 30-45: p50 +78 p90 +253 (n=2801); median +4 to 8% of lead, so A' = t0 + 1.055 x lead"
+   },
+   {
+    "name": "Run time observed minus scheduled, 1 station hop",
+    "n": 3537,
+    "p10": -39,
+    "p50": 10,
+    "p75": 33,
+    "p90": 49,
+    "unit": "s",
+    "note": "per-hop GTFS quirks up to -132 s (Avondale->Decatur W) and +78 s (Decatur->East Lake W) from minute rounding"
+   },
+   {
+    "name": "Run time observed minus scheduled, 7-10 hops",
+    "n": 4823,
+    "p10": -62,
+    "p50": 32,
+    "p75": 86,
+    "p90": 140,
+    "unit": "s",
+    "note": "relative: p50 +3%, p90 +14%; 11-20 hops: p50 +54 s p90 +185 s (+3% / +11%, n=2114); spans within one run are correlated"
+   },
+   {
+    "name": "Return leg from the feed departure at T to arrival at S, observed minus scheduled dep_T->arr_S, 6-10 hops",
+    "n": 602,
+    "p10": -55,
+    "p50": 26,
+    "p75": 79,
+    "p90": 135,
+    "unit": "s",
+    "note": "1 hop: p50 -18 p90 +55 (n=198); 11-20 hops: p50 +48 p90 +227 (n=457)"
+   },
+   {
+    "name": "Any-train variant: other trains passing S in the return direction before the bag train",
+    "n": 15674,
+    "p10": 1,
+    "p50": 3,
+    "p75": 5,
+    "p90": 8,
+    "unit": "trains",
+    "note": "the first train back past S is the bag train in only 565/15674 = 3.6% (independent sample 15/230 = 6.5%)"
+   },
+   {
+    "name": "Nearest other train at the same platform of S around the bag train's return",
+    "n": 2965,
+    "p10": 190,
+    "p50": 397,
+    "p75": 903,
+    "p90": 1304,
+    "unit": "s",
+    "note": "within 2 min: 53 (1.8%); within 4 min: 572 (19%)"
+   },
+   {
+    "name": "Meet at terminus: bag train's feed departure minus same-line follower's arrival",
+    "n": 178,
+    "p10": -960,
+    "p50": -339,
+    "p75": -113,
+    "p90": 31,
+    "unit": "s",
+    "note": ">=210 s (meet.py on-board rule) in 2/178; follower there before departure 23/178; using HAS_STARTED as departure: 9/193"
+   },
+   {
+    "name": "Meet at terminus, Airport Red<->Gold follower: feed departure minus follower arrival",
+    "n": 36,
+    "p10": -107,
+    "p50": 60,
+    "p75": 133,
+    "p90": 197,
+    "unit": "s",
+    "note": ">=210 s in 2/36; before departure 26/36; to HAS_STARTED >=210 s 9/39"
+   },
+   {
+    "name": "Live prediction error after the turn while still laying over at T (actual - poll - WAITING_SECONDS), lead 5-15 min",
+    "n": 1234,
+    "p10": -26,
+    "p50": 37,
+    "p75": 76,
+    "p90": 115,
+    "unit": "s",
+    "note": "lead 15-30: p50 +44 p90 +187 (n=1580); once moving, lead 5-15: p50 +16 p90 +103 (n=5519), lead 0-5: p50 0 p90 +39 (n=3663)"
+   }
+  ],
+  "estimators": [
+   {
+    "name": "Comes back, before the turn is visible (recommended, P3c)",
+    "formula": "A' = t0 + 1.055*(ETA_T - t0). If the last feed departure seen at T in the past 60 min matched a GTFS departure within 30 s (schedule in effect): D = first GTFS departure of trips STARTING at T (same line, opposite direction) at or after A' + m_T; ETA_back(S) = D + that trip's scheduled dep_T -> arr_S. Otherwise ETA_back(S) = A' + L_T + median scheduled dep_T -> arr_S.",
+    "constants": "k = 1.055; m_T = 90 s (150 s North Springs); a grid over m 0-150 s and k 1.00-1.08 changes p50 by <=7 s. L_T (s, day before 19:00 / evening-night): Airport Gold 365/232, Airport Red 354/423, Doraville 384/393, North Springs 324/620, H E Holmes 291/429, Indian Creek 604/285, Bankhead 454/254, Edgewood-Candler Park 518/839, Vine City -/402, Lindbergh -/1653.",
+    "backtest_n": 15674,
+    "median_abs_error_s": 85,
+    "p90_abs_error_s": 474,
+    "failure_rate": "3096/18770 = 16.5% of cases (independent sample 26/256 = 10.2%): 0% 12:30-19:00 (n=5392), 27.7% 19:00-21:00, 20.9% 21:00-22:22; causes: out of service 2295, short turn 630, late 116, not seen at S 55",
+    "recommendation": "Use before the train turns, as 'about HH:MM'. In daytime: median 44-72 s, p90 about 5 min. Signed p10 -279 s, so in ~18% of cases the train comes >2 min early, mostly because the slot was off by one headway. Not precise enough to tell the rider which arriving train is theirs (other trains reach the same platform every ~6.5 min median). Use the GTFS trip picked for D to warn about night short turns: it caught all 735 short-turn failures, with 175 false alarms. 'No GTFS departure after A'' means the train leaves service in 574/808 cases. No promise after 19:00 until the turn is seen."
+   },
+   {
+    "name": "Comes back, constant layover (P2b fallback)",
+    "formula": "ETA_back(S) = t0 + 1.055*(ETA_T - t0) + L_T(day|night) + median scheduled dep_T -> arr_S",
+    "constants": "L_T as in the recommended estimator (leave-one-train-out medians of (A -> arrival back at S2) - sched(T->S2))",
+    "backtest_n": 15674,
+    "median_abs_error_s": 132,
+    "p90_abs_error_s": 412,
+    "failure_rate": "same cases as above: 16.5%",
+    "recommendation": "Use when the GTFS schedule is not in effect at T (evening, after 19:30) or T has no starting trips. After midnight both estimators are off by +3 min median and about +17 min at p90, from long late-night layovers seen in only 39 arrivals. Treat that period as unmeasured."
+   },
+   {
+    "name": "Comes back, global 8-minute layover (P1)",
+    "formula": "ETA_back(S) = ETA_T + 480 s + median scheduled dep_T -> arr_S",
+    "constants": "480 s",
+    "backtest_n": 15674,
+    "median_abs_error_s": 143,
+    "p90_abs_error_s": 445,
+    "failure_rate": "16.5%",
+    "recommendation": "Not recommended: unbiased overall but 26% of cases come >2 min early."
+   },
+   {
+    "name": "Comes back, no layover (P0)",
+    "formula": "ETA_back(S) = ETA_T + median scheduled dep_T -> arr_S",
+    "constants": "none",
+    "backtest_n": 15674,
+    "median_abs_error_s": 486,
+    "p90_abs_error_s": 906,
+    "failure_rate": "16.5%",
+    "recommendation": "Reject: late in 98% of cases by about 8 min."
+   },
+   {
+    "name": "Comes back, live after the turn (railpred takes over)",
+    "formula": "Once the same TRAIN_ID shows the opposite direction (first poll after arrival + p50 34 s at stub termini, +260 s at pocket turns): ETA_back(S) = poll time + WAITING_SECONDS for S, + 40 s while the train is still at T (HAS_STARTED_TRIP false)",
+    "constants": "layover bias +40 s (measured p50 +34 to +44 s); no correction once moving",
+    "backtest_n": 13834,
+    "median_abs_error_s": 44,
+    "p90_abs_error_s": 115,
+    "failure_rate": "not applicable (only cases where the train already turned); error figures are lead 5-15 min while laying over (n=1234). Moving: lead 0-5 min p50 11 s p90 44 s, lead 15-30 min p50 66 s p90 180 s",
+    "recommendation": "Switch to this as soon as the turn is visible, and only then tell the rider which arriving train to watch for. Do not declare 'out of service' just because the train vanished at T: in 53 of 252 turnarounds the train was missing for more than 5 min and still came back, up to 21 min at Lindbergh at night. Wait until the predicted departure plus about 10 min, or 25 min at Lindbergh at night."
+   },
+   {
+    "name": "Any train heading back past S",
+    "formula": "first arrival at S in the opposite direction by any TRAIN_ID after t0",
+    "constants": "none",
+    "backtest_n": 15674,
+    "failure_rate": "wrong train in 96.4% of cases (independent sample 93.5%)",
+    "recommendation": "Reject. The bag is on one physical train, so plans must key on the bag train's TRAIN_ID. The ID held through every turnaround that came back, apart from one 40 s flicker (109 showed as 101). Tolerate short ID gaps, and never carry an ID across service days."
+   },
+   {
+    "name": "Meet at the terminus during the layover (rider on a following train)",
+    "formula": "feasible iff D_bag - (A_follower + 60) - 30 >= 120, with D_bag = the bag train's shown departure (IS_FIRST_STOP row) and A_follower = t0 + 1.055*(follower ETA_T - t0)",
+    "constants": "step-off 60 s, pad 30 s, floor 120 s (meet.py); trains start 56 s (p50) after the shown departure, so the shown time is the conservative one",
+    "backtest_n": 1847,
+    "failure_rate": "Outcomes: same line feasible 2/178, Airport Red<->Gold 2/36. Decisions before the bag train turned: 29 'yes' out of 1224, 13 of them would have missed. After it turned: 1 'yes' out of 623, correct.",
+    "recommendation": "Offer only after the bag train has turned and shows its departure row, and only at dead-end termini, where it sits at the platform. At Bankhead, Edgewood-Candler Park, Vine City and Lindbergh it is out of reach for most of the layover. Expect this plan to win almost never, except Red/Gold at the Airport. Whether doors are open during the layover cannot be measured."
+   }
+  ],
+  "pitfalls": [
+   "Coverage is one weekday only. The 01:25-12:27 recorder outage removes the morning, and stalls or outages at 13:25-15:07, 16:00-16:52, 17:22-17:55 and 19:05-19:27 are excluded. There are no weekend data and no end-of-service data after 01:25.",
+   "After 22:22 only Tiger's next-station rows exist: no full prediction lists, no HAS_STARTED_TRIP. So no backtest moments after 22:22, and late-night departures rely on the next station changing.",
+   "Arrival times come from when a station's prediction row drops (last poll + WAITING_SECONDS), good to about \u00b120 s. The terminus departure row is the schedule's time, not the physical start. Physical start is HAS_STARTED_TRIP, which can lag by up to one 20 s poll.",
+   "Live ETAs to the terminus run about 5.5% of lead short (p50 +53 s at 10-20 min lead, p90 +253 s at 30-45 min).",
+   "GTFS departures match operations in daytime but not after about 19:30: 33 of 201 feed departures were off schedule, nearly all in the evening. Use the schedule-slot method only while the live departures at T still match GTFS.",
+   "Do not use 'the first train heading back'. It is the bag train in 3.6% of cases, and a median of 3 other trains pass S first.",
+   "Trains vanish from the feed during turnarounds: more than 5 min in 21% of those that came back, up to 21 min at Lindbergh at night. Vanishing is not the same as out of service.",
+   "Evening pull-ins: from 19:00 to 21:30, 15-25% of trains reaching a terminus leave service, and none came back. IS_END_OF_SERVICE does not predict this: it is true all day on Green and was never set on the trains that left. GTFS block ends give the right rate, 2-3 of 9.",
+   "Night short turns: Red trains return only to Lindbergh and Green trains only to Vine City. Check the GTFS return trip's last stop before telling a rider at S to wait.",
+   "At Vine City the turned train shows no row for Vine City itself (0 of 14), so railpred's list starts at the next station. At Bankhead the departure row is missing in 11 of 38 turns.",
+   "TRAIN_ID is a run number: the same trip id was run by different TRAIN_IDs on Oct 8 night and Oct 9 night. It flickered once (109 showed as 101 for 40 s on the same ADD1 trip near H E Holmes). An unscheduled ADD1 train, 511, appeared at 23:16. Both were excluded from the statistics.",
+   "Small samples: Lindbergh (12 turns), Vine City (15), Five Points (1). Kensington short turns were never observed.",
+   "Backtest cases are strongly correlated: 18,770 cases come from about 256 train-terminus visits. Independent subsample: n=256, 26 failures, recommended estimator median 77 s, p90 493 s.",
+   "Rail lat/lon was not used (coordinates repeat stale values). Physical consist identity and open doors during layover cannot be measured from this feed.",
+   "Housekeeping: /tmp/reunion-measure already held helper modules from an earlier run. My db.py, common.py, events.py and sched.py overwrote them, so that run's q1_turnaround.py, load_tiger.py and sched_index.py no longer run as-is; its q1_out.txt is intact and agrees with these numbers. A `sed -i` over *.py also updated those three files' timestamps without changing their content."
+  ],
+  "scripts": [
+   "/tmp/reunion-measure/run_all.sh",
+   "/tmp/reunion-measure/db.py",
+   "/tmp/reunion-measure/common.py",
+   "/tmp/reunion-measure/load_archive.py",
+   "/tmp/reunion-measure/timeline.py",
+   "/tmp/reunion-measure/events.py",
+   "/tmp/reunion-measure/gtfs_sched.py",
+   "/tmp/reunion-measure/turnaround.py",
+   "/tmp/reunion-measure/runtime.py",
+   "/tmp/reunion-measure/slots.py",
+   "/tmp/reunion-measure/fit_minturn.py",
+   "/tmp/reunion-measure/backtest_return.py",
+   "/tmp/reunion-measure/grid_p3.py",
+   "/tmp/reunion-measure/shortturn_check.py",
+   "/tmp/reunion-measure/meet_terminus.py",
+   "/tmp/reunion-measure/constants.py",
+   "/tmp/reunion-measure/absence.py",
+   "/tmp/reunion-measure/pullins.py",
+   "/tmp/reunion-measure/layover_position.py",
+   "/tmp/reunion-measure/trace.py"
+  ]
+ },
+ "bus": {
+  "summary": "BUS reunion measurements. All read-only: SELECTs on Tiger, then Python under /tmp/reunion-measure/bus2. The scripts reuse store.vehicle_passes_py, and a 40-case spot check against the vehicle_passes SQL gave identical pass times.\n\nDATA LIMITS: 187,340 bus rows from 248 vehicles. Only 567 minutes (about 9.5 h) are gap-free. Most of that is Fri Oct 9, 7:29 PM to 12:12 AM ET, plus 12:29-1:23 PM, 3:08-3:55 PM, 5:57-7:02 PM and Thu 11:58 PM-1:23 AM. That means no AM peak, very little PM peak and no Saturday recordings. Every scored window had to be gap-free from the rider's moment to the outcome.\n\n1) SCHEDULE: 88% of weekday block successions are the same route coming back the other way, 11% are interlines and 4.8% of trips are a block's last. Scheduled layover is p50 14 min (p10 2, p90 22). Saturday is nearly the same. Route 49 is p50 15 min and always comes back on route 49. At the stop level, the very next trip comes back within 400 m for 84% of (trip, stop) pairs. Interlined next trips pass only about 20% of the outbound stops, and the bus usually returns only on the 3rd trip, about 2.6 h later.\n\n2) TERMINAL REALITY (1,096 recorded visits): buses sit p50 8.7 min. They arrive p50 4.5 min late and pull out p50 2.1 min late, and rarely leave early (3.7% more than 1 min early). The layover absorbs lateness only partly: about 40-60% of a 5-20 min arrival delay is gone by pull-out. A bus that arrives later than its whole layover turns in about 1-2 min (p50 74 s). The best fit is L_dep = max(90 s, L_arr - (lay_sched - 120 s)), with |err| p50 76 s and p90 281 s.\n\n3) COMES BACK (moment = 2 min after the bus passed the rider's stop):\n- When the timetable says the bus returns within 400 m: 91.7% came back on the scheduled trip, 5.6% vanished, 2.2% never passed the stop and 0.4% switched route. That is n=2,794 cases from 1,162 vehicle-trips.\n- On the 2,561 returns, the absorb estimator scores |err| p50 113 s and p90 458 s. Carry-only scores 171/514 and timetable 165/766.\n- The rider's real wait is p50 32 min and p90 71 min.\n\n4) WALK AHEAD: when the rider is at the stop the bus just left, an intermediate stop within 1.5 km is reachable with 3 min to spare in only 0.8% of 20,214 moments. That drops to 0.4% if they realise 5 min later, and most of those cases are loop routes. Predicted-feasible intermediate walks failed (bus came first) 14-19% of the time.\n- Meeting the bus at the end of the line during its layover is the walking option that works. It is reachable in 22% of moments whose trip ends within 1.5 km.\n- With a 2-min buffer, recommended end-of-line meets failed only 1.7% of the time.\n\n5) RECOMMENDATION: prefer walking only to the end of the line (or an intermediate stop at most 10 min away) when the predicted margin is at least 5 min (3 min required + 2 min buffer). Otherwise wait at the stop for the return. If the block ends there or the next trip is an interline that does not pass within 400 m, say the bus is not coming back soon and push the report.\n- Label \"live\" for on-trip predictions from a fresh fix up to about 15 min ahead (p90 at most 242 s).\n- Label \"estimated\" for anything that crosses a layover, or on-trip predictions beyond 15 min.\n- Label \"timetable\" when there is no fresh fix or the vehicle cannot be tied to the block.\n\nProcess note: at the start I overwrote, then briefly renamed, another agent's shared helper /tmp/reunion-measure/db.py. Their version is back in place, but a run of theirs around 00:10-00:12 AM ET may have failed. My files are only in /tmp/reunion-measure/bus2. The older /tmp/reunion-measure/bus folder from the interrupted earlier run is superseded.",
+  "measurements": [
+   {
+    "name": "Scheduled layover, weekday (service 5, Thu Oct 8/Fri Oct 9), all consecutive trips in a block",
+    "n": 6585,
+    "p10": 120,
+    "p50": 840,
+    "p75": 1020,
+    "p90": 1320,
+    "unit": "s",
+    "note": "next trip: 5783 same route opposite direction (comes back), 712 interline, 90 same route same direction; 434 pairs (6.6%) have gap <= 0 (through-routed: 140, 162, 118, 120, 3); 4.8% of trips are a block's last; 15 deadheads > 400 m"
+   },
+   {
+    "name": "Scheduled layover, weekday, comes-back pairs only",
+    "n": 5783,
+    "p10": 120,
+    "p50": 840,
+    "p75": 1080,
+    "p90": 1320,
+    "unit": "s",
+    "note": "return trip passes within 400 m of >= 80% of outbound stops in 94% of these pairs"
+   },
+   {
+    "name": "Scheduled layover, weekday, interline pairs",
+    "n": 712,
+    "p10": 0,
+    "p50": 720,
+    "p75": 900,
+    "p90": 960,
+    "unit": "s",
+    "note": "interlined next trip passes within 400 m of only p50 20% of the outbound stops (e.g. 21<->22, 118<->120, 116<->119, 117<->121, 32<->74, 85->185)"
+   },
+   {
+    "name": "Scheduled layover, Saturday (service 3, Oct 10), all pairs",
+    "n": 6342,
+    "p10": 120,
+    "p50": 840,
+    "p75": 1020,
+    "p90": 1320,
+    "unit": "s",
+    "note": "5578 comes back, 691 interline, 73 same direction; 4.6% of trips end a block"
+   },
+   {
+    "name": "Scheduled layover by time of day, weekday PM peak (15-19) vs evening (19-24)",
+    "n": 1421,
+    "p10": 0,
+    "p50": 600,
+    "p75": 900,
+    "p90": 1080,
+    "unit": "s",
+    "note": "PM peak shown; evening n=1649 p10 240 p50 900 p75 1140 p90 1500; AM peak n=1042 p50 780; midday n=2112 p50 840"
+   },
+   {
+    "name": "Scheduled layover, route 49 (weekday)",
+    "n": 108,
+    "p10": 300,
+    "p50": 900,
+    "p75": 960,
+    "p90": 1140,
+    "unit": "s",
+    "note": "always comes back as route 49; Saturday n=104 p10 360 p50 900 p75 960 p90 1080. Other downtown routes (stop within 1.3 km of Five Points), weekday p50 / p90: A 360/1020, 20 600/900, 51 780/1320, 55 780/1380, 42 900/1080, 7 1320/1860, 10 900/1200, 3 900/900, 21 600/888 and 22 600/1200 (21 and 22 interline with each other about half the time). Full table in t1_layover_by_route.csv"
+   },
+   {
+    "name": "Which later block trip first passes within 400 m of a stop (weekday, all trip-stop pairs)",
+    "n": 338494,
+    "p50": 1,
+    "unit": "trip index",
+    "note": "next trip 83.9%, 2nd 2.1%, 3rd 6.9%, block ends 5.4%, not within 3 trips 1.7%; when the next trip is an interline: next 21%, 3rd 63% (scheduled wait p50 9371 s)"
+   },
+   {
+    "name": "Scheduled wait from passing a stop to the return trip passing it (weekday, next trip)",
+    "n": 283968,
+    "p10": 1243,
+    "p50": 3076,
+    "p75": 4523,
+    "p90": 5984,
+    "unit": "s",
+    "note": "static only"
+   },
+   {
+    "name": "Recorded time buses sit at the terminal (60 m zone, scheduled next trip)",
+    "n": 1096,
+    "p10": 35,
+    "p50": 521,
+    "p75": 934,
+    "p90": 1223,
+    "unit": "s",
+    "note": "212 vehicles, 70 routes; with a 120 m zone n=1104 p10 64 p50 617 p75 1001 p90 1286 (some routes, e.g. 7, park 60-120 m from the stop). Route 49: n=30, sit p50 799 s vs scheduled 960 s"
+   },
+   {
+    "name": "Recorded arrival lateness at the terminal L_arr (60 m)",
+    "n": 1096,
+    "p10": -55,
+    "p50": 271,
+    "p75": 636,
+    "p90": 1192,
+    "unit": "s"
+   },
+   {
+    "name": "Recorded departure lateness from the terminal L_dep (60 m)",
+    "n": 1096,
+    "p10": 7,
+    "p50": 127,
+    "p75": 309,
+    "p90": 727,
+    "unit": "s",
+    "note": "left > 2 min late 558, > 5 min late 279, > 60 s early 41 (3.7%). On-time arrivals: L_dep p50 74 s; 5-10 min late: p50 138; 10-20 late: p50 266; > 20 late: p50 1515"
+   },
+   {
+    "name": "Actual turnaround when the bus arrived later than its whole scheduled layover (60 m)",
+    "n": 338,
+    "p10": 14,
+    "p50": 74,
+    "p75": 222,
+    "p90": 596,
+    "unit": "s",
+    "note": "120 m zone: n=303 p10 31 p50 138 p75 330 p90 708"
+   },
+   {
+    "name": "Share of arrival delay still present at pull-out, arrivals 5-10 min late (120 m)",
+    "n": 211,
+    "p10": 0.1,
+    "p50": 0.4,
+    "p75": 0.9,
+    "p90": 1.2,
+    "unit": "ratio L_dep/L_arr",
+    "note": "2-5 min late p50 0.7; 10-20 min late p50 0.4; > 20 min late p50 0.9 (layover cannot absorb it)"
+   },
+   {
+    "name": "trip_id switch time minus terminal pull-out (120 m)",
+    "n": 1104,
+    "p10": -252,
+    "p50": 19,
+    "p75": 29,
+    "p90": 57,
+    "unit": "s",
+    "note": "the trip_id run includes the layover at its end; never use the trip switch as the arrival time"
+   },
+   {
+    "name": "Comes back: rider's actual wait at S, moment = pass at S + 2 min",
+    "n": 2561,
+    "p10": 703,
+    "p50": 1924,
+    "p75": 2924,
+    "p90": 4282,
+    "unit": "s",
+    "note": "213 vehicles, 1074 vehicle-trips, 70 routes; hours mostly 6 PM to midnight"
+   },
+   {
+    "name": "Comes back: absorb estimator abs error (C0=90, M=120), moment +2 min",
+    "n": 2561,
+    "p10": 22,
+    "p50": 113,
+    "p75": 232,
+    "p90": 458,
+    "unit": "s",
+    "note": "signed pred-actual p10 -407 p50 -28 p90 +153; bus > 3 min earlier than predicted 8.0%, > 7 min later 9.5%. Moment +0: n=2443 p50 116 p90 474; +10 min: n=2279 p50 115 p90 457. Deduplicated to one case per vehicle-trip: n=1074 p50 131 p90 492"
+   },
+   {
+    "name": "Comes back: timetable-only abs error",
+    "n": 2561,
+    "p10": 24,
+    "p50": 165,
+    "p75": 355,
+    "p90": 766,
+    "unit": "s",
+    "note": "signed p50 -150: the bus is later than timetable most of the time"
+   },
+   {
+    "name": "Comes back: full-carry (sched + L_now) abs error",
+    "n": 2561,
+    "p10": 29,
+    "p50": 171,
+    "p75": 317,
+    "p90": 514,
+    "unit": "s",
+    "note": "35% of returns came more than 2 min earlier than this predicts"
+   },
+   {
+    "name": "End-of-line pull-out prediction abs error (rider decision moments, pooled)",
+    "n": 5764,
+    "p10": 19,
+    "p50": 80,
+    "p75": 142,
+    "p90": 301,
+    "unit": "s",
+    "note": "signed p5 -403 p50 +22 p95 +156"
+   },
+   {
+    "name": "Walk ahead: best spare time at an intermediate stop within 1.5 km (rider at the stop the bus just left)",
+    "n": 19875,
+    "p10": -641,
+    "p50": -368,
+    "p75": -277,
+    "p90": -217,
+    "unit": "s",
+    "note": ">= 180 s needed; reachable in 0.8% of moments (+2 min: 0.6%, +5 min: 0.4%); end of line reachable in 22.4% of moments whose trip ends within 1.5 km"
+   },
+   {
+    "name": "On-trip prediction sched(U) + L_now, abs error, predicted 0-5 min ahead",
+    "n": 94075,
+    "p10": 6,
+    "p50": 34,
+    "p75": 61,
+    "p90": 99,
+    "unit": "s",
+    "note": "5-10 min: n=66785 p50 67 p90 180; 10-15: n=47339 p50 88 p90 242; 15-20: n=32098 p50 109 p90 297; 20-30: n=34070 p50 130 p90 361; 30-45: n=16150 p50 156 p90 431. Timetable alone p50 about 200 s, p90 920-1940 s"
+   },
+   {
+    "name": "Bus ping interval per vehicle",
+    "n": 185934,
+    "p10": 30,
+    "p50": 30,
+    "p75": 31,
+    "p90": 31,
+    "unit": "s",
+    "note": "p99 152"
+   },
+   {
+    "name": "Bus row lag polled_at - ts",
+    "n": 187340,
+    "p10": 7.2,
+    "p50": 17,
+    "p75": 22.1,
+    "p90": 25.8,
+    "unit": "s"
+   }
+  ],
+  "estimators": [
+   {
+    "name": "comes_back_absorb (wait at S for the return trip)",
+    "formula": "ETA(S') = sched_B(S') + max(C0, L_now - (lay_sched - M)); S' = stop of the block's scheduled next trip B nearest S within 400 m; lay_sched = sched first departure of B - sched last arrival of A; L_now = (actual pass at the last passed stop k >= 1 of A) - sched(k), floored by (now - sched(k+1)) when the bus has not reached k+1, using only rows with polled_at <= now",
+    "constants": "C0 = 90 s, M = 120 s (fit on 1,096 terminal visits; the comes-back grid gave C0 120 / M 180-240 with p90 435-450 but more early misses). Display window: ETA - 3 min to ETA + 7 min (covers about p8 to p90). Treat L_now > 20 min as low confidence (7.3% of cases, 54 vehicles)",
+    "backtest_n": 2561,
+    "median_abs_error_s": 113,
+    "p90_abs_error_s": 458,
+    "failure_rate": "Of 2,794 cases where the timetable says the bus comes back: 91.7% came back as scheduled, 5.6% vanished (stopped reporting; 61% of those had nobody reporting trip B, 18% had B run by another vehicle, 22% reported B but were never seen at S'), 2.2% never passed S', 0.4% switched route unscheduled. When the block ends there: 99.2% vanished (n=368)",
+    "recommendation": "Default for 'wait where you are'. Label 'estimated'. Say 'usually comes back (about 9 in 10)'. Never offer it when B is missing (block ends) or B has no stop within 400 m (interline away)"
+   },
+   {
+    "name": "comes_back_timetable",
+    "formula": "ETA(S') = sched_B(S')",
+    "constants": "none",
+    "backtest_n": 2561,
+    "median_abs_error_s": 165,
+    "p90_abs_error_s": 766,
+    "failure_rate": "same vanish/switch rates as above; bus later than timetable at p50 by 150 s",
+    "recommendation": "Fallback only when no fresh position (label 'timetable')"
+   },
+   {
+    "name": "comes_back_full_carry",
+    "formula": "ETA(S') = sched_B(S') + L_now",
+    "constants": "none",
+    "backtest_n": 2561,
+    "median_abs_error_s": 171,
+    "p90_abs_error_s": 514,
+    "failure_rate": "bus > 2 min earlier than predicted in 35% of returns",
+    "recommendation": "Do not use: the layover absorbs part of the delay"
+   },
+   {
+    "name": "terminal_pullout (meet the bus at the end of the line during its layover)",
+    "formula": "pull_out = sched_dep_B(first stop) + max(C0, L - (lay_sched - M)), with L = L_arr if the bus is already at the terminal, else L_now; bus is at the terminal from sched_arr_A(last) + L until pull_out. Recommend going there if (pull_out - now) - (1.3 * d / 1.0 m/s + 60 s) >= 180 s + 120 s buffer",
+    "constants": "C0 = 90 s, M = 120 s, buffer 120 s",
+    "backtest_n": 5764,
+    "median_abs_error_s": 80,
+    "p90_abs_error_s": 301,
+    "failure_rate": "On the 1,096 terminal visits directly: |err| p50 76 s, p90 281 s, bus left > 2 min earlier than predicted 5.2%. Rider decisions (pooled 62,772 moments): with buffer 120 s, 695 recommended, the bus pulled out first in 1.7%, less than 3 min spare in 1.7%; it catches 296 of 416 truly reachable moments at +0 min",
+    "recommendation": "The walking option that actually works for buses. Label 'estimated'"
+   },
+   {
+    "name": "on_trip_live (stops ahead on the current trip)",
+    "formula": "ETA(U) = sched(U) + L_now",
+    "constants": "none",
+    "backtest_n": 294693,
+    "median_abs_error_s": 34,
+    "p90_abs_error_s": 99,
+    "failure_rate": "Errors above are for predictions 0-5 min ahead. 5-10 min: p50 67, p90 180, 9.9% more than 2 min early; 10-15 min: p50 88, p90 242, 16.7% early; 20-30 min: p50 130, p90 361",
+    "recommendation": "Label 'live' when the fix is at most 120 s old and the prediction is at most 15 min ahead; otherwise 'estimated'"
+   },
+   {
+    "name": "walk_ahead_intermediate",
+    "formula": "walk_s = 1.3 * d(P,U) / 1.0 + 60; recommend U if (sched(U) + L_now - now) - walk_s >= 180 + B and the predicted bus time at U is at most H min away",
+    "constants": "B = 120 s, H = 10 min",
+    "backtest_n": 62772,
+    "failure_rate": "Truly reachable in 0.8% / 0.6% / 0.4% of moments (+0 / +2 / +5 min). With H <= 10 and B = 120: only 14 recommendations, 0 misses. Without the horizon cap and B = 120: 193 recommended, bus came first 16.6%",
+    "recommendation": "Practically never possible for buses outside loop routes (140, 187, 180). Show it only under H <= 10 min and B >= 120 s; otherwise prefer waiting"
+   }
+  ],
+  "pitfalls": [
+   "Coverage is thin: 567 gap-free minutes, mostly Fri Oct 9 7:29 PM to 12:12 AM ET. There is no AM peak, little PM peak and no Saturday recordings, so all recorded numbers describe weekday evenings.",
+   "recorder_gaps_live has an open-ended 'recorder_silent' row for the laptop recorder (Roshans-MacBook-Air) since 10:22 PM ET Oct 9. The Vultr recorder 'bringithome' took over at 10:21 PM, so this is a false gap, but PgStore.gap_overlaps() will now flag every bus or rail window after 10:22 PM as gapped. I ignored that row and used poll density plus closed gap rows instead.",
+   "Bus rows are stamped with the vehicle's clock, which lags the poll (p50 17 s, p90 26 s). Any as-of reconstruction must filter on polled_at <= t, not only ts.",
+   "trip_id flips at pull-out (p50 19 s after leaving the stop, p10 4 min before). The trip run therefore includes the layover at its end, so a trip switch is not the arrival time.",
+   "Some vehicles report trip_ids about 1 h off for a whole evening (e.g. vehicle 2329 on route 95). L_now was over 20 min in 7.3% of comes-back cases (54 vehicles). Carrying the delay still beats the timetable there (p50 370 s vs 2130 s), but these cases need a low-confidence flag.",
+   "An interlined next trip passes only about 20% of the outbound stops (p50). The bus usually returns past the stop only on its 3rd trip, about 2.6 h later. Treat an interline as not coming back unless the next trip has a stop within 400 m.",
+   "Block ends: 4.8% of weekday trips are a block's last, and 99% of those buses vanished in the recordings. Evening sampling raises this to 9.5% of cases. Check next_in_block before offering 'wait for it'.",
+   "6.6% of weekday pairs have zero or negative scheduled layover (through-routing on 140, 162, 118, 120, 3). There max(C0, L - (lay - M)) carries almost all of the delay, which is correct.",
+   "Terminal geometry matters: a 120 m vs 60 m zone changes the measured sit time by about 100 s. Route 7 parks 60-120 m from its GTFS stop (p50 sit 849 s vs 281 s).",
+   "'Vanished' cannot tell AVL-dark from out-of-service: in 61% of those cases nobody reported the return trip.",
+   "Walk-ahead feasibility comes mostly from loop routes and timepoint holds. Predicted-feasible picks suffer from selection bias (winner's curse), so cap the horizon. The walking model is straight line x 1.3 with no real paths or crossings.",
+   "The comes-back sample takes 3 stops per vehicle-trip, so cases are correlated. Deduplicated to one case per vehicle-trip: n=1074, |err| p50 131 s, p90 492 s.",
+   "C0 and M were fitted on the same evening they were tested on (separate vehicle halves and a different truth event), so there is no cross-day validation yet.",
+   "Shared scratch dir: I overwrote and briefly renamed another agent's /tmp/reunion-measure/db.py at the start (about 00:10-00:12 AM ET). Their version is restored, but one of their runs may have failed in that window. My files are only in /tmp/reunion-measure/bus2."
+  ],
+  "scripts": [
+   "/tmp/reunion-measure/bus2/run_all.sh",
+   "/tmp/reunion-measure/bus2/busq.py",
+   "/tmp/reunion-measure/bus2/load_cache.py",
+   "/tmp/reunion-measure/bus2/model2.py",
+   "/tmp/reunion-measure/bus2/t1_static_layover.py",
+   "/tmp/reunion-measure/bus2/t1b_kth_trip.py",
+   "/tmp/reunion-measure/bus2/t2_terminal.py",
+   "/tmp/reunion-measure/bus2/t2_fit.py",
+   "/tmp/reunion-measure/bus2/t3_comes_back.py",
+   "/tmp/reunion-measure/bus2/t3_analyze.py",
+   "/tmp/reunion-measure/bus2/t3_vanished.py",
+   "/tmp/reunion-measure/bus2/t3_constants.py",
+   "/tmp/reunion-measure/bus2/t4_walk_ahead.py",
+   "/tmp/reunion-measure/bus2/t4_analyze.py",
+   "/tmp/reunion-measure/bus2/t4_rule.py",
+   "/tmp/reunion-measure/bus2/t5_live_error.py",
+   "/tmp/reunion-measure/bus2/parity_sql.py"
+  ]
+ }
+}

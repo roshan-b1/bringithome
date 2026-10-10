@@ -139,7 +139,7 @@ class Item(BaseModel):
 
 
 class Intake(BaseModel):
-    """Tap answers only. Never GPS, free text, item descriptions, screenshots, names or phones."""
+    """Tap answers only. Never GPS, free text, item descriptions, names or phones."""
     item: Item
     mode: Literal["bus", "rail", "streetcar", "unknown"]
     route: str | None = Field(None, max_length=8)
@@ -365,6 +365,10 @@ class PlanRequest(BaseModel):
     vehicle_keys: list[str] = Field(default_factory=list, max_length=2)   # 2 on a tie
     user: PlanUser = Field(default_factory=PlanUser)
     as_of: datetime | None = None
+    # the plan screen's optional taps, for this plan only (the stored session keeps its own answers):
+    # taken turns on the safety card and its order, car is the platform hint
+    taken: Literal["no", "maybe", "yes"] | None = None
+    car: Literal["front", "middle", "back"] | None = None
 
 
 class LostFound(BaseModel):
@@ -389,7 +393,7 @@ class Meet(BaseModel):
 
 
 class CardAction(BaseModel):
-    type: Literal["copy", "tel", "mailto", "link", "ics"]
+    type: Literal["copy", "tel", "mailto", "link", "ics", "directions"]   # directions: value is "lat,lon" of a stop
     label_id: str
     value: str
 
@@ -402,8 +406,8 @@ class CardEvidence(BaseModel):
 
 
 class Card(BaseModel):
-    kind: Literal["safety", "bag_staff", "meet", "too_far", "tell_staff", "keep", "report", "call",
-                  "freeze_cards", "phone_lost", "police_property"]
+    kind: Literal["safety", "bag_staff", "meet", "wait_return", "meet_end", "switch_platform", "too_far",
+                  "tell_staff", "keep", "report", "call", "freeze_cards", "phone_lost", "police_property"]
     step: int
     facts: dict[str, str | int | float]
     fact_sources: dict[str, Literal["db", "static_gtfs", "contacts", "rules"]]
@@ -442,6 +446,58 @@ class Report(BaseModel):
     call_script: Wording
 
 
+# 10a. reunion: every way back to the item, soonest first (reunion.py) --------------------------
+
+ReunionKind = Literal["walk_ahead", "shared_track", "switch_platform", "wait_here", "wait_on_return", "meet_at_end"]
+ReunionReason = Literal[
+    "ahead", "too_far", "block_ends", "interline_away", "may_leave_service", "night_short_turn", "not_live",
+    "no_location", "layover_too_short", "not_shared", "not_dead_end", "not_turned", "not_on_train", "on_train",
+    "no_trip", "tie", "too_soon", "no_return_stop", "not_seen", "already_left", "no_train_to_end", "not_matched"]
+ReunionNote = Literal[
+    "usually_comes_back", "running_very_late", "evening_not_certain", "after_midnight_unmeasured",
+    "vanished_still_expected", "watch_train", "watch_after_turn", "schedule_not_in_effect", "change_platform",
+    "assumed_location", "may_come_before_you", "night", "timetable_only", "at_the_end_of_the_line",
+    "late_still_expected"]
+
+
+class ReunionOption(BaseModel):
+    kind: ReunionKind
+    rank: int                           # 1 is the soonest
+    recommended: bool                   # the best-ranked option that is not low confidence (at most one)
+    vehicle_keys: list[str]
+    place_id: str                       # "station:<parent>" | "stop:<stop_id>"
+    place_label: str
+    direction: Dir | None = None        # rail: the platform's direction ("Wait at West End northbound")
+    platform_hint: Literal["front", "middle", "back"] | None = None
+    stop_lat: float                     # the place's public coordinates, for a Directions button; never the rider's
+    stop_lon: float
+    reunion_at: datetime                # when the rider and the item are together, as predicted
+    window_from: datetime               # when the vehicle may be there: the uncertainty, or a layover's span
+    window_to: datetime
+    leave_by: datetime | None = None    # the latest moment to set off and still keep the margin; null on board
+    walk_s: int                         # seconds until the rider is in place (walk, platform, ride, step-off)
+    wait_s: int                         # then seconds of waiting until reunion_at
+    margin_s: int                       # spare seconds in the rule that made it feasible
+    basis: Literal["live", "estimate", "timetable"]
+    confidence: Literal["high", "usual", "low"]
+    note_ids: list[ReunionNote]
+    facts: dict[str, str | int | float]
+    fact_sources: dict[str, Literal["db", "static_gtfs", "contacts", "rules"]]
+
+
+class NotOffered(BaseModel):
+    kind: ReunionKind
+    reason: ReunionReason
+
+
+class Reunion(BaseModel):
+    options: list[ReunionOption]        # feasible only, ranked; empty when nothing can be promised
+    not_offered: list[NotOffered]       # every kind of this mode that is not in options, with why
+    rider_location: Literal["gps", "chosen", "assumed_alight", "on_train", "none"]
+    computed_at: datetime
+    source: Source
+
+
 class Plan(BaseModel):
     generated_at: datetime
     lost_found: LostFound
@@ -449,6 +505,7 @@ class Plan(BaseModel):
     cards: list[Card]
     report: Report
     source: Source
+    reunion: Reunion | None = None      # the reunion planner's answer for the same vehicles (None without a meet ask)
 
 
 # 6. parse (typed or spoken where-and-when clues; taps never call it) ----------------

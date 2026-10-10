@@ -167,6 +167,53 @@ ADVERSARIAL = {
     "a week before": lambda t: _with(t, "on [[DATE]]", "a week before [[DATE]]"),
     "or a bit later": lambda t: _with(t, "at [[TIME]]", "at [[TIME]] or a bit later"),
     "a duration": lambda t: _with(t, "Has anything", "I waited for an hour. Has anything"),
+    # a word that names a fact has moved or changed: the tokens are intact, the facts are not
+    "swapped bus and route numbers": lambda t: _with(t, "bus [[VEHICLE]], route [[ROUTE]]",
+                                                     "bus [[ROUTE]], route [[VEHICLE]]"),
+    "a bus number called a route": lambda t: _with(t, "bus [[VEHICLE]]", "route [[VEHICLE]] bus"),
+    "got on for got off": lambda t: _with(t, "I got off at", "I got on at"),
+    "departed for got off": lambda t: _with(t, "I got off at", "I departed at"),
+    # a word before a token that doesn't fit the value that replaces it
+    "my before the item": lambda t: _with(t, "I left [[ITEM]]", "I left my [[ITEM]]"),
+    "around before the time": lambda t: _with(t, "at [[TIME]]", "around [[TIME]]"),
+    "near the stop": lambda t: _with(t, "at [[STOP]]", "near [[STOP]]"),
+    # a negation, or a word that moves the fact, next to a token (the review's cases, Oct 9)
+    "never got off": lambda t: _with(t, "I got off at [[STOP]]", "I never got off at [[STOP]]"),
+    "a negated stop": lambda t: _with(t, "I got off at [[STOP]] on", "I got off, though not at [[STOP]], on"),
+    "one stop further": lambda t: _with(t, "at [[STOP]] on", "at [[STOP]], or one stop further, on"),
+    "or afterwards": lambda t: _with(t, "at [[TIME]].", "at [[TIME]] or afterwards."),
+    "a day-only shift": lambda t: _with(t, "at [[TIME]].", "at [[TIME]], late in the day."),
+    "got off and got on": lambda t: _with(t, "I got off at", "I got off and got on at"),
+    # the direction: only after a verb of travel, and no compass word of the model's own
+    "heading away from": lambda t: _with(t, "heading [[DIRECTION]]", "heading away from [[DIRECTION]]"),
+    "coming from": lambda t: _with(t, "heading [[DIRECTION]]", "coming from [[DIRECTION]]"),
+    "a negated direction": lambda t: _with(t, "heading [[DIRECTION]]", "heading away from the city, not [[DIRECTION]]"),
+    "a compass word": lambda t: _with(t, "heading [[DIRECTION]]", "heading [[DIRECTION]], northbound"),
+    "a bound word": lambda t: _with(t, "Has anything", "It was outbound. Has anything"),
+    "no verb of travel": lambda t: _with(t, "heading [[DIRECTION]]", "at [[DIRECTION]]"),
+    # the item stays on the vehicle, and no item of the model's own
+    "left at the shelter": lambda t: _with(t, "I left [[ITEM]] on bus", "I left [[ITEM]] at the shelter by bus"),
+    "near the bus": lambda t: _with(t, "on bus [[VEHICLE]]", "near bus [[VEHICLE]]"),
+    "an invented item": lambda t: _with(t, "I left [[ITEM]]", "I left [[ITEM]] and my black backpack"),
+    "an item of its own": lambda t: _with(t, "Has anything", "It was in my backpack. Has anything"),
+    "a person's name": lambda t: _with(t, "Has anything", "The man, Marcus, saw it. Has anything"),
+    # times of day, counts, places and numerals the denylist missed
+    "dinnertime": lambda t: _with(t, "Has anything", "I noticed at dinnertime. Has anything"),
+    "breakfast": lambda t: _with(t, "Has anything", "I noticed at breakfast. Has anything"),
+    "after school": lambda t: _with(t, "Has anything", "It was after school. Has anything"),
+    "the commute": lambda t: _with(t, "Has anything", "It was during the commute. Has anything"),
+    "a couple of stops": lambda t: _with(t, "Has anything", "I rode a couple of stops. Has anything"),
+    "several": lambda t: _with(t, "Has anything", "I asked several people. Has anything"),
+    "twice": lambda t: _with(t, "Has anything", "I called twice. Has anything"),
+    "both": lambda t: _with(t, "Has anything", "I had both of them. Has anything"),
+    "a street name": lambda t: _with(t, "Has anything", "I was on Piedmont. Has anything"),
+    "a lower-case street": lambda t: _with(t, "Has anything", "I walked down piedmont avenue. Has anything"),
+    "a landmark": lambda t: _with(t, "Has anything", "I was near Ponce City Market. Has anything"),
+    "the Capitol": lambda t: _with(t, "Has anything", "I was near the Capitol. Has anything"),
+    "a bay letter": lambda t: _with(t, "Has anything", "I waited at bay c. Has anything"),
+    "a circled digit": lambda t: _with(t, "Has anything", "I was on platform \u2461. Has anything"),
+    "a roman numeral": lambda t: _with(t, "Has anything", "I was near gate \u216b. Has anything"),
+    "a superscript": lambda t: _with(t, "Has anything", "I think\u00b2. Has anything"),
 }
 
 
@@ -277,7 +324,7 @@ def test_plain_uses_of_one_after_and_day_still_pass(names):
 
 def test_plain_words_that_look_like_dates_or_times_are_fine(names):
     template = "I left [[ITEM]] on [[DATE]] at [[TIME]]."
-    assert validate("May I ask about [[ITEM]]? I lost it on [[DATE]] at [[TIME]].", template, names) == []
+    assert validate("May I ask about it? I left [[ITEM]] on [[DATE]] at [[TIME]].", template, names) == []
     assert validate("I am sure I left [[ITEM]] on [[DATE]] at [[TIME]].", template, names) == []
     assert validate("I left [[ITEM]] in May, on [[DATE]] at [[TIME]].", template, names)
     assert validate("I left [[ITEM]] on [[DATE]] at [[TIME]] p.m.", template, names)
@@ -288,6 +335,135 @@ def test_place_names_come_from_stops_stations_aliases_and_routes(names):
     assert "piedmont avenue se gilmer street se" in {" ".join(p) for p in names.phrases}
     assert names.find("on the Gold line") == ["gold"]
     assert names.find("I left my bag on the bus") == []
+
+
+# ----------------------------------------------------------------------------- the word before a token, and roles
+# (the stricter checks added with the Gemini hook, from real answers on Oct 9)
+
+# Sentences the real model wrote for the full train and bus templates: they passed every fact check, but "my
+# [[ITEM]]" would read "my a black backpack" and "around [[TIME]]" "around about 3:34 PM".
+MISFITS = [
+    "I accidentally left my [[ITEM]] on a [[ROUTE]] Line train.",
+    "I stepped off at [[STOP]] on [[DATE]], around [[TIME]].",
+    "I exited at [[STOP]] on [[DATE]], near [[TIME]].",
+    "I left [[ITEM]] on a train going toward [[DIRECTION]].",
+    "I got off at the [[STOP]] on [[DATE]], at [[TIME]].",
+    "I got off at [[STOP]] [[DATE]], at [[TIME]].",
+    "My journey ended [[STOP]] on [[DATE]], at [[TIME]].",
+    "[[TIME]] is when I got off.",
+    "I left [[ITEM]] on the [[VEHICLE]].",
+]
+FITS = [
+    "I misplaced [[ITEM]] aboard a [[ROUTE]] Line train moving [[DIRECTION]].",
+    "I stepped off at [[STOP]] on [[DATE]], at [[TIME]].",
+    "I left [[ITEM]] on bus [[VEHICLE]], route [[ROUTE]], traveling [[DIRECTION]].",
+]
+
+
+@pytest.mark.parametrize("sentence", MISFITS)
+def test_a_word_before_a_token_must_fit_the_value_that_replaces_it(sentence, names):
+    assert wording._misfits(sentence), sentence
+    assert any("doesn't fit its value" in p for p in validate(sentence, sentence, names))
+
+
+@pytest.mark.parametrize("sentence", FITS)
+def test_natural_rephrasings_around_tokens_still_fit(sentence, names):
+    assert wording._misfits(sentence) == []
+    assert validate(sentence, sentence, names) == []
+
+
+def test_every_template_fits_its_own_tokens():
+    for t in all_templates():
+        for text in (t.email_body, t.call_script):
+            assert wording._misfits(text) == [] and wording._role_changed(text, text) == [], t.key
+
+
+@pytest.mark.parametrize("role,old,new", [
+    ("alight", "I got off at [[STOP]]", "I departed at [[STOP]]"),      # a real answer for a rider who got off
+    ("alight", "I got off at [[STOP]]", "I got on at [[STOP]]"),
+    ("alight", "I got off at [[STOP]]", "I boarded at [[STOP]]"),
+    ("alight", "I got off at [[STOP]]", "I was at [[STOP]]"),
+    ("board", "I got on at [[STOP]]", "I got off at [[STOP]]"),
+    ("board", "I got on at [[STOP]]", "I exited at [[STOP]]"),
+    ("board", "I got on at [[STOP]]", "I departed from [[STOP]]"),
+])
+def test_got_off_or_got_on_must_stay_as_the_template_says(role, old, new, names):
+    t = templates_for("bus", VALUES, role)
+    for template in (t.email_body, t.call_script):
+        assert old in template
+        assert any("role changed" in p for p in validate(template.replace(old, new), template, names))
+        assert validate(template.replace(old, old.replace("I ", "I think I ", 1)), template, names) == []
+
+
+@pytest.mark.parametrize("role,old,new", [
+    ("alight", "I got off at [[STOP]]", "I stepped off at [[STOP]]"),
+    ("alight", "I got off at [[STOP]]", "I exited at [[STOP]]"),
+    ("alight", "I got off at [[STOP]]", "I disembarked at [[STOP]]"),
+    ("board", "I got on at [[STOP]]", "I boarded at [[STOP]]"),
+    ("board", "I got on at [[STOP]]", "I stepped onto it at [[STOP]]"),
+])
+def test_a_plain_synonym_for_got_off_or_got_on_keeps_the_role(role, old, new, names):
+    t = templates_for("bus", VALUES, role)
+    for template in (t.email_body, t.call_script):
+        assert validate(template.replace(old, new), template, names) == []
+
+
+@pytest.mark.parametrize("mode,old,new", [
+    ("bus", "bus [[VEHICLE]], route [[ROUTE]]", "bus [[ROUTE]], route [[VEHICLE]]"),   # every token kept, swapped
+    ("bus", "bus [[VEHICLE]], route [[ROUTE]]", "[[VEHICLE]], route [[ROUTE]]"),
+    ("rail", "train run [[VEHICLE]]", "railcar [[VEHICLE]]"),          # a run number is never a car number
+    ("rail", "train run [[VEHICLE]]", "train [[VEHICLE]]"),
+    ("rail", "a [[ROUTE]] Line train", "a train on line [[ROUTE]]"),
+    ("bus", "route [[ROUTE]]", "stop [[ROUTE]]"),                      # the route number relabeled, bus kept
+])
+def test_the_word_that_names_each_number_stays_next_to_it(mode, old, new, names):
+    t = templates_for(mode, VALUES, "alight")
+    for template in (t.email_body, t.call_script):
+        problems = validate(template.replace(old, new), template, names)
+        assert any("role changed" in p for p in problems), problems
+
+
+@pytest.mark.parametrize("mode,old,new", [
+    ("bus", "bus [[VEHICLE]], route [[ROUTE]]", "bus number [[VEHICLE]] on route [[ROUTE]]"),
+    ("rail", "a [[ROUTE]] Line train", "a [[ROUTE]] line train"),
+    ("rail", "MARTA's public feeds list it as train run [[VEHICLE]]", "Public feeds show it as train run [[VEHICLE]]"),
+])
+def test_the_number_words_may_be_rephrased_around_their_anchor(mode, old, new, names):
+    t = templates_for(mode, VALUES, "alight")
+    for template in (t.email_body, t.call_script):
+        assert validate(template.replace(old, new), template, names) == []
+
+
+@pytest.mark.parametrize("mode,have,old,new", [
+    ("rail", VALUES, "a [[ROUTE]] Line train", "a [[ROUTE]] Line bus"),
+    ("bus", {"ROUTE": "49", "STOP": "x"}, "a route [[ROUTE]] bus", "a route [[ROUTE]] train"),
+    ("bus", {"ROUTE": "49", "STOP": "x"}, "a route [[ROUTE]] bus", "a route [[ROUTE]] streetcar"),
+    ("streetcar", VALUES, "the streetcar", "the bus"),
+    ("streetcar", VALUES, "the streetcar", "a train"),
+    ("unknown", VALUES, "a bus or train", "a bus"),
+])
+def test_the_kind_of_vehicle_stays_as_the_template_says(mode, have, old, new, names):
+    t = templates_for(mode, have, "alight")
+    for template in (t.email_body, t.call_script):
+        assert old in template
+        problems = validate(template.replace(old, new), template, names)
+        assert any("role changed" in p for p in problems), problems
+
+
+def test_a_rewording_may_still_name_its_own_vehicle_again(names):
+    t = templates_for("bus", VALUES, "alight")
+    again = t.call_script.replace("I got off at [[STOP]]", "I got off the bus at [[STOP]]")
+    assert validate(again, t.call_script, names) == []
+
+
+def test_a_real_rail_rewording_passes_every_check(names):
+    """The rail call script Gemini wrote on Oct 9 (gemini-3.5-flash-lite), as cached."""
+    t = templates_for("rail", VALUES, "alight")
+    real = ("Hi, I am calling about a missing item. I accidentally left [[ITEM]] aboard a [[ROUTE]] Line train "
+            "traveling [[DIRECTION]]. Public feeds show it as train run [[VEHICLE]]. I got off at [[STOP]] on "
+            "[[DATE]], at [[TIME]]. I also sent an online report. Could you tell me if anything matches this "
+            "description, and what I ought to do?")
+    assert validate(real, t.call_script, names) == []
 
 
 # ----------------------------------------------------------------------------- the copy lint itself
@@ -315,8 +491,8 @@ def test_the_allowlist_lets_negated_safety_lines_and_run_numbers_through(text):
     ("Our AI found it.", "banned_word"), ("A.I. matching", "banned_word"), ("It helps as therapy.", "banned_word"),
     ("The bus is running late.", "banned_word"), ("Cross the tracks to the other side.", "banned_word"),
     ("MARTA will hold the train for you.", "promise"), ("We'll contact the driver.", "promise"),
-    ("The bus will wait for you.", "promise"), ("Breathe \u2014 slowly.", "dash"), ("8\u20139 AM", "dash"),
-    ("Step one -- breathe.", "dash"), ("No, run for it.", "banned_word"), ("Jump on.", "banned_word"),
+    ("The bus will wait for you.", "promise"), ("Wait here \u2014 slowly.", "dash"), ("8\u20139 AM", "dash"),
+    ("Step one -- tell staff.", "dash"), ("No, run for it.", "banned_word"), ("Jump on.", "banned_word"),
     ("Rush over.", "banned_word"), ("It is a treatment.", "banned_word"),
 ])
 def test_the_lint_flags_unsafe_and_off_brand_copy(text, kind):

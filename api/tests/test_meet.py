@@ -252,11 +252,16 @@ def test_train_horizon_is_inclusive_at_exactly_1200_s():
     assert not M.onboard_feasible(T + 1200 * S + MS, T + 600 * S, T)
 
 
-def test_bus_margin_is_inclusive_at_exactly_180_s_and_the_walk_at_exactly_900_s():
-    assert M.bus_margin_s(T + 240 * S, T, 60) == 180 and M.bus_feasible(T + 240 * S, T, 60)
-    assert not M.bus_feasible(T + 240 * S - MS, T, 60)
-    assert M.bus_feasible(T + 1080 * S, T, 900)
-    assert not M.bus_feasible(T + 3000 * S, T, 900.001)                 # however much time: a 15 min walk at most
+def test_bus_walk_ahead_needs_300_s_inclusive_and_the_bus_at_most_10_min_away():
+    # 180 s plus the measured 2 min buffer (walk_ahead_intermediate, n=62,772)
+    assert M.bus_margin_s(T + 360 * S, T, 60) == 300 and M.bus_feasible(T + 360 * S, T, 60)
+    assert not M.bus_feasible(T + 360 * S - MS, T, 60)
+    # the horizon: without it predicted-feasible walks failed 14 to 19% of the time
+    assert M.bus_feasible(T + 600 * S, T, 60) and not M.bus_feasible(T + 600 * S + MS, T, 60)
+    assert not M.bus_feasible(T + 3000 * S, T, 900)                     # however much margin: 10 min at most
+    # so the longest walk that can still make a bus is 300 s; the 15 min cap stays in the rule regardless
+    assert M.bus_feasible(T + 600 * S, T, 300) and not M.bus_feasible(T + 600 * S, T, 300.001)
+    assert M.BUS_FLOOR_S == 180                                          # the /now withdraw floor is unchanged
 
 
 def test_walk_seconds_and_the_1500_m_reach():
@@ -423,37 +428,42 @@ def bus_stop(i):
     return sid, (BUS_LON, lat)
 
 
-def test_bus_picks_the_earliest_stop_that_clears_3_min(index):
+def test_bus_picks_the_earliest_stop_that_clears_5_min(index):
     sid4, p4 = bus_stop(4)
-    bag = bus_v("1401", (bus_stop(2)[0], T + 60 * S), (bus_stop(3)[0], T + 150 * S), (sid4, T + 300 * S),
+    bag = bus_v("1401", (bus_stop(2)[0], T + 60 * S), (bus_stop(3)[0], T + 150 * S), (sid4, T + 360 * S),
                 (bus_stop(5)[0], T + 450 * S))
     got = M.decide(index, [bag], Rider(point=p4, fix=p4), T)
     assert got == {"possible": True, "reason": "meet", "vehicle_keys": ["bus:1401"], "place_id": f"stop:{sid4}",
-                   "place_label": sid4, "eta": [T + 300 * S], "walk_s": 60, "margin_min": 4}
+                   "place_label": sid4, "eta": [T + 360 * S], "walk_s": 60, "margin_min": 5}
+    one_second_short = bus_v("1401", (sid4, T + 359 * S), (bus_stop(5)[0], T + 450 * S))
+    assert M.decide(index, [one_second_short], Rider(point=p4), T)["reason"] == "too_far"
     assert "platform_hint" not in M.decide(index, [bag], Rider(point=p4), T, car="front")
 
 
-def test_a_slow_walker_gets_a_later_stop(index):
-    (sid4, p4), (sid5, p5) = bus_stop(4), bus_stop(5)
-    mid = (BUS_LON, (p4[1] + p5[1]) / 2)                                  # about 200 m from both
-    d = haversine_m(mid[0], mid[1], *p4)
-    bag = bus_v("1401", (sid4, T + math.ceil(M.walk_seconds(d) + 180) * S), (sid5, T + 650 * S))
-    normal = M.decide(index, [bag], Rider(point=mid), T)
-    slow = M.decide(index, [bag], Rider(point=mid, walk="slow"), T)
-    assert (normal["place_id"], slow["place_id"]) == (f"stop:{sid4}", f"stop:{sid5}")
-    assert slow["walk_s"] == 432 and normal["walk_s"] == 321
+def test_a_slow_walker_needs_more_time_and_is_not_sent_where_a_normal_walker_is(index):
+    (sid4, p4), (sid5, _p5) = bus_stop(4), bus_stop(5)
+    near = (BUS_LON, p4[1] - 150 / 6371008.8 * 57.29577951308232)        # 150 m south of stop 4
+    d = haversine_m(near[0], near[1], *p4)
+    bag = bus_v("1401", (sid4, T + math.ceil(M.walk_seconds(d) + 300) * S), (sid5, T + 700 * S))
+    normal = M.decide(index, [bag], Rider(point=near), T)
+    slow = M.decide(index, [bag], Rider(point=near, walk="slow"), T)
+    assert (normal["reason"], normal["place_id"], normal["walk_s"]) == ("meet", f"stop:{sid4}", 256)
+    # slowly the walk is 339 s (256 s at the normal pace), which the margin no longer covers, and stop 5 is
+    # past the 10 min horizon
+    assert slow == M.no_meet("too_far", ["bus:1401"])
 
 
 def test_bus_stops_beyond_1500_m_are_not_considered_and_long_walks_fail(index):
     sid1, p1 = bus_stop(1)
     north = lambda m: (p1[0], p1[1] + m / 6371008.8 * 57.29577951308232)   # noqa: E731  m metres due north
-    bag = bus_v("1401", (sid1, T + 3000 * S))
+    bag = bus_v("1401", (sid1, T + 600 * S))
     assert [o.place_id for o in M.bus_verdict(index, bag, Rider(point=north(1499.9)), T).options] == [f"stop:{sid1}"]
     assert M.bus_verdict(index, bag, Rider(point=north(1500.1)), T).options == ()
-    # inside 1.5 km but a walk over 15 min: listed, never feasible
+    # inside 1.5 km but a walk the 10 min bus can't wait for: listed, never feasible
     assert not M.bus_verdict(index, bag, Rider(point=north(1499.9)), T).options[0].feasible
-    assert M.decide(index, [bag], Rider(point=north(646)), T)["reason"] == "meet"
-    assert M.decide(index, [bag], Rider(point=north(647)), T)["reason"] == "too_far"
+    # the bus 10 min out leaves 300 s of walk: 1.3 d + 60 <= 300 reaches 184.6 m
+    assert M.decide(index, [bag], Rider(point=north(184)), T)["reason"] == "meet"
+    assert M.decide(index, [bag], Rider(point=north(185)), T)["reason"] == "too_far"
 
 
 def bus_world(data_dir, *, stops, vehicle="1401", fix_lat=33.7610, ts=T - 10 * S):
@@ -465,18 +475,18 @@ def bus_world(data_dir, *, stops, vehicle="1401", fix_lat=33.7610, ts=T - 10 * S
 
 
 def test_a_live_bus_meet_end_to_end_from_a_chosen_stop(tmp_path, feed, index):
-    stops = [(bus_stop(i)[0], T + s * S) for i, s in ((2, 60), (3, 150), (4, 300), (5, 450), (6, 600))]
+    stops = [(bus_stop(i)[0], T + s * S) for i, s in ((2, 60), (3, 150), (4, 360), (5, 450), (6, 600))]
     rows, tu = bus_world(tmp_path, stops=stops)
     store = MemoryStore(Schedule(feed), rows=rows)
     body = vehicle_now(store, index, "bus", "1401", T, as_of=False, data_dir=tmp_path, tripupdates=tu)
     assert {s["source"] for s in body["next_stops"]} == {"live"}
     got = plan(feed, index, tmp_path, rows, ["bus:1401"], {"place_id": f"stop:{bus_stop(4)[0]}"}, tripupdates=tu)
     assert (got["reason"], got["place_id"], got["walk_s"], got["margin_min"]) == \
-        ("meet", f"stop:{bus_stop(4)[0]}", 60, 4)
+        ("meet", f"stop:{bus_stop(4)[0]}", 60, 5)
 
 
 def test_a_chosen_stop_wins_over_the_phone_fix(tmp_path, feed, index):
-    stops = [(bus_stop(i)[0], T + s * S) for i, s in ((2, 60), (3, 150), (4, 300), (5, 450), (6, 600))]
+    stops = [(bus_stop(i)[0], T + s * S) for i, s in ((2, 60), (3, 150), (4, 360), (5, 450), (6, 600))]
     rows, tu = bus_world(tmp_path, stops=stops)
     _, (lon1, lat1) = bus_stop(1)
     user = {"place_id": f"stop:{bus_stop(4)[0]}", "lat": lat1, "lon": lon1, "accuracy_m": 10, "fix_age_s": 2}

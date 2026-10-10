@@ -182,3 +182,19 @@ def test_whole_now_bodies_agree(world, mode, vid, as_of):
         assert [s["place_id"] for s in a["next_stops"]] == ["stop:213002", "stop:213003"]
     if vid == "407":                     # newer keyed-only polls never make a 400 s old position live
         assert (a["at"], a["state"]) == (T - 400 * S, "stale")
+
+
+@pytest.mark.parametrize("vid,as_of", [("1401", False), ("1401", True), ("1402", True), ("1403", True),
+                                       ("1404", True), ("nope", True)])
+def test_the_reunion_planners_bus_state_agrees(world, vid, as_of):
+    """busturn.bus_state reads only parity-held reads (latest_rows, freshness_ref, trip_info, trip_stops,
+    next_block_trip and replay's track_rows); the whole state it builds must come out the same on both paths."""
+    from backtrack_api import busturn
+
+    feed, _, pg, mem, data_dir = world
+    index = PlaceIndex.from_feed(feed)
+    a = busturn.bus_state(pg.with_horizon(T) if as_of else pg, index, vid, T, as_of=as_of, data_dir=data_dir)
+    b = busturn.bus_state(mem.with_horizon(T) if as_of else mem, index, vid, T, as_of=as_of, data_dir=data_dir)
+    assert vars(a) == vars(b)
+    if vid == "1401":                    # on t49a, whose block continues as route 21
+        assert a.trip.trip_id == "t49a" and a.next_trip.trip_id == "t21a" and a.reason is None

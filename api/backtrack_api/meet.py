@@ -23,9 +23,16 @@ floor is a meet):
     feasible S in R's order wins.
   BUS, rider at P (a chosen place, else a fix with accuracy <= 100 m and age < 30 s)
     each upcoming LIVE stop X within 1500 m straight line: walk_s = 1.3 * |PX| / v + 60 with
-    v = 1.0 m/s, or 0.7 for "I walk slowly"; feasible if ETA(X) - now - walk_s >= 180 and
-    walk_s <= 900; the earliest feasible X wins. Only the 5 stops /now shows are considered,
-    so the meet stop is always on the rider's now card and the withdraw check always finds it.
+    v = 1.0 m/s, or 0.7 for "I walk slowly"; feasible if ETA(X) - now - walk_s >= 180 + 120,
+    ETA(X) - now <= 600 and walk_s <= 900; the earliest feasible X wins. Only the 5 stops /now
+    shows are considered, so the meet stop is always on the rider's now card and the withdraw
+    check always finds it.
+    The 2 min buffer and the 10 min horizon are measured (docs/reunion-measurements.json, bus
+    "walk_ahead_intermediate", n=62,772 rider moments): walking ahead to a stop on the current trip
+    was truly possible in only 0.8% of moments, and without the horizon cap the predicted-feasible
+    walks failed 14 to 19% of the time (16.6% of 193 with the buffer alone: a winner's curse on
+    optimistic predictions). With both, 14 recommendations, 0 misses. The withdraw check below keeps
+    the 180 s floor: the buffer is for deciding, not for standing at the stop.
   TWO candidates (a tie): a place only if it is feasible for both; the Meet names both ETAs. For
     two trains and a rider at or near a station, also only where both run the same way and their
     lines stop at the same platform_stop_id there (one_platform): a station id names every
@@ -50,8 +57,8 @@ Reasons (models.Meet.reason), for the integrator's card choice:
               the two candidates are a bus and a train
   ahead       the bag train already passed the rider's station, or reaches the first shared
               station before the rider's train (the plan shows tell_staff)
-  too_far     all live and shared, but no place clears the margin, the 20 min horizon, the
-              15 min walk or 1.5 km; or there is no usable rider location (no chosen place, no
+  too_far     all live and shared, but no place clears the margin, the horizon (train 20 min, bus
+              10 min), the 15 min walk or 1.5 km; or there is no usable rider location (no chosen place, no
               fix within 100 m and 30 s; a chosen station without "I'm at the station" and no
               fix); or a rider on a train with the bag on a bus
 On a tie, the first failing reason in that order (stale, no_eta, not_shared, ahead, too_far)
@@ -104,7 +111,10 @@ TRAIN_PAD_S = 30            # rail ETAs run 18 to 22 s optimistic (decision 9)
 HORIZON_S = 1200            # ETA_bag(S) - now <= 20 min
 PLATFORM_S = 90             # faregates and stairs to the platform
 STEP_OFF_S = 60             # off the rider's train and onto the right spot of the platform
-BUS_FLOOR_S = 180           # a judgment call, not a measured TripUpdates error (decision 9)
+BUS_FLOOR_S = 180           # decision 9's floor; the /now withdraw check uses it while the rider walks
+BUS_BUFFER_S = 120          # planning a bus walk-ahead: + 2 min buffer (walk_ahead_intermediate, n=62,772)
+BUS_WALK_FLOOR_S = BUS_FLOOR_S + BUS_BUFFER_S    # 300 s
+BUS_HORIZON_S = 600         # and the bus at most 10 min away: without the cap, 14 to 19% of picks failed
 BUS_PAD_S = 0
 WALK_DETOUR = 1.3           # streets are not straight lines
 WALK_FIXED_S = 60           # crossings and lights
@@ -150,7 +160,9 @@ def bus_margin_s(eta: datetime, t: datetime, walk_s: float) -> float:
 
 
 def bus_feasible(eta: datetime, t: datetime, walk_s: float) -> bool:
-    return bus_margin_s(eta, t, walk_s) >= BUS_FLOOR_S and walk_s <= MAX_WALK_S
+    """Walking ahead to meet a bus: margin >= 180 + 120 s, the bus at most 10 min away, a walk of 15 min at most."""
+    return (bus_margin_s(eta, t, walk_s) >= BUS_WALK_FLOOR_S and (eta - t).total_seconds() <= BUS_HORIZON_S
+            and walk_s <= MAX_WALK_S)
 
 
 def near_enough(distance_m: float) -> bool:

@@ -19,7 +19,10 @@ Where every fact comes from:
 Card order (decision 10):
   1 safety       taken is Maybe or Yes: wb_12_safe with MARTA Police and 911
   2 bag_staff    every transit loss: bag_01_staff; a train loss adds tracks_01
-  3 meet         a meet is possible, else too_far (only when a meet was asked for) plus tell_staff
+  3 meet         a meet is possible; else the reunion planner's recommended way back when it is a wait
+                 (wait_return), the end of the line (meet_end) or a ride and a platform change
+                 (switch_platform), each with its facts; else too_far (only when a meet was asked for).
+                 tell_staff follows whenever there is no meet: reporting the item never waits on a plan
   4 keep         the vehicle summary (plan_body_1)
   5 report       MARTA's form fields with values, an Open form link and a Copy action (plan_body_3)
   6 call         weekday hours, or after hours with the next opening and an ics reminder (plan_body_4_*)
@@ -38,9 +41,18 @@ uncertain, not_reporting and no_match never name a vehicle and never get a meet 
 guess must not send anyone across town), but still get bag_staff, tell_staff, keep, report (with the
 candidates note at uncertain) and call, built from the rider's clue.
 
-Privacy (decision 16): the rider's location in the request's user block goes to meet.plan_meet for this
-one call and is never stored, logged or returned. A plan carries places, times and seconds, never
-coordinates.
+The reunion planner (reunion.py) answers alongside the meet, for the same vehicles and the same rider:
+reunion.resolve_user decides once where the rider stands (a chosen place, a trusted fix, their train, or
+where they got off), and both use it. walk_ahead and shared_track ARE the meet's verdict, and a possible
+meet is the reunion's rank 1, so the meet card and the top option can never disagree.
+
+The request may override two of the session's taps for this plan only (the stored session keeps its own):
+taken (no, maybe, yes) turns the safety card and its order on or off, and car (front, middle, back) is the
+platform hint on the meet and the reunion's train options.
+
+Privacy (decision 16): the rider's location in the request's user block goes to meet.plan_meet and the
+reunion planner for this one call and is never stored, logged or returned. A plan carries places, times
+and seconds, never coordinates (a reunion option carries its stop's own public coordinates).
 """
 
 from __future__ import annotations
@@ -53,7 +65,7 @@ from typing import Any
 
 from backtrack_worker.timeutil import ATL
 
-from . import contacts, meet
+from . import contacts, meet, reunion
 from . import report as report_mod
 from . import wording
 from .models import CardAction, PlanRequest, PlanUser
@@ -64,8 +76,10 @@ from .trains import _direction_toward
 UTC = timezone.utc
 THEFT = ("maybe", "yes")                        # "Do you think someone took it?"
 NAMED = ("matched", "ambiguous")                # statuses whose chosen vehicles the plan names (and may meet)
-ORDER = ("safety", "bag_staff", "meet", "too_far", "tell_staff", "keep", "report", "call",
-         "freeze_cards", "phone_lost", "police_property")
+ORDER = ("safety", "bag_staff", "meet", "wait_return", "meet_end", "switch_platform", "too_far", "tell_staff",
+         "keep", "report", "call", "freeze_cards", "phone_lost", "police_property")
+REUNION_CARDS = {"wait_here": "wait_return", "wait_on_return": "wait_return", "meet_at_end": "meet_end",
+                 "switch_platform": "switch_platform"}
 FIRST = ("safety", "bag_staff", "freeze_cards")  # wallet or theft: "freeze cards first"
 LINE_NAMES = report_mod.LINE_NAMES
 INFO_LINES = ("customer_service", "route_schedule_info")   # other MARTA lines worth a call while the office is shut
@@ -76,11 +90,19 @@ INFO_LINES = ("customer_service", "route_schedule_info")   # other MARTA lines w
 # card to it.
 REPORT_SLOTS = frozenset({"route_number", "bus_number", "direction", "location", "time", "rail_line", "rail_station",
                           "train_run", "candidates_note", "form_reason"})
+REUNION_SLOTS = frozenset({"mode", "vehicle", "label", "train_run", "stop", "time", "window_from", "window_to",
+                           "minutes", "walk_min", "leave_by", "toward", "night", "platform_hint", "pulls_out",
+                           "departs", "get_off_at", "ride_run", "ride_toward", "off_time", "board_at", "board_time",
+                           "confidence", "usually", "assumed"})
 COPY: dict[str, tuple[tuple[str, ...], frozenset[str]]] = {
     "safety": (("wb_12_safe",), frozenset({"police_non_emergency", "emergency_911"})),
     "bag_staff": (("bag_01_staff", "tracks_01"), frozenset({"police_non_emergency", "tracks_01"})),
     "meet": (("res_02_meet", "plan_body_2_bus", "res_03_tell_bus", "plan_body_2_train", "res_03_tell_train"),
              frozenset({"mode", "stop", "time", "minutes", "toward", "platform_hint", "night", "on_train"})),
+    # the reunion planner's top option when there is no meet (copy keys for the phone's copy table)
+    "wait_return": (("reunion_wait",), REUNION_SLOTS),
+    "meet_end": (("reunion_end",), REUNION_SLOTS),
+    "switch_platform": (("reunion_switch",), REUNION_SLOTS),
     "too_far": (("res_04_far",), frozenset()),
     "tell_staff": (("plan_body_2_none", "res_03_tell_train"),
                    frozenset({"mode", "vehicle", "label", "train_run", "direction"})),
@@ -256,6 +278,25 @@ def meet_card(m: Mapping, t: datetime, *, heading: str | None, on_train: bool, e
     return card("meet", f, evidence=evidence, source="live")
 
 
+def reunion_card(option: Mapping, location: str) -> dict:
+    """The reunion's recommended option when there is no meet: wait for it to come back (wait_return), meet it
+    at the end of the line (meet_end), or ride on and change platforms (switch_platform). Its facts, plus the
+    confidence variant and switches for "usually comes back" and an assumed location. Waits and the end of the
+    line get a Directions action to the stop's own public coordinates."""
+    kind = REUNION_CARDS[option["kind"]]
+    f = Facts()
+    for slot, value in option["facts"].items():
+        f.put(slot, value, option["fact_sources"][slot])
+    f.put("confidence", option["confidence"], "rules")
+    f.switch("usually", "usually_comes_back" in option["note_ids"])
+    f.switch("assumed", location == "assumed_alight")
+    actions = []
+    if kind != "switch_platform":
+        actions.append(CardAction(type="directions", label_id="directions",
+                                  value=f"{option['stop_lat']:.6f},{option['stop_lon']:.6f}"))
+    return card(kind, f, actions=actions, source="schedule" if option["basis"] == "timetable" else "live")
+
+
 def too_far_card() -> dict:
     """res_04_far: "Too far to meet right now. That's okay. Here's your plan." No slots."""
     return card("too_far", source="live")
@@ -373,8 +414,9 @@ def police_property_card() -> dict | None:
 
 def rider_now(user: PlanUser, intake: Mapping) -> PlanUser:
     """The request's user block, with one tap from the session filled in: "I walk slowly" (a request
-    that doesn't say how the rider walks keeps the session's answer). Location is never filled in:
-    the request alone says where the rider is now."""
+    that doesn't say how the rider walks keeps the session's answer). Location is never filled in here:
+    the request alone says where the rider is now, and the meet runs on exactly that. Only the reunion's
+    waits may assume the alight place (reunion.resolve_user)."""
     if user.on_vehicle is not None:
         key = user.on_vehicle.vehicle_key
         try:
@@ -386,6 +428,70 @@ def rider_now(user: PlanUser, intake: Mapping) -> PlanUser:
     if "walk" not in user.model_fields_set and intake.get("walk") == "slow":
         user = user.model_copy(update={"walk": "slow"})
     return user
+
+
+def with_taps(session: Mapping, request: PlanRequest) -> Mapping:
+    """The session as this plan sees it: the request's taken and car taps, when sent, over the stored ones."""
+    over = {k: v for k, v in (("taken", request.taken), ("car", request.car)) if v is not None}
+    return {**session, "intake": {**session["intake"], **over}} if over else session
+
+
+def reunion_keys(match: Mapping, keys: Sequence[str]) -> list[str]:
+    """The vehicles a reunion is about: the request's, else the match's own (the top one, both on a tie)."""
+    if keys:
+        return list(keys)
+    cands = [c["vehicle_key"] for c in match.get("candidates") or ()]
+    return cands[:1] if match.get("status") == "matched" else cands[:2] if match.get("status") == "ambiguous" else []
+
+
+def build_reunion(store, index, session: Mapping, request: PlanRequest | Mapping, *, t: datetime, as_of: bool,
+                  data_dir: Path, tripupdates=None, rail_files: RailFileCache | None = None) -> dict:
+    """POST /reunion: models.Reunion alone, for polling every 20 s with a live fix. No wording and no Gemini:
+    the same meet and the same planner the plan uses, on the same rider. A session whose match names no vehicle
+    gets no options (not_matched). PlanError for a bad request; database errors propagate."""
+    if t.tzinfo is None:
+        raise PlanError("t must be timezone-aware")
+    request = request if isinstance(request, PlanRequest) else PlanRequest.model_validate(request)
+    session = with_taps(session, request)
+    intake, match = session["intake"], session["result"]["match"]
+    user = rider_now(request.user, intake)
+    assumed, location = reunion.resolve_user(index, intake, user)
+    keys = reunion_keys(match, request.vehicle_keys)
+    known = {c["vehicle_key"] for c in match.get("candidates") or ()}
+    if any(k not in known for k in keys):
+        raise PlanError(f"vehicle_keys {sorted(set(keys) - known)} are not this session's candidates")
+    kinds = reunion.RAIL_KINDS if intake.get("mode") == "rail" else reunion.BUS_KINDS
+    if not keys or match["status"] not in NAMED:
+        return reunion.nothing(kinds, "not_matched", location, t, as_of=as_of)
+    m, r = _meet_and_reunion(store, index, session, keys, user, assumed, location, t, as_of=as_of,
+                             data_dir=data_dir, tripupdates=tripupdates, rail_files=rail_files)
+    return r
+
+
+def _meet_and_reunion(store, index, session: Mapping, keys: Sequence[str], user: PlanUser, assumed: PlanUser,
+                      location: str, t: datetime, *, as_of: bool, data_dir: Path, tripupdates,
+                      rail_files: RailFileCache | None) -> tuple[dict, dict]:
+    """The meet (on the request's own user: a place assumed from the alight anchor never becomes a meet card)
+    and the reunion (on `assumed`, resolve_user's rider). A train session asked about on a later rail service day
+    gets neither: its TRAIN_ID is a run number that another physical train carries today."""
+    intake, result = session["intake"], session["result"]
+    if reunion.other_service_day(session, keys, t):
+        return ({"possible": False, "reason": "stale", "vehicle_keys": list(keys)},
+                reunion.nothing(reunion.RAIL_KINDS, "not_live", location, t, as_of=as_of))
+    try:
+        m = meet.plan_meet(store, index, keys, user, t, as_of=as_of, data_dir=data_dir, car=intake.get("car"),
+                           block_linked=meet.block_linked_keys(result), tripupdates=None if as_of else tripupdates,
+                           rail_files=rail_files)
+        if m is not None and m["possible"]:
+            _toward, direction = heading(index, data_dir, m["vehicle_keys"], t, rail_files)
+            if direction is not None:      # the platform: "Wait at West End southbound"; /now's meet_direction
+                m["direction"] = direction
+        r = reunion.plan_reunion(store, index, session, keys, assumed, t, as_of=as_of, data_dir=data_dir,
+                                 location=location, meet_result=m, car=intake.get("car"),
+                                 tripupdates=None if as_of else tripupdates, rail_files=rail_files)
+    except ValueError as e:
+        raise PlanError(str(e)) from None
+    return m, r
 
 
 def build_plan(store, index, session: Mapping, request: PlanRequest | Mapping, *, t: datetime, as_of: bool,
@@ -400,10 +506,12 @@ def build_plan(store, index, session: Mapping, request: PlanRequest | Mapping, *
     if t.tzinfo is None:
         raise PlanError("t must be timezone-aware")
     request = request if isinstance(request, PlanRequest) else PlanRequest.model_validate(request)
+    session = with_taps(session, request)
     intake, result = session["intake"], session["result"]
     match = result["match"]
     keys = list(request.vehicle_keys)
     user = rider_now(request.user, intake)
+    assumed, location = reunion.resolve_user(index, intake, user)
 
     names = wording.PlaceNames.from_index(index) if hook is not None else None
     try:
@@ -417,11 +525,10 @@ def build_plan(store, index, session: Mapping, request: PlanRequest | Mapping, *
     listed = named or (cands[:report_mod.NOTE_MAX] if match["status"] == "uncertain"
                        else cands[:2] if match["status"] == "ambiguous" else [])
 
-    m = None
+    m = r = None
     if keys and match["status"] in NAMED:
-        m = meet.plan_meet(store, index, keys, user, t, as_of=as_of, data_dir=data_dir, car=intake.get("car"),
-                           block_linked=meet.block_linked_keys(result), tripupdates=None if as_of else tripupdates,
-                           rail_files=rail_files)
+        m, r = _meet_and_reunion(store, index, session, keys, user, assumed, location, t, as_of=as_of,
+                                 data_dir=data_dir, tripupdates=tripupdates, rail_files=rail_files)
 
     item = (intake.get("item") or {}).get("category")
     taken = intake.get("taken") in THEFT
@@ -432,13 +539,14 @@ def build_plan(store, index, session: Mapping, request: PlanRequest | Mapping, *
     cards = [bag_staff_card(train_loss)]
     if taken:
         cards.append(safety_card())
+    top = next((o for o in r["options"] if o["recommended"]), None) if r is not None else None
     if m is not None and m["possible"]:
-        toward, direction = heading(index, data_dir, m["vehicle_keys"], t, rail_files)
-        if direction is not None:      # the platform: "Wait at West End southbound"; /now's meet_direction
-            m["direction"] = direction
+        toward, _direction = heading(index, data_dir, m["vehicle_keys"], t, rail_files)
         cards.append(meet_card(m, t, heading=toward, on_train=user.on_vehicle is not None, evidence=evidence))
     else:
-        if m is not None:
+        if top is not None and top["kind"] in REUNION_CARDS:
+            cards.append(reunion_card(top, location))
+        elif m is not None:
             cards.append(too_far_card())
         cards.append(tell_staff_card(rf, named, evidence))
     cards += [keep_card(session, rf, named, evidence), report_card(rf, evidence_of(listed)), call_card(t, office)]
@@ -456,4 +564,5 @@ def build_plan(store, index, session: Mapping, request: PlanRequest | Mapping, *
             "meet": m,
             "cards": order_cards(cards, wallet_or_theft=item == "wallet" or taken),
             "report": report.model_dump(exclude_none=True),
-            "source": "as_of" if as_of else "live"}
+            "source": "as_of" if as_of else "live",
+            "reunion": r}

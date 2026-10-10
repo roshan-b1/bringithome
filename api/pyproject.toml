@@ -8,7 +8,6 @@ dependencies = [
   "uvicorn>=0.30",             # its server
   "psycopg[binary,pool]>=3.2", # Tiger Data
   "backtrack-worker",          # shared code: time handling, place names, the schedule loader
-  "python-multipart>=0.0.20",  # FastAPI needs it to accept the Find My screenshot upload (POST /api/findmy)
 ]
 
 [project.optional-dependencies]
