@@ -689,12 +689,19 @@ function PlanView({
       {result ? (
         <>
           {sections.way ? <OneCard card={sections.way} replay={replay} override={wayOverride} title={t('plan.card.best')} tone="accent" /> : null}
-          <ItemAsk item={itemAnswer} onItem={(v) => flow.setExtra({ what: v ?? null })} />
           {sections.backup.length ? (
-            <Backup open={backupOpen} onToggle={() => update({ backup: !backupOpen })}>
+            hasWay ? (
+              <Backup open={backupOpen} onToggle={() => update({ backup: !backupOpen })}>
+                <PlanCards cards={sections.backup} replay={replay} slots={slots} />
+              </Backup>
+            ) : (
+              // nothing to chase (no live vehicle, or no way back to time): the steps that still help come first,
+              // with no "Didn't find it?" in front of them
               <PlanCards cards={sections.backup} replay={replay} slots={slots} />
-            </Backup>
+            )
           ) : null}
+          {/* optional and only adds the item's own steps, so it never sits above the plan */}
+          <ItemAsk item={itemAnswer} onItem={(v) => flow.setExtra({ what: v ?? null })} />
         </>
       ) : plan.loading || !loaded ? (
         <div className={styles.loading}>

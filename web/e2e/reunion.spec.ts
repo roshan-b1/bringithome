@@ -145,7 +145,7 @@ for (const size of SIZES) {
       await expect(card.getByText('Tell staff and send the report below: those are your best steps.')).toBeVisible()
       await expect(card.getByRole('region', { name: 'Best way now' })).toHaveCount(0)
       // no way back: the backup steps are shown directly
-      await expect(page.getByRole('button', { name: "Didn't find it?" })).toHaveAttribute('aria-expanded', 'true')
+      await expect(page.getByRole('button', { name: "Didn't find it?" })).toHaveCount(0)   // no toggle in front of them
       await expect(page.getByRole('heading', { name: 'Tell staff now' })).toBeVisible()
       await expect(page.getByRole('heading', { name: 'Fill in the lost item form' })).toBeVisible()
       await expect(page.getByRole('complementary', { name: 'Safety' }).first()).toBeAttached()
