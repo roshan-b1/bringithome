@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Schibsted_Grotesk } from 'next/font/google'
 import type { ReactNode } from 'react'
+import { ServiceWorker } from '@/components/ServiceWorker'
 import { t } from '@/lib/copy'
 import './globals.css'
 
@@ -26,6 +27,10 @@ export const metadata: Metadata = {
     type: 'website',
   },
   formatDetection: { telephone: false }, // phone numbers are explicit tel: links, never auto-detected
+  // installed from the home screen (app/manifest.ts): full screen on iOS too. The status bar stays the default dark
+  // text on white, matching the white header; the content already pads under it with the safe-area insets.
+  appleWebApp: { capable: true, title: 'bring it home', statusBarStyle: 'default' },
+  manifest: '/manifest.webmanifest',
 }
 
 export const viewport: Viewport = {
@@ -48,7 +53,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* the reveal after 5 s is a safety net: if the script bundle never runs, the page must not stay blank */}
         <style>{`html[data-resuming] body{visibility:hidden;animation:bih-reveal 0s 5s forwards}@keyframes bih-reveal{to{visibility:visible}}`}</style>
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <ServiceWorker />
+      </body>
     </html>
   )
 }

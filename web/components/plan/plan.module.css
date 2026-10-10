@@ -1,0 +1,643 @@
+/* The plan screens. Tokens only (app/globals.css); navy for words and structure, orange for the route line and the
+ * one primary action per card. Every tap target is 56 px or more, phone first, nothing wider than the column. */
+
+/* ------------------------------------------------------------------------------------------ the route of cards */
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* the logo's orange line, joining one card's stop marker to the next across the gap between them. The marker's
+ * centre sits 40 px in (2 px border, 20 px padding, half of 36 px), so the 4 px line starts at 38 px */
+.step {
+  position: relative;
+}
+
+.step + .step::before {
+  content: '';
+  position: absolute;
+  left: 38px;
+  top: calc(-1 * var(--sp-5) - 2px);
+  width: 4px;
+  height: calc(var(--sp-5) + 4px);
+  border-radius: 2px;
+  background: var(--orange);
+}
+
+.lead {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-snug);
+}
+
+.factLine {
+  font-weight: var(--fw-bold);
+}
+
+/* "Keep this": the line a rider shows staff, set apart like a ticket stub */
+.keepLine {
+  padding: var(--sp-3) var(--sp-4);
+  border-left: 4px solid var(--orange);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: var(--navy-04);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.note {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  line-height: var(--lh-snug);
+}
+
+/* ---------------------------------------------------------------------------------------- source and evidence */
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 2px solid var(--navy-04);
+}
+
+.evidence {
+  flex: 1 1 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  line-height: var(--lh-snug);
+}
+
+.staticSource {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--r-pill);
+  background: var(--navy-04);
+  color: var(--ink-2);
+  font-size: 0.9375rem; /* 15 px, the chip's size */
+  font-weight: var(--fw-bold);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------------------------- the optional questions */
+
+.askPanel {
+  padding: var(--sp-4);
+  border-radius: var(--r-lg);
+  background: var(--navy-04);
+}
+
+.ask,
+.askDone,
+.picker,
+.quick {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.quickQuestion {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-heavy);
+  line-height: var(--lh-snug);
+}
+
+/* focused by script only (keepFocusAt), to keep a screen reader's place: no ring for a tap */
+.quickQuestion:focus {
+  outline: none;
+}
+
+.quickHint {
+  margin-top: calc(-1 * var(--sp-2));
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+
+.quickGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-2);
+}
+
+.quickStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.quickButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  padding: var(--sp-2) var(--sp-3);
+  border: 2px solid var(--navy-14);
+  border-radius: var(--r-md);
+  background: var(--white);
+  color: var(--navy);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-snug);
+  text-align: center;
+  overflow-wrap: anywhere;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+}
+
+.quickStack .quickButton {
+  justify-content: flex-start;
+  padding-inline: var(--sp-4);
+  text-align: left;
+}
+
+.quickButton[aria-pressed='true'] {
+  border-color: var(--navy);
+  background: var(--navy-08);
+}
+
+.quickButton:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.quickButton:disabled {
+  opacity: 0.6;
+}
+
+.quickQuiet {
+  border-style: dashed;
+  border-color: var(--navy-24);
+  color: var(--ink-2);
+  font-weight: var(--fw-semibold);
+}
+
+@media (hover: hover) {
+  .quickButton:hover:not(:disabled) {
+    border-color: var(--navy);
+  }
+}
+
+.answered {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  padding-left: var(--sp-3);
+  border-radius: var(--r-md);
+  background: var(--navy-04);
+}
+
+.answered:focus {
+  outline: none;
+}
+
+.answered:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.answeredIcon {
+  flex: none;
+  color: var(--ok);
+}
+
+.answeredText {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-snug);
+  padding-block: var(--sp-2);
+}
+
+.linkButton {
+  flex: none;
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: 0 var(--sp-3);
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--navy);
+  font-weight: var(--fw-bold);
+  text-decoration: underline;
+  text-decoration-color: var(--orange);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.18em;
+}
+
+.linkButton:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.miniSpinner {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 50%;
+  border: 3px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --------------------------------------------------------------------------------------------------- the meet */
+
+.meet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.ticket {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-4);
+  border: 2px solid var(--orange-24);
+  border-radius: var(--r-md);
+  background: var(--white);
+}
+
+.ticketPlace {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-heavy);
+  line-height: var(--lh-tight);
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+
+.ticketTime {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--sp-2);
+}
+
+.ticketTime strong {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-heavy);
+}
+
+.ticketTime span {
+  color: var(--ink-2);
+  font-weight: var(--fw-semibold);
+}
+
+/* the rider, as the map draws them: a navy marker, words always beside it */
+.youPill {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--sp-2);
+  padding: 6px 14px 6px 10px;
+  border-radius: var(--r-pill);
+  background: var(--navy);
+  color: var(--white);
+  font-weight: var(--fw-bold);
+}
+
+.offer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--tap);
+  padding: var(--sp-2) var(--sp-4);
+  border: 2px solid var(--navy-14);
+  border-radius: var(--r-md);
+  background: var(--white);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  cursor: pointer;
+}
+
+.toggle input {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  accent-color: var(--navy);
+}
+
+.toggle:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+.checking {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+
+.pulse {
+  position: relative;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+
+.pulse::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--ok);
+  opacity: 0;
+  animation: pulse 2s var(--ease-out) infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------------------------------------------- the report */
+
+.report,
+.call {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.subhead {
+  font-weight: var(--fw-bold);
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border: 2px solid var(--navy-08);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.field + .field {
+  border-top: 2px solid var(--navy-08);
+}
+
+.field dt {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+}
+
+.field dd {
+  margin: 0;
+  font-weight: var(--fw-bold);
+  overflow-wrap: anywhere;
+}
+
+.runLine {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+}
+
+.inline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.inputLabel {
+  font-weight: var(--fw-bold);
+}
+
+.inputRow {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 var(--sp-4);
+  border: 2px solid var(--navy-24);
+  border-radius: var(--r-md);
+  background: var(--white);
+  font-size: var(--fs-md); /* 20 px: iOS zooms into anything under 16 */
+}
+
+.input:focus-visible {
+  border-color: var(--navy);
+  box-shadow: var(--focus-ring);
+  border-radius: var(--r-md);
+}
+
+.input::placeholder {
+  color: var(--ink-2);
+  opacity: 0.8;
+}
+
+.details {
+  border: 2px solid var(--navy-08);
+  border-radius: var(--r-md);
+  background: var(--white);
+}
+
+.details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  min-height: var(--tap);
+  padding: 0 var(--sp-4);
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+  list-style: none;
+}
+
+.details summary::-webkit-details-marker {
+  display: none;
+}
+
+/* a chevron drawn with borders, turning when open */
+.details summary::after {
+  content: '';
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  border-right: 3px solid var(--navy);
+  border-bottom: 3px solid var(--navy);
+  transform: rotate(45deg) translateY(-3px);
+  transition: transform var(--dur) var(--ease);
+}
+
+.details[open] summary::after {
+  transform: rotate(225deg) translateY(-3px);
+}
+
+.details summary:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: var(--r-md);
+}
+
+.detailsBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-4) var(--sp-4);
+}
+
+.mailSubject {
+  font-weight: var(--fw-bold);
+  overflow-wrap: anywhere;
+}
+
+.mailBody,
+.script {
+  padding: var(--sp-3);
+  border-radius: var(--r-sm);
+  background: var(--navy-04);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mailBody {
+  font-size: var(--fs-sm);
+}
+
+/* ----------------------------------------------------------------------------------------- loading, the end */
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.updating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  margin: 0;
+  border-radius: var(--r-pill);
+  background: var(--navy);
+  color: var(--white);
+  font-weight: var(--fw-semibold);
+}
+
+.end {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding-top: var(--sp-4);
+  text-align: center;
+}
+
+.endMark {
+  margin: 0 auto;
+}
+
+.endText {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-snug);
+  text-wrap: balance;
+}
+
+.clear {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  text-align: left;
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-4);
+  border-radius: var(--r-md);
+  background: var(--warn-bg);
+}
+
+.confirmText {
+  font-weight: var(--fw-bold);
+}
+
+.confirmText:focus {
+  outline: none;
+}
+
+/* ------------------------------------------------------------------------------------------------- the proof */
+
+.proof {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--sp-4);
+  padding: 0 var(--sp-1);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  line-height: var(--lh-snug);
+}
+
+.proofBuild {
+  font-size: 0.9375rem;
+}
+
+/* a phone number from a fact never splits across lines (FactText) */
+.nowrap {
+  white-space: nowrap;
+}
+
+/* the laptop's right pane (PlanAside): the map, then where it is now */
+.aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}

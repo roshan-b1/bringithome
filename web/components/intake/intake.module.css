@@ -1,0 +1,912 @@
+/* The intake screens: four questions, TellMe, done and the somewhere-else path. Tokens from app/globals.css only;
+ * every target is at least 56 px (--tap), the rows that answer are 64 px or more, like ChoiceList. */
+
+/* ------------------------------------------------------------------------------------------------ what: tiles */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  width: 100%;
+  height: 100%;
+  min-height: 92px;
+  padding: var(--sp-3) var(--sp-4);
+  border: 2px solid var(--navy-14);
+  border-radius: var(--r-md);
+  background: var(--white);
+  color: var(--navy);
+  text-align: left;
+  box-shadow: var(--shadow-1);
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+
+.tileIcon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--navy-04);
+  color: var(--navy);
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.tileLabel {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+}
+
+@media (hover: hover) {
+  .tile:hover {
+    border-color: var(--navy-24);
+    background: var(--navy-04);
+  }
+}
+
+.tile:active {
+  transform: scale(0.985);
+  border-color: var(--orange);
+  background: var(--orange-06);
+}
+
+.tile[aria-pressed='true'] {
+  border-color: var(--navy);
+  background: var(--navy-04);
+}
+
+.tile[aria-pressed='true'] .tileIcon {
+  background: var(--orange);
+  color: var(--navy);
+}
+
+.tile:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: var(--r-md);
+}
+
+/* ---------------------------------------------------------------------------------------------- shared pieces */
+
+/* "Not sure", in the same dashed, quieter style as ChoiceList's, for screens that place it themselves */
+.notSure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--sp-2) var(--sp-4);
+  border: 2px dashed var(--navy-24);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-semibold);
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.notSure[aria-pressed='true'] {
+  border-style: solid;
+  border-color: var(--navy);
+  color: var(--navy);
+}
+
+@media (hover: hover) {
+  .notSure:hover {
+    background: var(--navy-04);
+    color: var(--navy);
+  }
+}
+
+.notSure:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: var(--r-md);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.sectionHeading {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-snug);
+  letter-spacing: 0.01em;
+  color: var(--ink-2);
+}
+
+/* a calm one-line status: the location line, "location is off", "no stop matches" */
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-md);
+  background: var(--navy-04);
+  color: var(--navy);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-snug);
+}
+
+.noteIcon {
+  flex: none;
+  margin-top: 1px;
+}
+
+.noteWarm {
+  background: var(--orange-06);
+}
+
+.divider {
+  height: 2px;
+  margin: var(--sp-1) 0;
+  border-radius: var(--r-pill);
+  background: var(--navy-08);
+}
+
+/* place rows: distance and routes as one run of text, rail lines on their own line below */
+.placeSub {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.meta {
+  /* distance and routes side by side when they fit; the routes move down whole when they don't */
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 1.1em;
+  /* clips the routes' leading dot when they start a line of their own (see .routes::before) */
+  overflow: hidden;
+}
+
+.dist {
+  font-weight: var(--fw-semibold);
+  color: var(--navy);
+  white-space: nowrap;
+}
+
+/* The dot between distance and routes belongs to the routes and sits in the gap before them. On the distance's
+   line it shows; when the routes wrap to their own line it falls left of the box and is clipped, so no line ever
+   ends or starts with a stray dot. */
+.routes {
+  min-width: 0;
+}
+
+.dist ~ .routes::before {
+  content: '·';
+  display: inline-block;
+  width: 1.1em;
+  margin-left: -1.1em;
+  text-align: center;
+  color: var(--ink-2);
+  font-weight: var(--fw-bold);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.lines {
+  /* two columns: at 320 px, four lines one per row made a Five Points row 200 px tall */
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: 2px var(--sp-4);
+}
+
+.line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: var(--fw-semibold);
+  color: var(--navy);
+}
+
+.lineDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--white), 0 0 0 3px var(--navy-14);
+}
+
+.skeletonRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.skeletonRow {
+  height: 76px;
+  border-radius: var(--r-md);
+  background: linear-gradient(90deg, var(--navy-04), var(--navy-08), var(--navy-04));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s var(--ease) infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ------------------------------------------------------------------------------------------------ the search */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.label {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-snug);
+}
+
+.searchBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: var(--sp-4);
+  color: var(--ink-2);
+  pointer-events: none;
+}
+
+.input {
+  width: 100%;
+  min-height: var(--tap-lg);
+  padding: var(--sp-3) var(--sp-4);
+  border: 2px solid var(--navy-24);
+  border-radius: var(--r-md);
+  background: var(--white);
+  color: var(--navy);
+  font-size: var(--fs-md); /* 20 px: iOS never zooms an input of 16 px or more */
+  line-height: var(--lh-snug);
+  transition: border-color var(--dur-fast) var(--ease);
+}
+
+.searchBox .input {
+  padding-left: 52px;
+  padding-right: 52px;
+}
+
+.input::placeholder {
+  color: #6b7590; /* 4.6:1 on white: a hint, still readable */
+  opacity: 1;
+}
+
+.input:focus-visible {
+  border-color: var(--navy);
+  box-shadow: var(--focus-ring);
+}
+
+.input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.searchSpin {
+  position: absolute;
+  right: var(--sp-4);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid var(--navy-14);
+  border-top-color: var(--orange);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.hint {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  line-height: var(--lh-snug);
+}
+
+/* -------------------------------------------------------------------------------------------- pick a time */
+
+/* the time buttons: two columns of tiles, in time order left to right */
+.timeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeTile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  height: 100%;
+  min-height: 72px;
+  padding: var(--sp-3) var(--sp-4);
+  border: 2px solid var(--navy-14);
+  border-radius: var(--r-md);
+  background: var(--white);
+  color: var(--navy);
+  text-align: left;
+  box-shadow: var(--shadow-1);
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+
+.timeLabel {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+}
+
+.timeCheck {
+  flex: none;
+  color: var(--orange);
+  visibility: hidden;
+}
+
+.timeTile[aria-pressed='true'] {
+  border-color: var(--navy);
+  background: var(--navy-04);
+}
+
+.timeTile[aria-pressed='true'] .timeCheck {
+  visibility: visible;
+}
+
+.timePickIcon {
+  flex: none;
+}
+
+@media (hover: hover) {
+  .timeTile:hover {
+    border-color: var(--navy-24);
+    background: var(--navy-04);
+  }
+}
+
+.timeTile:active {
+  transform: scale(0.985);
+  border-color: var(--orange);
+  background: var(--orange-06);
+}
+
+.timeTile:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: var(--r-md);
+}
+
+
+.pickPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border: 2px solid var(--navy);
+  border-radius: var(--r-lg);
+  background: var(--navy-04);
+  scroll-margin: var(--sp-6);
+}
+
+.timeInput {
+  width: 100%;
+  min-height: var(--tap-lg);
+  padding: var(--sp-2) var(--sp-4);
+  border: 2px solid var(--navy-24);
+  border-radius: var(--r-md);
+  background: var(--white);
+  color: var(--navy);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+}
+
+.timeInput:focus-visible {
+  border-color: var(--navy);
+  box-shadow: var(--focus-ring);
+}
+
+.yesterday {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-semibold);
+  color: var(--warn);
+}
+
+/* --------------------------------------------------------------------------------------------------- done */
+
+.looking {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-5);
+  padding: var(--sp-8) 0 var(--sp-4);
+}
+
+/* the logo's route line, a wheel rolling along it toward the house */
+.route {
+  position: relative;
+  width: min(280px, 100%);
+  height: 44px;
+}
+
+.routeLine {
+  position: absolute;
+  left: 0;
+  right: 34px;
+  top: 50%;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: var(--r-pill);
+  background: var(--orange);
+}
+
+.routeWheel {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 28px;
+  height: 28px;
+  margin-top: -14px;
+  border: 7px solid var(--navy);
+  border-radius: 50%;
+  background: var(--white);
+  animation: roll 2.4s var(--ease) infinite;
+}
+
+.routeHome {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-58%);
+}
+
+@keyframes roll {
+  0% {
+    left: 0;
+  }
+  70%,
+  100% {
+    left: calc(100% - 64px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .routeWheel {
+    animation: none;
+    left: calc(50% - 30px);
+  }
+}
+
+.clue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-4);
+  border-radius: var(--r-md);
+  background: var(--navy-04);
+  font-size: var(--fs-base);
+  line-height: var(--lh-snug);
+}
+
+.clueRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+}
+
+.clueRow svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+/* ------------------------------------------------------------------------------------------------- TellMe */
+
+.textarea {
+  width: 100%;
+  min-height: 132px;
+  padding: var(--sp-3) var(--sp-4);
+  border: 2px solid var(--navy-24);
+  border-radius: var(--r-md);
+  background: var(--white);
+  color: var(--navy);
+  font-size: var(--fs-md);
+  line-height: var(--lh-snug);
+  resize: vertical;
+}
+
+.textarea:focus-visible {
+  border-color: var(--navy);
+  box-shadow: var(--focus-ring);
+}
+
+.textarea::placeholder {
+  color: #6b7590;
+  opacity: 1;
+}
+
+.mic {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.listening {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--navy);
+}
+
+.pulse {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--orange);
+  animation: pulse 1.2s var(--ease) infinite;
+}
+
+@keyframes pulse {
+  50% {
+    transform: scale(1.5);
+    opacity: 0.5;
+  }
+}
+
+/* confirm: each fact a big row the rider keeps or leaves out */
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.factEyebrow {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--ink-2);
+}
+
+.said {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  font-style: italic;
+}
+
+.check {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--tap-lg);
+  padding: var(--sp-3) var(--sp-4);
+  border: 2px solid var(--navy-14);
+  border-radius: var(--r-md);
+  background: var(--white);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+
+.check:has(input:checked) {
+  border-color: var(--navy);
+  background: var(--navy-04);
+}
+
+.check:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+.check input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.box {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--navy-24);
+  border-radius: 8px;
+  background: var(--white);
+  color: transparent;
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.radio .box {
+  border-radius: 50%;
+}
+
+.check input:checked + .box {
+  border-color: var(--navy);
+  background: var(--orange);
+  color: var(--navy);
+}
+
+.checkText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+}
+
+.checkSub {
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-regular);
+  color: var(--ink-2);
+}
+
+/* a fact left out reads quieter; an unpicked place choice stays at full strength */
+.check:not(.radio):has(input:not(:checked)) .checkText > span:first-child {
+  color: var(--ink-2);
+}
+
+.factIcon {
+  flex: none;
+  color: var(--navy);
+}
+
+/* ----------------------------------------------------------------------------------------- somewhere else */
+
+.planList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.addRow {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.addRow .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.addButton {
+  flex: none;
+  min-width: 88px;
+  min-height: var(--tap-lg);
+  padding: 0 var(--sp-4);
+  border: 2px solid var(--navy);
+  border-radius: var(--r-md);
+  background: var(--navy);
+  color: var(--white);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+}
+
+.addButton:disabled {
+  border-color: var(--navy-14);
+  background: var(--navy-08);
+  color: var(--ink-2);
+  cursor: not-allowed;
+}
+
+.addButton:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: var(--r-md);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  padding: var(--sp-2) var(--sp-4);
+  border: 2px solid var(--navy-14);
+  border-radius: var(--r-pill);
+  background: var(--white);
+  color: var(--navy);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-semibold);
+}
+
+@media (hover: hover) {
+  .chip:hover:not(:disabled) {
+    border-color: var(--navy-24);
+    background: var(--navy-04);
+  }
+}
+
+.chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chip:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: var(--r-pill);
+}
+
+.placeList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.placeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--tap-lg);
+  padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4);
+  border: 2px solid var(--navy);
+  border-radius: var(--r-md);
+  background: var(--navy-04);
+}
+
+.placeNum {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 4px solid var(--navy);
+  border-radius: 50%;
+  background: var(--white);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-heavy);
+}
+
+.placeName {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+}
+
+.placeTag {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+}
+
+.remove {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--navy);
+}
+
+@media (hover: hover) {
+  .remove:hover {
+    background: var(--navy-08);
+  }
+}
+
+.remove:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+@media (forced-colors: active) {
+  .tile,
+  .timeTile,
+  .notSure,
+  .check,
+  .chip,
+  .placeRow,
+  .input,
+  .textarea,
+  .timeInput {
+    border-color: ButtonText;
+  }
+  .lineDot {
+    forced-color-adjust: none;
+  }
+}
+
+@media (max-width: 359px) {
+  .tile,
+  .timeTile {
+    padding: var(--sp-3);
+  }
+  .tileLabel,
+  .timeLabel {
+    font-size: var(--fs-sm);
+  }
+}
+
+/* the form's Location and Time from the rider's taps (done screen, when live data isn't answering) */
+.clueForm {
+  display: grid;
+  gap: 12px;
+  margin-top: 4px;
+}
+.clueForm dl {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  background: var(--navy-04);
+}
+.clueFormRow {
+  display: grid;
+  gap: 2px;
+}
+.clueFormRow dt {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.clueFormRow dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* moved to by script (keepFocusAt) so a screen reader keeps its place after a tap: no ring for a tap */
+.focusTarget:focus {
+  outline: none;
+}

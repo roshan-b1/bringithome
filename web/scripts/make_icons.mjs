@@ -7,7 +7,10 @@
 //   favicon.ico           16, 32 and 48 px
 //   apple-icon.png        180 px, white ground (iOS rounds the corners itself)
 //   opengraph-image.png   1200x630, the full lockup, for links shared in chat
-import { chromium } from 'playwright'
+// and into public/icons/ for the web app manifest (app/manifest.ts):
+//   icon-192.png, icon-512.png           purpose "any": the mark on a white rounded square
+//   maskable-192.png, maskable-512.png   purpose "maskable": full-bleed white, the mark inside the 80% safe circle
+import { chromium } from '@playwright/test'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -68,6 +71,15 @@ icoSizes.forEach((s, i) => {
 writeFileSync(join(app, 'favicon.ico'), Buffer.concat([header, ...icoPngs]))
 
 writeFileSync(join(app, 'apple-icon.png'), await png(squareSvg(0.14, 0), 180, 180))
+
+// manifest icons (the installed app's launcher icon and splash screen)
+const icons = join(web, 'public/icons')
+;(await import('node:fs')).mkdirSync(icons, { recursive: true })
+for (const s of [192, 512]) {
+  writeFileSync(join(icons, `icon-${s}.png`), await png(squareSvg(0.1, 0.22), s, s))
+  // a launcher may cut any shape inside the middle 80%: a 20% margin keeps the whole mark inside that circle
+  writeFileSync(join(icons, `maskable-${s}.png`), await png(squareSvg(0.2, 0), s, s))
+}
 
 // share image: the lockup (traced by trace_wordmark.mjs) on white, with the warm paper edge
 const lockup = readFileSync(join(web, 'public/brand/lockup.svg'), 'utf8')

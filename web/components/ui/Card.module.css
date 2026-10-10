@@ -37,6 +37,12 @@
   gap: var(--sp-3);
 }
 
+.titleEnd {
+  flex: none;
+  margin-left: auto;
+  padding-top: 4px;
+}
+
 .headText {
   display: flex;
   flex-direction: column;

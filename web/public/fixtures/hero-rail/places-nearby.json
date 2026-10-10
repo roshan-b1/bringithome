@@ -1,0 +1,63 @@
+{
+ "places": [
+  {
+   "place_id": "station:510038",
+   "label": "Garnett station",
+   "kind": "station",
+   "lat": 33.748544,
+   "lon": -84.395888,
+   "distance_m": 16,
+   "stop_ids": [
+    "907843",
+    "908600"
+   ],
+   "routes": [],
+   "lines": [
+    "RED",
+    "GOLD"
+   ],
+   "needs_confirm": false
+  },
+  {
+   "place_id": "station:510015",
+   "label": "Five Points station",
+   "kind": "station",
+   "lat": 33.75387,
+   "lon": -84.39157,
+   "distance_m": 680,
+   "stop_ids": [
+    "908976",
+    "908981",
+    "908986",
+    "908990"
+   ],
+   "routes": [],
+   "lines": [
+    "RED",
+    "GOLD",
+    "BLUE",
+    "GREEN"
+   ],
+   "needs_confirm": false
+  },
+  {
+   "place_id": "station:510039",
+   "label": "SEC District station",
+   "kind": "station",
+   "lat": 33.75618,
+   "lon": -84.39725,
+   "distance_m": 831,
+   "stop_ids": [
+    "908435",
+    "908694"
+   ],
+   "routes": [],
+   "lines": [
+    "BLUE",
+    "GREEN"
+   ],
+   "needs_confirm": false
+  }
+ ],
+ "source": "as_of"
+}

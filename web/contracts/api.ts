@@ -387,10 +387,17 @@ export interface PlanUser {
   walk?: 'normal' | 'slow'
 }
 
+export type PlanTaken = 'no' | 'maybe' | 'yes'
+export type PlanCar = 'front' | 'middle' | 'back'
+
 export interface PlanRequest {
   vehicle_keys?: VehicleKey[] // 0 to 2 (2 on a tie)
   user?: PlanUser
   as_of?: ISO | null
+  // the plan screen's optional taps, for this plan only. No 'unsure' here (Intake.taken has it, this does not):
+  // "Not sure" is sent as no field at all, or the API answers 400
+  taken?: PlanTaken | null
+  car?: PlanCar | null
 }
 
 export interface LostFound {
@@ -414,7 +421,7 @@ export interface Meet {
   margin_min?: number | null
 }
 
-export type CardActionType = 'copy' | 'tel' | 'mailto' | 'link' | 'ics'
+export type CardActionType = 'copy' | 'tel' | 'mailto' | 'link' | 'ics' | 'directions' // directions: value is "lat,lon" of a stop
 
 export interface CardAction {
   type: CardActionType
@@ -433,6 +440,9 @@ export type CardKind =
   | 'safety'
   | 'bag_staff'
   | 'meet'
+  | 'wait_return'
+  | 'meet_end'
+  | 'switch_platform'
   | 'too_far'
   | 'tell_staff'
   | 'keep'
@@ -484,6 +494,60 @@ export interface Report {
   call_script: Wording
 }
 
+// 10a. reunion: every way back to the item, soonest first (reunion.py) ---------------------------------------------
+
+export type ReunionKind = 'walk_ahead' | 'shared_track' | 'switch_platform' | 'wait_here' | 'wait_on_return' | 'meet_at_end'
+export const REUNION_REASONS = [
+  'ahead', 'too_far', 'block_ends', 'interline_away', 'may_leave_service', 'night_short_turn', 'not_live',
+  'no_location', 'layover_too_short', 'not_shared', 'not_dead_end', 'not_turned', 'not_on_train', 'on_train',
+  'no_trip', 'tie', 'too_soon', 'no_return_stop', 'not_seen', 'already_left', 'no_train_to_end', 'not_matched',
+] as const
+export type ReunionReason = (typeof REUNION_REASONS)[number]
+export const REUNION_NOTES = [
+  'usually_comes_back', 'running_very_late', 'evening_not_certain', 'after_midnight_unmeasured',
+  'vanished_still_expected', 'watch_train', 'watch_after_turn', 'schedule_not_in_effect', 'change_platform',
+  'assumed_location', 'may_come_before_you', 'night', 'timetable_only', 'at_the_end_of_the_line',
+] as const
+export type ReunionNote = (typeof REUNION_NOTES)[number]
+
+export interface ReunionOption {
+  kind: ReunionKind
+  rank: number // 1 is the soonest
+  recommended: boolean
+  vehicle_keys: VehicleKey[]
+  place_id: string
+  place_label: string
+  direction?: Dir | null
+  platform_hint?: 'front' | 'middle' | 'back' | null
+  stop_lat: number // the place's public coordinates, never the rider's
+  stop_lon: number
+  reunion_at: ISO
+  window_from: ISO
+  window_to: ISO
+  leave_by?: ISO | null
+  walk_s: number
+  wait_s: number
+  margin_s: number
+  basis: 'live' | 'estimate' | 'timetable'
+  confidence: 'high' | 'usual' | 'low'
+  note_ids: ReunionNote[]
+  facts: Record<string, string | number>
+  fact_sources: Record<string, FactSource>
+}
+
+export interface NotOffered {
+  kind: ReunionKind
+  reason: ReunionReason
+}
+
+export interface Reunion {
+  options: ReunionOption[]
+  not_offered: NotOffered[]
+  rider_location: 'gps' | 'chosen' | 'assumed_alight' | 'on_train' | 'none'
+  computed_at: ISO
+  source: Source
+}
+
 export interface Plan {
   generated_at: ISO
   lost_found: LostFound
@@ -491,6 +555,7 @@ export interface Plan {
   cards: Card[]
   report: Report
   source: Source
+  reunion?: Reunion | null // the reunion planner's answer for the same vehicles (null without a meet ask)
 }
 
 // 6. POST /api/parse (typed or spoken where-and-when clues; taps never call it) ----------------------------------
@@ -621,6 +686,8 @@ const source = lit('live', 'as_of', 'fixture')
 const line = lit('RED', 'GOLD', 'BLUE', 'GREEN')
 const dir = lit('N', 'S', 'E', 'W')
 const level = lit('high', 'medium', 'low')
+const factSource = lit('db', 'static_gtfs', 'contacts', 'rules')
+const reunionKind = lit('walk_ahead', 'shared_track', 'switch_platform', 'wait_here', 'wait_on_return', 'meet_at_end')
 
 export const PlaceCheck = obj<Place>({
   place_id: str, label: str, kind: lit('stop', 'station', 'alias'), lat: num, lon: num,
@@ -729,9 +796,10 @@ export const PlanCheck = obj<Plan>({
     direction: opt(nullable(dir)), eta: opt(nullable(arr(iso))), walk_s: opt(nullable(int)), margin_min: opt(nullable(int)),
   })),
   cards: arr(obj<Card>({
-    kind: lit('safety', 'bag_staff', 'meet', 'too_far', 'tell_staff', 'keep', 'report', 'call', 'freeze_cards', 'phone_lost', 'police_property'),
-    step: int, facts: record(oneOf(str, num)), fact_sources: record(lit('db', 'static_gtfs', 'contacts', 'rules')),
-    actions: arr(obj<CardAction>({ type: lit('copy', 'tel', 'mailto', 'link', 'ics'), label_id: str, value: str })),
+    kind: lit('safety', 'bag_staff', 'meet', 'wait_return', 'meet_end', 'switch_platform', 'too_far', 'tell_staff', 'keep',
+      'report', 'call', 'freeze_cards', 'phone_lost', 'police_property'),
+    step: int, facts: record(oneOf(str, num)), fact_sources: record(factSource),
+    actions: arr(obj<CardAction>({ type: lit('copy', 'tel', 'mailto', 'link', 'ics', 'directions'), label_id: str, value: str })),
     evidence: arr(obj<CardEvidence>({ role: str, place_label: str, at: iso, distance_m: int })),
     source: lit('live', 'schedule', 'static'),
   })),
@@ -746,6 +814,19 @@ export const PlanCheck = obj<Plan>({
     call_script: obj<Wording>({ text: str, wording: lit('gemini', 'template') }),
   }),
   source,
+  reunion: opt(nullable(obj<Reunion>({
+    options: arr(obj<ReunionOption>({
+      kind: reunionKind, rank: int, recommended: bool, vehicle_keys: arr(str), place_id: str, place_label: str,
+      direction: opt(nullable(dir)), platform_hint: opt(nullable(lit('front', 'middle', 'back'))), stop_lat: num, stop_lon: num,
+      reunion_at: iso, window_from: iso, window_to: iso, leave_by: opt(nullable(iso)), walk_s: int, wait_s: int, margin_s: int,
+      basis: lit('live', 'estimate', 'timetable'), confidence: lit('high', 'usual', 'low'), note_ids: arr(lit(...REUNION_NOTES)),
+      facts: record(oneOf(str, num)), fact_sources: record(factSource),
+    })),
+    not_offered: arr(obj<NotOffered>({ kind: reunionKind, reason: lit(...REUNION_REASONS) })),
+    rider_location: lit('gps', 'chosen', 'assumed_alight', 'on_train', 'none'),
+    computed_at: iso,
+    source,
+  }))),
 })
 
 const parsedAnchor = obj<ParsedAnchor>({

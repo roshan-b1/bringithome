@@ -1,14 +1,15 @@
 // What survives a reload: sessionStorage only, holding the server session id, the flow step (with its Back history)
-// and the tap answers (ARCHITECTURE.md decisions 12 and 16). Never localStorage, cookies, a service worker or a
-// manifest, so "nothing stays on this phone after you close this page" is literally true: the browser drops
-// sessionStorage with the tab. GPS is never in here (flow.ts answers are taps only).
+// and the tap answers (ARCHITECTURE.md decisions 12 and 16). Never localStorage or cookies, so "nothing stays on this
+// phone after you close this page" is literally true: the browser drops sessionStorage with the tab. The service
+// worker (public/sw.js, added for the installed app) caches only the app's own files and the recorded fixture sets,
+// never an /api answer. GPS is never in here (flow.ts answers are taps only).
 //
 // Resume: on the results or plan screen, a reload calls GET /api/sessions/{id} instead of POSTing again, so the
 // session and its deletes_by stay the same; a 404 (past retention) starts over.
 
 import type { SessionResponse } from '../contracts/api.ts'
 import { ApiError, deleteSession, getSession, type ApiResult } from './api.ts'
-import { initialState, type FlowState, type Step } from './flow.ts'
+import { initialState, isStep, type FlowState, type Step } from './flow.ts'
 
 const KEY = 'bring-it-home:v1'
 
@@ -32,12 +33,16 @@ export function loadSaved(): Saved | null {
     const raw = storage()?.getItem(KEY)
     if (!raw) return null
     const v = JSON.parse(raw) as Partial<Saved>
-    if (typeof v !== 'object' || v === null || typeof v.step !== 'string' || typeof v.answers !== 'object') return null
+    // sessionStorage outlives a redeploy: a step (or a Back entry) this build doesn't have would render no screen,
+    // so a saved visit naming one starts fresh
+    if (typeof v !== 'object' || v === null || !isStep(v.step) || typeof v.answers !== 'object') return null
+    const history = Array.isArray(v.history) ? v.history : []
+    if (!history.every(isStep)) return null
     return {
       sessionId: typeof v.sessionId === 'string' ? v.sessionId : null,
       step: v.step,
       answers: v.answers ?? {},
-      history: Array.isArray(v.history) ? v.history : [],
+      history,
     }
   } catch {
     return null // corrupt or unreadable: start fresh rather than crash
@@ -53,9 +58,19 @@ export function saveFlow(flow: FlowState, sessionId: string | null): void {
   }
 }
 
+/** Every key this app keeps (the flow, the results question's marker, the plan's taps), so "Clear now" is total. */
+export const KEY_PREFIX = 'bring-it-home:'
+
 export function clearSaved(): void {
   try {
-    storage()?.removeItem(KEY)
+    const s = storage()
+    if (!s) return
+    const keys: string[] = []
+    for (let i = 0; i < s.length; i++) {
+      const k = s.key(i)
+      if (k?.startsWith(KEY_PREFIX)) keys.push(k)
+    }
+    for (const k of keys) s.removeItem(k)
   } catch {
     // nothing to clear
   }
@@ -87,6 +102,9 @@ export async function resume(signal?: AbortSignal): Promise<Resume> {
   const saved = loadSaved()
   if (!saved) return { kind: 'fresh', flow: initialState() }
   const flow: FlowState = { step: saved.step, answers: saved.answers, history: saved.history }
+  // results or plan with no session id (a reload while the Looking screen's POST was in flight): there is nothing
+  // to GET, so it goes back to Looking, which POSTs these answers (or says there is no stop to match against)
+  if (!saved.sessionId && NEEDS_SESSION.includes(saved.step)) return { kind: 'flow', flow: { ...flow, step: 'done' }, sessionId: null }
   if (!saved.sessionId || !NEEDS_SESSION.includes(saved.step)) return { kind: 'flow', flow, sessionId: saved.sessionId }
   try {
     const session = await getSession(saved.sessionId, { signal })

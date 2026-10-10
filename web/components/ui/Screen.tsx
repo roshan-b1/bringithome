@@ -3,6 +3,8 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { Mark } from '@/components/brand/Mark'
 import { t } from '@/lib/copy'
+import { useWide } from '@/lib/hooks'
+import { useDefaultAside } from './Aside'
 import { Icon } from './Icon'
 import { LiveRegion } from './LiveRegion'
 import styles from './Screen.module.css'
@@ -31,28 +33,74 @@ export interface ScreenProps {
   /** the home screen draws its own hero instead of the header */
   bare?: boolean
   className?: string
+  /**
+   * The right pane on a laptop (900 px and up): the map, the replay and the live view on results and plan. Without
+   * it the screen shows AppShell's default (the clue so far); `false` draws no pane. Never shown on a phone.
+   */
+  aside?: ReactNode | false
 }
 
-export function Screen({ title, lead, progress, onBack, chip, banner, actions, footer, children, stepKey, announce, bare = false, className }: ScreenProps) {
+// the step whose screen was last on display, across Screen instances (null until the first one shows)
+let lastShownStep: string | null = null
+// Focus moves only after the rider has tapped or typed: a load or a resumed visit (reload mid-flow) leaves focus
+// at the top of the page, where the browser put it.
+let interacted = false
+/** The rider has tapped or typed on this page (focus may be moved for them from now on, never on a load). */
+export const userInteracted = (): boolean => interacted
+
+/**
+ * After a tap that removed the focused control (an answer that folds its question into an "Answered" row, an Add
+ * that clears its field), focus would fall to <body> and a screen reader would lose its place. This moves it to
+ * `el` instead, but only when focus really was lost, and only after a real tap or key (never on a load or resume).
+ */
+export function keepFocusAt(el: HTMLElement | null): void {
+  if (!el || !interacted) return
+  const a = document.activeElement
+  if (a && a !== document.body && a !== document.documentElement && a.isConnected) return
+  el.focus({ preventScroll: true })
+}
+
+if (typeof window !== 'undefined') {
+  const mark = () => {
+    interacted = true
+  }
+  window.addEventListener('pointerdown', mark, { once: true, capture: true })
+  window.addEventListener('keydown', mark, { once: true, capture: true })
+}
+
+export function Screen({ title, lead, progress, onBack, chip, banner, actions, footer, children, stepKey, announce, bare = false, className, aside }: ScreenProps) {
+  const fallbackAside = useDefaultAside()
+  // mounted only on a laptop, so a phone's page (and its screen reader) never holds a hidden second copy
+  const wide = useWide()
+  const side = !wide || aside === false ? null : (aside ?? fallbackAside)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const titleId = useId()
-  const first = useRef(true)
-
   useEffect(() => {
-    // not on first paint (the page just loaded, focus belongs at the top); on every later step change
-    if (first.current) {
-      first.current = false
-      return
-    }
+    // Not on the page's first screen (focus belongs at the top after a load), and only when the step really
+    // changed. The key lives at module level because each step may be a different Screen instance, and comparing
+    // keys (not counting runs) keeps React's double-run of effects in dev from stealing focus.
+    if (stepKey === undefined) return
+    const previous = lastShownStep
+    lastShownStep = stepKey
+    if (previous === null || previous === stepKey || !interacted) return
     titleRef.current?.focus({ preventScroll: false })
     window.scrollTo({ top: 0 })
   }, [stepKey])
+
+  // the tab's title names the step ("About when did you get off? · bring it home"), read from the h1 itself so a
+  // title given as elements reads the same
+  useEffect(() => {
+    const text = titleRef.current?.textContent?.replace(/\s+/g, ' ').trim()
+    const next = text ? `${text} · bring it home` : 'bring it home'
+    if (document.title !== next) document.title = next
+  })
 
   const progressText = progress ? t('progress', { n: progress.n, m: progress.m }) : null
   const spoken = announce ?? [progressText, typeof title === 'string' ? title : null].filter(Boolean).join('. ')
 
   return (
-    <div className={`${styles.screen} ${bare ? styles.bare : ''} ${className ?? ''}`}>
+    <div className={`${styles.screen} ${bare ? styles.bare : ''} ${side ? styles.hasSide : ''} ${className ?? ''}`}>
+      <div className={styles.pane}>
       <a className="skip-link" href="#content">
         {t('skip_to_content')}
       </a>
@@ -71,8 +119,8 @@ export function Screen({ title, lead, progress, onBack, chip, banner, actions, f
         </header>
       )}
       {banner}
-      {progress ? <ProgressLine n={progress.n} m={progress.m} label={progressText!} /> : null}
       <main id="content" className={styles.main} tabIndex={-1} aria-labelledby={title ? titleId : undefined}>
+        {progress ? <ProgressLine n={progress.n} m={progress.m} label={progressText!} /> : null}
         {title ? (
           <div className={styles.titleBlock}>
             <h1 ref={titleRef} id={titleId} tabIndex={-1} className={styles.title}>
@@ -84,7 +132,14 @@ export function Screen({ title, lead, progress, onBack, chip, banner, actions, f
         {children}
         {footer ? <div className={styles.footer}>{footer}</div> : null}
       </main>
-      {actions ? <div className={styles.actions}>{actions}</div> : null}
+      {/* a footer landmark: the thumb zone's lines (the borrowed-phone note, the data credit) belong to one */}
+      {actions ? <footer className={styles.actions}>{actions}</footer> : null}
+      </div>
+      {side ? (
+        <aside className={styles.side} aria-label={t('aside.label')}>
+          {side}
+        </aside>
+      ) : null}
       <LiveRegion text={stepKey ? spoken : null} />
     </div>
   )

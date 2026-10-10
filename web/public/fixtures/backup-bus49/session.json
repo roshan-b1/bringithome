@@ -1,0 +1,61 @@
+{
+ "session_id": "089096f3-14e6-44bc-8d6f-c7340fad0ed2",
+ "deletes_by": "2026-10-11T04:47:29.687750Z",
+ "as_of": "2026-10-09T13:30:00-04:00",
+ "record": false,
+ "match": {
+  "status": "matched",
+  "level": "medium",
+  "context": {
+   "vehicles_near": 6,
+   "counted": "buses",
+   "radius_m": 400,
+   "place_label": "Piedmont Ave SE @ Gilmer St SE",
+   "window": {
+    "from": "2026-10-09T13:05:00-04:00",
+    "to": "2026-10-09T13:31:00-04:00"
+   }
+  },
+  "candidates": [
+   {
+    "vehicle_key": "bus:2331",
+    "mode": "bus",
+    "vehicle_id": "2331",
+    "label": "1631",
+    "route": "49",
+    "continuing_as": null,
+    "line": null,
+    "direction_label": "Toward North Ave Station",
+    "confidence": 0.6,
+    "level": "medium",
+    "evidence": [
+     {
+      "role": "alight",
+      "place_label": "Piedmont Ave SE @ Gilmer St SE",
+      "at": "2026-10-09T17:18:52.173888Z",
+      "t_in": "2026-10-09T17:18:52.173888Z",
+      "t_out": "2026-10-09T17:18:52.173888Z",
+      "distance_m": 22
+     }
+    ],
+    "flags": [],
+    "source": "live"
+   }
+  ],
+  "schedule_candidates": [],
+  "coverage": {
+   "unreported_share": 0,
+   "recorder_gap": true
+  },
+  "tie_break": null,
+  "separate_by": null,
+  "stats": {
+   "positions_scanned": 912,
+   "vehicles_considered": 6,
+   "query_ms": 55,
+   "sql": "SELECT source, vehicle_id, label, route_short, trip_id, trip_canceled, direction, destination, anchor_idx, piece, dist_m, t_pass, t_in, t_out, gap_s FROM vehicle_passes(%(mode)s, %(lons)s, %(lats)s, %(t_from)s, %(t_to)s, 400, interval '600 seconds', interval '90 seconds', %(until)s)",
+   "engine": "sql"
+  }
+ },
+ "source": "as_of"
+}

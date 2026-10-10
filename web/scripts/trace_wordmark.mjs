@@ -9,7 +9,7 @@
 //
 // Writes public/brand/wordmark.svg (two lines, as in the logo), wordmark-line.svg (one line, for headers) and
 // lockup.svg (mark + wordmark + domain, the logo's own coordinates, for the comparison screenshot).
-import { chromium } from 'playwright'
+import { chromium } from '@playwright/test'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'

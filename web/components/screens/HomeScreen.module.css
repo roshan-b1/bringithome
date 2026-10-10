@@ -88,6 +88,24 @@
   font-weight: var(--fw-bold);
 }
 
+/* offline: the recorded ride, one line even at 320 px */
+.hero .recorded {
+  padding-inline: var(--sp-4);
+}
+
+@media (max-width: 359px) {
+  .hero .recorded {
+    font-size: var(--fs-base);
+  }
+}
+
+/* offline: the two notes in the page, after the route */
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
 /* bottom: the button, then the reassurance and the data credit */
 .cta {
   border-radius: var(--r-lg);
@@ -154,5 +172,12 @@
   .hero {
     padding-top: var(--sp-6);
     gap: var(--sp-5);
+  }
+}
+
+/* laptop: how it works moves to the right pane (HomeAside), so the left pane is the promise and the button */
+@media (min-width: 900px) {
+  .how {
+    display: none;
   }
 }

@@ -104,7 +104,24 @@ export function setRuntime(next: Partial<RuntimeParams>): void {
   flippedToFixtures = false
 }
 
+/**
+ * "See a recorded example": a recorded set, offline, for the rest of this visit. The address bar gets the same
+ * ?mode=offline&set= so a reload stays on the example, and nothing else in the URL changes.
+ */
+export function openRecordedExample(set = 'hero-rail'): void {
+  setRuntime({ mode: 'offline', set, setGiven: true, caseId: null })
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  url.searchParams.set('mode', 'offline')
+  url.searchParams.set('set', set)
+  url.searchParams.delete('case')
+  window.history.replaceState(window.history.state, '', url.toString())
+}
+
 const usesFixtures = () => runtime().mode !== 'live' || flippedToFixtures
+
+/** True while answers come from a recorded set (mock, offline, or ?stage=1 after a failure): GPS can't change them. */
+export const fixtureData = (): boolean => usesFixtures()
 
 // ------------------------------------------------------------------------------------------------------- errors
 
@@ -268,11 +285,13 @@ async function call<T>(
   fixture: string | (() => Promise<string>),
   opts: CallOpts,
   asOfSent: string | null = null,
+  replaying = false,
 ): Promise<ApiResult<T>> {
   if (usesFixtures()) return fromFixture<T>(fixture, opts)
   try {
     const { body, headerSource } = await request<T>(live.url, live.init ?? { method: 'GET' }, opts)
-    const source = asSource(headerSource) ?? asSource((body as { source?: unknown } | undefined)?.source) ?? 'live'
+    const said = asSource(headerSource) ?? asSource((body as { source?: unknown } | undefined)?.source) ?? 'live'
+    const source = replaying && said === 'live' ? 'as_of' : said
     const asOf = asOfSent ?? ((body as { as_of?: unknown } | undefined)?.as_of as string | null | undefined) ?? null
     const result = { data: body, source, asOf }
     report({ source, asOf })
@@ -309,9 +328,14 @@ const json = (body: unknown): RequestInit => ({
 
 // ----------------------------------------------------------------------------------------------- the endpoints
 
-/** 1. GET /api/health */
-export function health(opts: CallOpts = {}): Promise<ApiResult<Health>> {
-  return call({ url: '/api/health' }, 'health.json', opts)
+/**
+ * 1. GET /api/health. It takes no as_of, so it answers "live" even on a ?set= visit that replays a recorded moment
+ * through the real engine. That visit's clock (serverNow) is already the replayed one, so health reports itself as
+ * the replay too: the chip reads Replay from the first screen, never "Live" over times resolved against Oct 9.
+ */
+export async function health(opts: CallOpts = {}): Promise<ApiResult<Health>> {
+  const replaying = usesFixtures() ? null : await replayAsOf()
+  return call({ url: '/api/health' }, 'health.json', opts, replaying, replaying !== null)
 }
 
 /** 2. GET /api/places/nearby: by a fix used once, or by ?near=<alias> when the URL has one (it wins over GPS). */
@@ -358,12 +382,17 @@ export async function parse(text: string, opts: CallOpts = {}): Promise<ApiResul
   return call({ url: '/api/parse', init: json({ text, as_of }) }, 'parse.json', opts, as_of ?? null)
 }
 
-/** 7. POST /api/sessions. Fixture: session-<case>.json when ?case= names one, else session.json. */
+/**
+ * 7. POST /api/sessions. Fixture: session-<case>.json when ?case= names one, else session.json. A re-run from the
+ * results question (the intake carries a route, line or direction the four taps never set) answers with the set's
+ * main session.json, which is recorded with those facts: ?case=uncertain asks "which way?" and then shows the match.
+ */
 export async function createSession(intake: Intake, opts: CallOpts = {}): Promise<ApiResult<SessionResponse>> {
   const as_of = await asOfParam()
   const init = json({ intake, as_of })
   if (recordToken) (init.headers as Record<string, string>)['X-Record-Token'] = recordToken
-  return call({ url: '/api/sessions', init }, sessionFixture, opts, as_of ?? null)
+  const refined = intake.route !== undefined || intake.line !== undefined || intake.direction !== undefined || intake.direction_id !== undefined
+  return call({ url: '/api/sessions', init }, refined ? 'session.json' : sessionFixture, opts, as_of ?? null)
 }
 
 /** 7a. GET /api/sessions/{id} (reload resume). */
@@ -441,10 +470,25 @@ async function probe(dir: string, want: number, last: number): Promise<number> {
   }
 }
 
-/** 10. POST /api/sessions/{id}/plan. `user` is where the rider is now, used for this one answer. */
+/**
+ * 10. POST /api/sessions/{id}/plan. `user` is where the rider is now, used for this one answer. Fixture: the set's
+ * plan for where the rider said they are (plan-on_vehicle.json, plan-at_station.json, plan-place.json), else
+ * plan.json, the plan before "Where are you now?" is answered.
+ */
 export async function plan(id: string, body: Omit<PlanRequest, 'as_of'>, opts: CallOpts = {}): Promise<ApiResult<Plan>> {
   const as_of = await asOfParam()
-  return call({ url: `/api/sessions/${encodeURIComponent(id)}/plan`, init: json({ ...body, as_of }) }, 'plan.json', opts, as_of ?? null)
+  const u = body.user
+  const variant = u?.on_vehicle ? 'on_vehicle' : u?.at_station ? 'at_station' : u?.place_id ? 'place' : null
+  const fixture = async () => {
+    if (!variant) return 'plan.json'
+    try {
+      await request(`/fixtures/${runtime().set}/plan-${variant}.json`, { method: 'HEAD' }, {})
+      return `plan-${variant}.json`
+    } catch {
+      return 'plan.json'
+    }
+  }
+  return call({ url: `/api/sessions/${encodeURIComponent(id)}/plan`, init: json({ ...body, as_of }) }, fixture, opts, as_of ?? null)
 }
 
 /** "rail:405" -> ["rail", "405"]. */

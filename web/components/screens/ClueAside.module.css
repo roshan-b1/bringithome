@@ -1,0 +1,148 @@
+/* The laptop's clue pane: a navy card (the wordmark's colour, for structure) with the logo's orange route running
+   down it, one navy-ringed stop per answer and the house at the end. Text on navy is white (15.9:1) or 80% white. */
+.panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--sp-8);
+  min-height: 100%;
+  padding: var(--sp-10) var(--sp-10) var(--sp-8);
+  border-radius: var(--r-lg);
+  background: var(--navy);
+  color: var(--white);
+}
+
+.head {
+  display: grid;
+  gap: var(--sp-2);
+  max-width: 36ch;
+}
+
+.title {
+  font-size: var(--fs-2xl);
+  letter-spacing: -0.025em;
+}
+
+.lead {
+  font-size: var(--fs-md);
+  color: rgb(255 255 255 / 0.8);
+}
+
+.route {
+  position: relative;
+  display: grid;
+  gap: var(--sp-6);
+  margin: 0;
+}
+
+/* the route line, behind the stops */
+.route::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 14px;
+  bottom: 30px;
+  width: 6px;
+  border-radius: var(--r-pill);
+  background: var(--orange);
+}
+
+.stop {
+  position: relative;
+  display: grid;
+  grid-template-columns: 32px 44px 1fr;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 56px;
+}
+
+.wheel {
+  position: relative;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  border: 7px solid var(--white);
+  border-radius: 50%;
+  background: var(--navy);
+  transition: background var(--dur) var(--ease);
+}
+
+.done .wheel {
+  background: var(--orange);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
+  background: rgb(255 255 255 / 0.1);
+  color: var(--white);
+}
+
+.text {
+  display: grid;
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: rgb(255 255 255 / 0.8);
+}
+
+.value {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+}
+
+.stop:not(.done) .value {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+  color: rgb(255 255 255 / 0.65);
+}
+
+.last {
+  grid-template-columns: 32px 1fr;
+}
+
+.house {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-left: -10px;
+  border-radius: var(--r-md);
+  background: var(--white);
+}
+
+.end {
+  padding-left: var(--sp-3);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+}
+
+.credit {
+  margin-top: auto;
+  font-size: var(--fs-sm);
+  color: rgb(255 255 255 / 0.8);
+}
+
+.plain {
+  grid-template-columns: 32px 1fr;
+}
+
+.plain .value {
+  padding-left: var(--sp-3);
+}
+
+.stop.last .value {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--white);
+}

@@ -1,22 +1,23 @@
 {
  "resolved": {
-  "place_id": "stop:600029",
-  "label": "Courtland St @ Ellis St (route 49 near Peachtree Center)",
-  "kind": "stop",
-  "lat": 33.7585,
-  "lon": -84.384307,
-  "distance_m": 306,
+  "place_id": "alias:garnett",
+  "label": "Garnett",
+  "kind": "alias",
+  "lat": 33.748817,
+  "lon": -84.395643,
   "stop_ids": [
-   "600029"
+   "907843",
+   "908600"
   ],
-  "routes": [
-   "49"
+  "routes": [],
+  "lines": [
+   "RED",
+   "GOLD"
   ],
-  "lines": [],
   "needs_confirm": false
  },
  "choices": [],
- "method": "route_context",
+ "method": "alias",
  "needs_confirm": false,
  "source": "as_of"
 }

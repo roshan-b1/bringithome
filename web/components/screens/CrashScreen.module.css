@@ -1,0 +1,6 @@
+.credit {
+  margin-top: var(--sp-3);
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+  text-align: center;
+}

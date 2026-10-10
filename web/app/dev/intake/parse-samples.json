@@ -1,0 +1,272 @@
+{
+ "recorded": "API rule-based parser (backtrack_api.parse.parse_clue, no Gemini) at as_of 2026-10-09T13:24:00-04:00",
+ "samples": {
+  "bus-49": {
+   "text": "got off the 49 near peachtree center around 1:15",
+   "response": {
+    "fields": {
+     "mode": "bus",
+     "route": "49",
+     "alight": {
+      "place_phrase": "peachtree center",
+      "choices": [
+       {
+        "place_id": "stop:600029",
+        "label": "Courtland St @ Ellis St (route 49 near Peachtree Center)",
+        "kind": "stop",
+        "lat": 33.7585,
+        "lon": -84.384307,
+        "distance_m": 306,
+        "stop_ids": [
+         "600029"
+        ],
+        "routes": [
+         "49"
+        ],
+        "lines": [],
+        "needs_confirm": false
+       }
+      ],
+      "time_phrase": "around 1:15",
+      "at": "2026-10-09T17:15:00Z",
+      "day_label": "today",
+      "window_min": 20
+     }
+    },
+    "dropped": [],
+    "source": "rules"
+   }
+  },
+  "rail-red": {
+   "text": "left my bag on the red line, got off at north ave 20 minutes ago",
+   "response": {
+    "fields": {
+     "mode": "rail",
+     "line": "RED",
+     "alight": {
+      "place_phrase": "north ave",
+      "choices": [
+       {
+        "place_id": "alias:north avenue",
+        "label": "North Ave",
+        "kind": "alias",
+        "lat": 33.771687166666666,
+        "lon": -84.38689866666667,
+        "stop_ids": [
+         "907913",
+         "907914"
+        ],
+        "routes": [],
+        "lines": [
+         "RED",
+         "GOLD"
+        ],
+        "needs_confirm": false
+       }
+      ],
+      "time_phrase": "20 minutes ago",
+      "at": "2026-10-09T17:04:00Z",
+      "day_label": "today",
+      "window_min": 10
+     }
+    },
+    "dropped": [],
+    "source": "rules"
+   }
+  },
+  "gsu-no-time": {
+   "text": "bus near gsu",
+   "response": {
+    "fields": {
+     "mode": "bus",
+     "alight": {
+      "place_phrase": "gsu",
+      "choices": [
+       {
+        "place_id": "alias:gsu",
+        "label": "Georgia State University",
+        "kind": "alias",
+        "lat": 33.75042242857143,
+        "lon": -84.38567414285714,
+        "stop_ids": [
+         "210555",
+         "500210",
+         "500211",
+         "500350",
+         "500351"
+        ],
+        "routes": [
+         "20",
+         "21",
+         "22",
+         "42",
+         "49",
+         "55"
+        ],
+        "lines": [],
+        "needs_confirm": true
+       }
+      ],
+      "time_phrase": "",
+      "window_min": 90
+     }
+    },
+    "dropped": [],
+    "source": "rules"
+   }
+  },
+  "peachtree-choices": {
+   "text": "got off at peachtree around 1",
+   "response": {
+    "fields": {
+     "alight": {
+      "place_phrase": "peachtree",
+      "choices": [
+       {
+        "place_id": "station:510040",
+        "label": "Peachtree Center station",
+        "kind": "station",
+        "lat": 33.759684,
+        "lon": -84.387598,
+        "stop_ids": [
+         "907842",
+         "908601"
+        ],
+        "routes": [],
+        "lines": [
+         "RED",
+         "GOLD"
+        ],
+        "needs_confirm": false
+       },
+       {
+        "place_id": "stop:102042",
+        "label": "Decatur St SE @ Peachtree Center Ave",
+        "kind": "stop",
+        "lat": 33.753105,
+        "lon": -84.38757,
+        "stop_ids": [
+         "102042"
+        ],
+        "routes": [
+         "3",
+         "10",
+         "21",
+         "22"
+        ],
+        "lines": [],
+        "needs_confirm": false
+       },
+       {
+        "place_id": "stop:103134",
+        "label": "Marietta St NW @ Peachtree St",
+        "kind": "stop",
+        "lat": 33.754393,
+        "lon": -84.390071,
+        "stop_ids": [
+         "103134"
+        ],
+        "routes": [
+         "3",
+         "10",
+         "20",
+         "42"
+        ],
+        "lines": [],
+        "needs_confirm": false
+       }
+      ],
+      "time_phrase": "around 1",
+      "at": "2026-10-09T17:00:00Z",
+      "day_label": "today",
+      "window_min": 30
+     }
+    },
+    "dropped": [],
+    "source": "rules"
+   }
+  },
+  "board-only": {
+   "text": "got on the 49 at five points around 12:50",
+   "response": {
+    "fields": {
+     "mode": "bus",
+     "route": "49",
+     "board": {
+      "place_phrase": "five points",
+      "choices": [
+       {
+        "place_id": "stop:500211",
+        "label": "Georgia State Station - Bay B",
+        "kind": "stop",
+        "lat": 33.750662,
+        "lon": -84.386144,
+        "distance_m": 691,
+        "stop_ids": [
+         "500211"
+        ],
+        "routes": [
+         "49",
+         "55"
+        ],
+        "lines": [],
+        "needs_confirm": false
+       },
+       {
+        "place_id": "stop:600028",
+        "label": "Courtland St NE @ Auburn Ave NE",
+        "kind": "stop",
+        "lat": 33.755912,
+        "lon": -84.384348,
+        "distance_m": 749,
+        "stop_ids": [
+         "600028"
+        ],
+        "routes": [
+         "49"
+        ],
+        "lines": [],
+        "needs_confirm": false
+       },
+       {
+        "place_id": "stop:210555",
+        "label": "Piedmont Ave SE @ Gilmer St SE",
+        "kind": "stop",
+        "lat": 33.752543,
+        "lon": -84.384156,
+        "distance_m": 770,
+        "stop_ids": [
+         "210555"
+        ],
+        "routes": [
+         "20",
+         "21",
+         "22",
+         "42",
+         "49",
+         "55"
+        ],
+        "lines": [],
+        "needs_confirm": false
+       }
+      ],
+      "time_phrase": "around 12:50",
+      "at": "2026-10-09T16:50:00Z",
+      "day_label": "today",
+      "window_min": 20
+     }
+    },
+    "dropped": [],
+    "source": "rules"
+   }
+  },
+  "nothing": {
+   "text": "i dont know",
+   "response": {
+    "fields": {},
+    "dropped": [],
+    "source": "rules"
+   }
+  }
+ }
+}

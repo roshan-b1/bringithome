@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-09T17:24:00Z",
+ "generated_at": "2026-10-09T19:27:00Z",
  "lost_found": {
   "open_now": true,
   "next_open": "2026-10-12T12:30:00Z",
@@ -7,9 +7,9 @@
  },
  "meet": {
   "possible": false,
-  "reason": "no_eta",
+  "reason": "too_far",
   "vehicle_keys": [
-   "bus:2331"
+   "rail:407"
   ]
  },
  "cards": [
@@ -18,7 +18,7 @@
    "step": 1,
    "facts": {
     "police_non_emergency": "404-848-4900",
-    "tracks_01": 0
+    "tracks_01": 1
    },
    "fact_sources": {
     "police_non_emergency": "contacts",
@@ -47,24 +47,24 @@
    "kind": "tell_staff",
    "step": 3,
    "facts": {
-    "mode": "bus",
-    "vehicle": "Bus 49",
-    "label": "1631",
-    "direction": "Toward North Ave Station"
+    "mode": "rail",
+    "vehicle": "Red Line train",
+    "train_run": "407",
+    "direction": "To Airport"
    },
    "fact_sources": {
     "mode": "rules",
     "vehicle": "db",
-    "label": "db",
-    "direction": "static_gtfs"
+    "train_run": "db",
+    "direction": "db"
    },
    "actions": [],
    "evidence": [
     {
      "role": "alight",
-     "place_label": "Piedmont Ave SE @ Gilmer St SE",
-     "at": "2026-10-09T17:18:52.173888Z",
-     "distance_m": 22
+     "place_label": "Garnett",
+     "at": "2026-10-09T19:23:59.352815Z",
+     "distance_m": 5
     }
    ],
    "source": "live"
@@ -73,17 +73,17 @@
    "kind": "keep",
    "step": 4,
    "facts": {
-    "mode": "bus",
-    "vehicle": "Bus 49",
-    "label": "1631",
-    "stop": "Piedmont Ave SE @ Gilmer St SE",
-    "time": "1:18 PM",
+    "mode": "rail",
+    "vehicle": "Red Line train",
+    "train_run": "407",
+    "stop": "Garnett",
+    "time": "3:23 PM",
     "role": "alight"
    },
    "fact_sources": {
     "mode": "rules",
     "vehicle": "db",
-    "label": "db",
+    "train_run": "db",
     "stop": "static_gtfs",
     "time": "db",
     "role": "rules"
@@ -92,15 +92,15 @@
     {
      "type": "copy",
      "label_id": "keep_copy",
-     "value": "Bus 49, vehicle 1631, got off at Piedmont Ave SE @ Gilmer St SE around 1:18 PM on Friday, October 9."
+     "value": "Red Line train, MARTA train run 407, got off at Garnett around 3:23 PM on Friday, October 9."
     }
    ],
    "evidence": [
     {
      "role": "alight",
-     "place_label": "Piedmont Ave SE @ Gilmer St SE",
-     "at": "2026-10-09T17:18:52.173888Z",
-     "distance_m": 22
+     "place_label": "Garnett",
+     "at": "2026-10-09T19:23:59.352815Z",
+     "distance_m": 5
     }
    ],
    "source": "live"
@@ -109,18 +109,20 @@
    "kind": "report",
    "step": 5,
    "facts": {
-    "route_number": "49",
-    "bus_number": "1631",
-    "direction": "Toward North Ave Station",
-    "location": "Piedmont Ave SE @ Gilmer St SE",
-    "time": "Fri Oct 9, about 1:18 PM"
+    "direction": "To Airport",
+    "location": "Garnett",
+    "time": "Fri Oct 9, about 3:23 PM",
+    "rail_line": "Red Line",
+    "rail_station": "Garnett",
+    "train_run": "MARTA train run 407, from MARTA's public feeds"
    },
    "fact_sources": {
-    "route_number": "db",
-    "bus_number": "db",
-    "direction": "static_gtfs",
+    "direction": "db",
     "location": "static_gtfs",
-    "time": "db"
+    "time": "db",
+    "rail_line": "db",
+    "rail_station": "static_gtfs",
+    "train_run": "db"
    },
    "actions": [
     {
@@ -131,15 +133,15 @@
     {
      "type": "copy",
      "label_id": "report_copy",
-     "value": "Route Number: 49\nBus Number: 1631\nDirection of Travel/Destination: Toward North Ave Station\nLocation: Piedmont Ave SE @ Gilmer St SE\nTime: Fri Oct 9, about 1:18 PM"
+     "value": "Rail Line: Red Line\nMARTA Rail Station: Garnett\nDirection of Travel/Destination: To Airport\nLocation: Garnett\nTime: Fri Oct 9, about 3:23 PM\nMARTA train run 407, from MARTA's public feeds"
     }
    ],
    "evidence": [
     {
      "role": "alight",
-     "place_label": "Piedmont Ave SE @ Gilmer St SE",
-     "at": "2026-10-09T17:18:52.173888Z",
-     "distance_m": 22
+     "place_label": "Garnett",
+     "at": "2026-10-09T19:23:59.352815Z",
+     "distance_m": 5
     }
    ],
    "source": "live"
@@ -181,19 +183,20 @@
  ],
  "report": {
   "form_fields": {
-   "route_number": "49",
-   "bus_number": "1631",
-   "direction": "Toward North Ave Station",
-   "location": "Piedmont Ave SE @ Gilmer St SE",
-   "time": "Fri Oct 9, about 1:18 PM"
+   "direction": "To Airport",
+   "location": "Garnett",
+   "time": "Fri Oct 9, about 3:23 PM",
+   "rail_line": "Red Line",
+   "rail_station": "Garnett",
+   "train_run": "MARTA train run 407, from MARTA's public feeds"
   },
   "email": {
-   "subject": "Lost item on bus 1631, route 49, Friday, October 9",
-   "body": "Hello,\n\nI'm writing to report a lost item. I left [[ITEM]] on bus 1631, route 49, heading toward North Ave Station. I got off at Piedmont Ave SE @ Gilmer St SE on Friday, October 9, at about 1:18 PM.\n\nI have also sent these details through the online lost item form. If it turns up, please let me know how to arrange a pickup. I can describe it in more detail and bring a photo ID.\n\nThank you.",
+   "subject": "Lost item on a Red Line train, Friday, October 9",
+   "body": "Hello,\n\nI'm writing to report a lost item. I left [[ITEM]] on a Red Line train, heading to Airport. MARTA's public feeds list it as train run 407. I got off at Garnett on Friday, October 9, at about 3:23 PM.\n\nI have also sent these details through the online lost item form. If it turns up, please let me know how to arrange a pickup. I can describe it in more detail and bring a photo ID.\n\nThank you.",
    "wording": "template"
   },
   "call_script": {
-   "text": "Hi, I'm calling to report a lost item. I left [[ITEM]] on bus 1631, route 49, heading toward North Ave Station. I got off at Piedmont Ave SE @ Gilmer St SE on Friday, October 9, at about 1:18 PM. I've also sent the online report. Has anything like that been turned in, and what should I do next?",
+   "text": "Hi, I'm calling to report a lost item. I left [[ITEM]] on a Red Line train, heading to Airport. MARTA's public feeds list it as train run 407. I got off at Garnett on Friday, October 9, at about 3:23 PM. I've also sent the online report. Has anything like that been turned in, and what should I do next?",
    "wording": "template"
   }
  },

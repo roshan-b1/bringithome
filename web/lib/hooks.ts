@@ -90,3 +90,15 @@ export function getFix(timeoutMs = 8000): Promise<Fix | null> {
     )
   })
 }
+
+const WIDE = '(min-width: 900px)'
+const subscribeWide = media(WIDE)
+
+/**
+ * The laptop layout: at 900 px and up the screens are two panes (steps and cards left; the map, the replay and the
+ * live view right). Screens use it only to decide where a heavy part mounts (one MapLibre map, never two); the
+ * layout itself is CSS. False during the static prerender, so hydration matches the phone layout.
+ */
+export function useWide(): boolean {
+  return useSyncExternalStore(subscribeWide, () => window.matchMedia(WIDE).matches, () => false)
+}

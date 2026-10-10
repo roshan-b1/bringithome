@@ -1,6 +1,9 @@
 'use client'
 
+import { ClueAside } from '@/components/screens/ClueAside'
+import { ScreenBoundary } from '@/components/screens/CrashScreen'
 import { PlaceholderScreen } from '@/components/screens/PlaceholderScreen'
+import { DefaultAsideProvider } from '@/components/ui/Aside'
 import { SCREENS } from '@/components/screens/registry'
 import { useFlowSession } from '@/lib/useFlow'
 
@@ -10,5 +13,18 @@ import { useFlowSession } from '@/lib/useFlow'
 export function AppShell() {
   const flow = useFlowSession()
   const StepScreen = SCREENS[flow.state.step] ?? PlaceholderScreen
-  return <StepScreen flow={flow} />
+  // the laptop's right pane, for any screen that has no map of its own: the clue so far (never drawn on a phone)
+  return (
+    <DefaultAsideProvider value={<ClueAside answers={flow.state.answers} />}>
+      {/* a screen that throws keeps the frame, the rider's report and the safety footer (CrashScreen) */}
+      <ScreenBoundary
+        answers={flow.state.answers}
+        resetKey={flow.state.step}
+        onRestart={flow.restart}
+        onRecorded={() => flow.goTo('done')}
+      >
+        <StepScreen flow={flow} />
+      </ScreenBoundary>
+    </DefaultAsideProvider>
+  )
 }

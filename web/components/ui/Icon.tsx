@@ -31,6 +31,7 @@ export type IconName =
   | 'mic'
   | 'close'
   | 'house'
+  | 'message'
 
 const PATHS: Record<IconName, string> = {
   back: 'M15 5l-7 7 7 7',
@@ -62,6 +63,7 @@ const PATHS: Record<IconName, string> = {
   close: 'M6 6l12 12M18 6L6 18',
   // the logo's house as a route line: the brand's own glyph at icon size
   house: 'M3.5 19.5h3V10l5.5-5 5.5 5v9.5h-4',
+  message: 'M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3.5V16H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z',
 }
 
 export function Icon({ name, size = 24, strokeWidth = 2.25, className }: { name: IconName; size?: number; strokeWidth?: number; className?: string }) {

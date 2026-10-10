@@ -1,66 +1,79 @@
 {
  "trains": [
   {
-   "vehicle_key": "rail:404",
-   "line": "RED",
-   "direction": "S",
-   "destination_label": "Airport",
-   "next_station": {
-    "place_id": "station:510029",
-    "label": "Oakland City",
-    "eta": "2026-10-09T17:24:10.074000Z"
-   },
-   "distance_m": null,
-   "preselect": false
-  },
-  {
-   "vehicle_key": "rail:410",
-   "line": "RED",
-   "direction": "S",
-   "destination_label": "Airport",
-   "next_station": {
-    "place_id": "station:510037",
-    "label": "Airport",
-    "eta": "2026-10-09T17:24:31.074000Z"
-   },
-   "distance_m": null,
-   "preselect": false
-  },
-  {
    "vehicle_key": "rail:408",
    "line": "RED",
    "direction": "S",
    "destination_label": "Airport",
    "next_station": {
-    "place_id": "station:510026",
-    "label": "Midtown",
-    "eta": "2026-10-09T17:24:37.074000Z"
+    "place_id": "station:510008",
+    "label": "College Park",
+    "eta": "2026-10-09T19:27:39Z"
    },
    "distance_m": null,
    "preselect": false
   },
   {
-   "vehicle_key": "rail:301",
+   "vehicle_key": "rail:401",
+   "line": "RED",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510030",
+    "label": "Sandy Springs",
+    "eta": "2026-10-09T19:27:40Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:411",
+   "line": "RED",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510027",
+    "label": "North Ave",
+    "eta": "2026-10-09T19:27:50Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:308",
    "line": "GOLD",
    "direction": "S",
    "destination_label": "Airport",
    "next_station": {
-    "place_id": "station:510015",
-    "label": "Five Points",
-    "eta": "2026-10-09T17:24:41.074000Z"
+    "place_id": "station:510001",
+    "label": "Arts Center",
+    "eta": "2026-10-09T19:28:11Z"
    },
    "distance_m": null,
    "preselect": false
   },
   {
-   "vehicle_key": "rail:310",
+   "vehicle_key": "rail:309",
    "line": "GOLD",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510005",
+    "label": "Brookhaven-Oglethorpe",
+    "eta": "2026-10-09T19:28:23Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:409",
+   "line": "RED",
    "direction": "S",
    "destination_label": "Airport",
    "next_station": {
     "place_id": "station:510024",
     "label": "Lindbergh Center",
-    "eta": "2026-10-09T17:24:58.074000Z"
+    "eta": "2026-10-09T19:28:35Z"
    },
    "distance_m": null,
    "preselect": false
@@ -71,22 +84,9 @@
    "direction": "S",
    "destination_label": "Airport",
    "next_station": {
-    "place_id": "station:510006",
-    "label": "Chamblee",
-    "eta": "2026-10-09T17:25:27.074000Z"
-   },
-   "distance_m": null,
-   "preselect": false
-  },
-  {
-   "vehicle_key": "rail:306",
-   "line": "GOLD",
-   "direction": "S",
-   "destination_label": "Airport",
-   "next_station": {
-    "place_id": "station:510008",
-    "label": "College Park",
-    "eta": "2026-10-09T17:26:03.074000Z"
+    "place_id": "station:510033",
+    "label": "West End",
+    "eta": "2026-10-09T19:29:00Z"
    },
    "distance_m": null,
    "preselect": false
@@ -97,19 +97,36 @@
    "direction": "S",
    "destination_label": "Airport",
    "next_station": {
-    "place_id": "station:510036",
-    "label": "Buckhead",
-    "eta": "2026-10-09T17:27:15.074000Z"
+    "place_id": "station:510029",
+    "label": "Oakland City",
+    "eta": "2026-10-09T19:29:03Z"
    },
    "distance_m": null,
    "preselect": false
   },
   {
-   "vehicle_key": "rail:409",
+   "vehicle_key": "rail:310",
+   "line": "GOLD",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510013",
+    "label": "East Point",
+    "eta": "2026-10-09T19:29:44Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:402",
    "line": "RED",
    "direction": "S",
    "destination_label": "Airport",
-   "next_station": null,
+   "next_station": {
+    "place_id": "station:510028",
+    "label": "North Springs",
+    "eta": "2026-10-09T19:34:04Z"
+   },
    "distance_m": null,
    "preselect": false
   }

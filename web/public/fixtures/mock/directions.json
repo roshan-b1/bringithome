@@ -1,12 +1,20 @@
 {
- "ask": false,
+ "ask": true,
  "options": [
   {
    "direction_id": 0,
-   "direction": null,
-   "label": "Toward North Ave Station",
+   "direction": "N",
+   "label": "To North Springs",
    "stop_ids": [
-    "210555"
+    "908600"
+   ]
+  },
+  {
+   "direction_id": 1,
+   "direction": "S",
+   "label": "To Airport",
+   "stop_ids": [
+    "907843"
    ]
   }
  ],

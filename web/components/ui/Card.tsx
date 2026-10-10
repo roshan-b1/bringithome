@@ -14,13 +14,15 @@ export interface CardProps {
   title?: ReactNode
   titleAs?: 'h2' | 'h3'
   titleId?: string
+  /** beside the heading, outside it (a source chip): a heading's name is its words only */
+  titleEnd?: ReactNode
   children?: ReactNode
   footer?: ReactNode
   className?: string
   id?: string
 }
 
-export function Card({ as: Tag = 'section', tone = 'plain', step, eyebrow, title, titleAs: H = 'h2', titleId, children, footer, className, id }: CardProps) {
+export function Card({ as: Tag = 'section', tone = 'plain', step, eyebrow, title, titleAs: H = 'h2', titleId, titleEnd, children, footer, className, id }: CardProps) {
   return (
     <Tag className={`${styles.card} ${styles[tone]} ${className ?? ''}`} id={id} aria-labelledby={title && titleId ? titleId : undefined}>
       {step !== undefined || eyebrow || title ? (
@@ -38,6 +40,7 @@ export function Card({ as: Tag = 'section', tone = 'plain', step, eyebrow, title
               </H>
             ) : null}
           </div>
+          {titleEnd ? <div className={styles.titleEnd}>{titleEnd}</div> : null}
         </div>
       ) : null}
       {children ? <div className={styles.body}>{children}</div> : null}

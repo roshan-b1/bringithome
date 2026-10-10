@@ -1,0 +1,190 @@
+.card {
+  gap: var(--sp-4);
+}
+
+.state {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-snug);
+}
+
+.state svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.warn {
+  color: var(--warn);
+}
+
+.warnText {
+  color: var(--warn);
+  font-weight: var(--fw-semibold);
+}
+
+.liveDot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin: 7px 4px 0;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 4px var(--ok-bg);
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: var(--fw-semibold);
+}
+
+.heading svg {
+  flex: none;
+  color: var(--orange);
+}
+
+.stopsBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.h3 {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--ink-2);
+  letter-spacing: 0.01em;
+}
+
+/* the next stops as a route line: an orange line with navy stop rings, like the logo's line and wheel */
+.stops {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stops::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 8px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--orange);
+}
+
+.stop {
+  position: relative;
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  align-items: center;
+  column-gap: var(--sp-3);
+  min-height: 48px;
+  padding: 4px 0;
+}
+
+.stopMark {
+  position: relative;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  border: 4px solid var(--navy);
+  border-radius: 50%;
+  background: var(--white);
+}
+
+.stop:first-child .stopMark {
+  background: var(--orange);
+}
+
+.stopName {
+  min-width: 0;
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+}
+
+.stop:first-child .stopName {
+  font-weight: var(--fw-heavy);
+}
+
+.stopTime {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-weight: var(--fw-bold);
+  /* not tabular: the brand face's tabular colon is set wide ("3 : 29"); the column is right-aligned anyway */
+  white-space: nowrap;
+}
+
+.tag {
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  font-size: 0.8125rem;
+  font-weight: var(--fw-bold);
+  line-height: 1.5;
+}
+
+.tagLive {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.tagReplay {
+  background: var(--navy);
+  color: var(--white);
+}
+
+.tagSchedule {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.muted {
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+
+.rider {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border-radius: var(--r-md);
+  background: #eef4fd;
+  font-weight: var(--fw-bold);
+}
+
+.riderDot {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--white);
+  border-radius: 50%;
+  background: #1a66d9;
+  box-shadow: 0 0 0 1px #b8cdee;
+}
+
+.riderAsk {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+@media (forced-colors: active) {
+  .stops::before {
+    background: CanvasText;
+  }
+  .tag {
+    border: 1px solid CanvasText;
+  }
+}

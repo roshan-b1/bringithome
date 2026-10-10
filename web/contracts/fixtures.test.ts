@@ -27,7 +27,9 @@ const sets = (() => {
 })()
 
 describe('fixture sets match the contract', () => {
-  test('there is at least the mock set', () => assert.ok(sets.includes('mock'), `sets: ${sets.join(', ')}`))
+  test('there is the mock set and the three recorded sets', () => {
+    for (const s of ['mock', 'hero-rail', 'backup-bus49', 'not-reporting']) assert.ok(sets.includes(s), `sets: ${sets.join(', ')}`)
+  })
   for (const set of sets) {
     test(`set "${set}"`, () => {
       const problems: string[] = []
@@ -65,7 +67,8 @@ describe('the checker catches drift', () => {
     ])
   })
   test('a time without an offset', () => {
-    const now = JSON.parse(readFileSync(join(ROOT, 'mock', 'now', 'bus-2331', '000.json'), 'utf8'))
+    const vehicle = readdirSync(join(ROOT, 'mock', 'now'))[0]!
+    const now = JSON.parse(readFileSync(join(ROOT, 'mock', 'now', vehicle, '000.json'), 'utf8'))
     now.at = '2026-10-09 13:23:41'
     assert.deepEqual(checkValue(VehicleNowCheck, now), ['$.at: expected ISO time with offset'])
   })

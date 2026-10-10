@@ -46,10 +46,11 @@
   overflow-wrap: anywhere;
 }
 
+/* full colour, never faded: navy at 0.85 on the orange measured 4.0:1, under AA for 16 px text. The hierarchy comes
+   from size and weight instead (the label is bold and larger). */
 .sublabel {
   font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
-  opacity: 0.85;
 }
 
 .icon {

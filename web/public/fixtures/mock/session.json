@@ -1,58 +1,110 @@
 {
- "session_id": "081ecdf3-81fe-4d6c-be59-2d038eaac718",
- "deletes_by": "2026-10-11T02:27:58.649945Z",
- "as_of": "2026-10-09T13:24:00-04:00",
+ "session_id": "88a9ee86-330c-431c-b681-d680a745c723",
+ "deletes_by": "2026-10-11T04:35:19.654536Z",
+ "as_of": "2026-10-09T15:27:00-04:00",
  "record": false,
  "match": {
   "status": "matched",
-  "level": "high",
+  "level": "medium",
   "context": {
    "vehicles_near": 6,
-   "counted": "buses",
+   "counted": "trains",
    "radius_m": 400,
-   "place_label": "Piedmont Ave SE @ Gilmer St SE",
+   "place_label": "Garnett",
    "window": {
-    "from": "2026-10-09T13:10:00-04:00",
-    "to": "2026-10-09T13:26:00-04:00"
+    "from": "2026-10-09T15:16:00-04:00",
+    "to": "2026-10-09T15:32:00-04:00"
    }
   },
   "candidates": [
    {
-    "vehicle_key": "bus:2331",
-    "mode": "bus",
-    "vehicle_id": "2331",
-    "label": "1631",
-    "route": "49",
+    "vehicle_key": "rail:407",
+    "mode": "rail",
+    "vehicle_id": "407",
+    "label": null,
+    "route": "RED",
     "continuing_as": null,
-    "line": null,
-    "direction_label": "Toward North Ave Station",
-    "confidence": 0.869,
-    "level": "high",
+    "line": "RED",
+    "direction_label": "To Airport",
+    "confidence": 0.623,
+    "level": "medium",
     "evidence": [
      {
       "role": "alight",
-      "place_label": "Piedmont Ave SE @ Gilmer St SE",
-      "at": "2026-10-09T17:18:52.173888Z",
-      "t_in": "2026-10-09T17:18:52.173888Z",
-      "t_out": "2026-10-09T17:18:52.173888Z",
-      "distance_m": 22
+      "place_label": "Garnett",
+      "at": "2026-10-09T19:23:59.352815Z",
+      "t_in": "2026-10-09T19:23:59.352815Z",
+      "t_out": "2026-10-09T19:23:59.352815Z",
+      "distance_m": 5
      }
     ],
     "flags": [],
+    "source": "live"
+   },
+   {
+    "vehicle_key": "rail:302",
+    "mode": "rail",
+    "vehicle_id": "302",
+    "label": null,
+    "route": "GOLD",
+    "continuing_as": null,
+    "line": "GOLD",
+    "direction_label": "To Airport",
+    "confidence": 0.199,
+    "level": "low",
+    "evidence": [
+     {
+      "role": "alight",
+      "place_label": "Garnett",
+      "at": "2026-10-09T19:26:35.479255Z",
+      "t_in": "2026-10-09T19:26:35.479255Z",
+      "t_out": "2026-10-09T19:26:35.479255Z",
+      "distance_m": 10
+     }
+    ],
+    "flags": [
+     "line_differs"
+    ],
+    "source": "live"
+   },
+   {
+    "vehicle_key": "rail:310",
+    "mode": "rail",
+    "vehicle_id": "310",
+    "label": null,
+    "route": "GOLD",
+    "continuing_as": null,
+    "line": "GOLD",
+    "direction_label": "To Airport",
+    "confidence": 0.094,
+    "level": "low",
+    "evidence": [
+     {
+      "role": "alight",
+      "place_label": "Garnett",
+      "at": "2026-10-09T19:19:58.410794Z",
+      "t_in": "2026-10-09T19:19:58.410794Z",
+      "t_out": "2026-10-09T19:19:58.410794Z",
+      "distance_m": 5
+     }
+    ],
+    "flags": [
+     "line_differs"
+    ],
     "source": "live"
    }
   ],
   "schedule_candidates": [],
   "coverage": {
-   "unreported_share": 0.0,
+   "unreported_share": 0,
    "recorder_gap": false
   },
   "tie_break": null,
   "separate_by": null,
   "stats": {
-   "positions_scanned": 645,
+   "positions_scanned": 415,
    "vehicles_considered": 6,
-   "query_ms": 91,
+   "query_ms": 27,
    "sql": "SELECT source, vehicle_id, label, route_short, trip_id, trip_canceled, direction, destination, anchor_idx, piece, dist_m, t_pass, t_in, t_out, gap_s FROM vehicle_passes(%(mode)s, %(lons)s, %(lats)s, %(t_from)s, %(t_to)s, 400, interval '600 seconds', interval '90 seconds', %(until)s)",
    "engine": "sql"
   }

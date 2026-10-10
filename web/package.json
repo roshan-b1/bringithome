@@ -8,15 +8,17 @@
   },
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "node scripts/sync_contacts.mjs && next build",
-    "start:out": "python3 -m http.server -d out 3000",
+    "build": "node scripts/sync_contacts.mjs && NEXT_PUBLIC_GIT_SHA=${NEXT_PUBLIC_GIT_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo dev)} next build && node scripts/build_sw.mjs",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "node --test \"lib/**/*.test.ts\" \"contracts/**/*.test.ts\"",
+    "test": "node --test \"lib/**/*.test.ts\" \"contracts/**/*.test.ts\" \"components/**/*.test.ts\"",
     "lint:copy": "node scripts/copylint.mjs",
     "e2e": "playwright test",
     "geo": "python3 scripts/export_geo.py",
     "sync:contacts": "node scripts/sync_contacts.mjs",
-    "check": "npm run typecheck && npm run test && npm run lint:copy"
+    "check": "npm run typecheck && npm run test && npm run lint:copy",
+    "serve": "python3 scripts/serve.py 3000",
+    "snapshot": "node scripts/snapshot.mjs",
+    "icons": "node scripts/make_icons.mjs"
   },
   "dependencies": {
     "maplibre-gl": "6.13.0",

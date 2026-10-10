@@ -1,0 +1,209 @@
+{
+ "generated_at": "2026-10-09T19:27:00Z",
+ "lost_found": {
+  "open_now": true,
+  "next_open": "2026-10-12T12:30:00Z",
+  "usually": false
+ },
+ "meet": {
+  "possible": true,
+  "reason": "meet",
+  "vehicle_keys": [
+   "rail:407"
+  ],
+  "place_id": "station:510013",
+  "place_label": "East Point",
+  "direction": "S",
+  "eta": [
+   "2026-10-09T19:34:04Z"
+  ],
+  "walk_s": 224,
+  "margin_min": 2
+ },
+ "cards": [
+  {
+   "kind": "bag_staff",
+   "step": 1,
+   "facts": {
+    "police_non_emergency": "404-848-4900",
+    "tracks_01": 1
+   },
+   "fact_sources": {
+    "police_non_emergency": "contacts",
+    "tracks_01": "rules"
+   },
+   "actions": [
+    {
+     "type": "tel",
+     "label_id": "call_police",
+     "value": "tel:+14048484900"
+    }
+   ],
+   "evidence": [],
+   "source": "static"
+  },
+  {
+   "kind": "meet",
+   "step": 2,
+   "facts": {
+    "mode": "rail",
+    "stop": "East Point",
+    "time": "3:34 PM",
+    "minutes": 7,
+    "toward": "Airport",
+    "night": 0,
+    "on_train": 1
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "stop": "static_gtfs",
+    "time": "db",
+    "minutes": "db",
+    "toward": "db",
+    "night": "rules",
+    "on_train": "rules"
+   },
+   "actions": [],
+   "evidence": [
+    {
+     "role": "alight",
+     "place_label": "Garnett",
+     "at": "2026-10-09T19:23:59.352815Z",
+     "distance_m": 5
+    }
+   ],
+   "source": "live"
+  },
+  {
+   "kind": "keep",
+   "step": 3,
+   "facts": {
+    "mode": "rail",
+    "vehicle": "Red Line train",
+    "train_run": "407",
+    "stop": "Garnett",
+    "time": "3:23 PM",
+    "role": "alight"
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "train_run": "db",
+    "stop": "static_gtfs",
+    "time": "db",
+    "role": "rules"
+   },
+   "actions": [
+    {
+     "type": "copy",
+     "label_id": "keep_copy",
+     "value": "Red Line train, MARTA train run 407, got off at Garnett around 3:23 PM on Friday, October 9."
+    }
+   ],
+   "evidence": [
+    {
+     "role": "alight",
+     "place_label": "Garnett",
+     "at": "2026-10-09T19:23:59.352815Z",
+     "distance_m": 5
+    }
+   ],
+   "source": "live"
+  },
+  {
+   "kind": "report",
+   "step": 4,
+   "facts": {
+    "direction": "To Airport",
+    "location": "Garnett",
+    "time": "Fri Oct 9, about 3:23 PM",
+    "rail_line": "Red Line",
+    "rail_station": "Garnett",
+    "train_run": "MARTA train run 407, from MARTA's public feeds"
+   },
+   "fact_sources": {
+    "direction": "db",
+    "location": "static_gtfs",
+    "time": "db",
+    "rail_line": "db",
+    "rail_station": "static_gtfs",
+    "train_run": "db"
+   },
+   "actions": [
+    {
+     "type": "link",
+     "label_id": "report_open_form",
+     "value": "https://itsmarta.com/tplecrmcontact-v2.aspx"
+    },
+    {
+     "type": "copy",
+     "label_id": "report_copy",
+     "value": "Rail Line: Red Line\nMARTA Rail Station: Garnett\nDirection of Travel/Destination: To Airport\nLocation: Garnett\nTime: Fri Oct 9, about 3:23 PM\nMARTA train run 407, from MARTA's public feeds"
+    }
+   ],
+   "evidence": [
+    {
+     "role": "alight",
+     "place_label": "Garnett",
+     "at": "2026-10-09T19:23:59.352815Z",
+     "distance_m": 5
+    }
+   ],
+   "source": "live"
+  },
+  {
+   "kind": "call",
+   "step": 5,
+   "facts": {
+    "open_now": 1,
+    "lost_found_phone": "404-848-3208",
+    "lost_found_hours": "Mon to Fri, 8:30 AM to 5 PM",
+    "lost_found_transit_time": "up to 5 business days",
+    "lost_found_hold": "30 days",
+    "usually": 0
+   },
+   "fact_sources": {
+    "open_now": "contacts",
+    "lost_found_phone": "contacts",
+    "lost_found_hours": "contacts",
+    "lost_found_transit_time": "contacts",
+    "lost_found_hold": "contacts",
+    "usually": "contacts"
+   },
+   "actions": [
+    {
+     "type": "tel",
+     "label_id": "call_lost_found",
+     "value": "tel:+14048483208"
+    },
+    {
+     "type": "mailto",
+     "label_id": "email_lost_found",
+     "value": "mailto:lostandfound@itsmarta.com"
+    }
+   ],
+   "evidence": [],
+   "source": "static"
+  }
+ ],
+ "report": {
+  "form_fields": {
+   "direction": "To Airport",
+   "location": "Garnett",
+   "time": "Fri Oct 9, about 3:23 PM",
+   "rail_line": "Red Line",
+   "rail_station": "Garnett",
+   "train_run": "MARTA train run 407, from MARTA's public feeds"
+  },
+  "email": {
+   "subject": "Lost item on a Red Line train, Friday, October 9",
+   "body": "Hello,\n\nI'm writing to report a lost item. I left [[ITEM]] on a Red Line train, heading to Airport. MARTA's public feeds list it as train run 407. I got off at Garnett on Friday, October 9, at about 3:23 PM.\n\nI have also sent these details through the online lost item form. If it turns up, please let me know how to arrange a pickup. I can describe it in more detail and bring a photo ID.\n\nThank you.",
+   "wording": "template"
+  },
+  "call_script": {
+   "text": "Hi, I'm calling to report a lost item. I left [[ITEM]] on a Red Line train, heading to Airport. MARTA's public feeds list it as train run 407. I got off at Garnett on Friday, October 9, at about 3:23 PM. I've also sent the online report. Has anything like that been turned in, and what should I do next?",
+   "wording": "template"
+  }
+ },
+ "source": "as_of"
+}

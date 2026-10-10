@@ -1,0 +1,150 @@
+/* "Likely match:" above the vehicle's name, which is the big line */
+.titleLead {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0;
+  color: var(--ink-2);
+}
+
+/* ContextLine: what was checked, then what fits */
+.context {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.contextLine {
+  font-size: var(--fs-md);
+  line-height: var(--lh-snug);
+}
+
+.contextLine strong {
+  font-weight: var(--fw-heavy);
+}
+
+.contextWhere {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  line-height: var(--lh-snug);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.sectionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.h2 {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-heavy);
+}
+
+/* the one question on the results screen */
+.question {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding-top: var(--sp-1);
+}
+
+.questionTitle {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-heavy);
+}
+
+.checking {
+  color: var(--ink-2);
+  font-weight: var(--fw-semibold);
+}
+
+.fits {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* not_reporting: the timetable's buses */
+.schedule {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scheduleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border: 2px solid var(--navy-08);
+  border-radius: var(--r-md);
+  background: var(--white);
+}
+
+.scheduleIcon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.scheduleText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+}
+
+.scheduleTrip {
+  font-weight: var(--fw-heavy);
+}
+
+.warnText {
+  color: var(--warn);
+  font-weight: var(--fw-semibold);
+}
+
+.muted {
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+
+.credit {
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+/* the laptop's right pane: the map, then where it is now */
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.lives {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}

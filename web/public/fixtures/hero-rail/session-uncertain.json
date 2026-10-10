@@ -1,0 +1,193 @@
+{
+ "session_id": "43d1372f-191b-4f95-be65-a829af4c6a59",
+ "deletes_by": "2026-10-11T04:35:19.792959Z",
+ "as_of": "2026-10-09T15:27:00-04:00",
+ "record": false,
+ "match": {
+  "status": "uncertain",
+  "level": "low",
+  "context": {
+   "vehicles_near": 9,
+   "counted": "trains",
+   "radius_m": 400,
+   "place_label": "Garnett station",
+   "window": {
+    "from": "2026-10-09T15:06:00-04:00",
+    "to": "2026-10-09T15:42:00-04:00"
+   }
+  },
+  "candidates": [
+   {
+    "vehicle_key": "rail:407",
+    "mode": "rail",
+    "vehicle_id": "407",
+    "label": null,
+    "route": "RED",
+    "continuing_as": null,
+    "line": "RED",
+    "direction_label": "To Airport",
+    "confidence": 0.162,
+    "level": "low",
+    "evidence": [
+     {
+      "role": "alight",
+      "place_label": "Garnett station",
+      "at": "2026-10-09T19:23:57.486776Z",
+      "t_in": "2026-10-09T19:23:57.486776Z",
+      "t_out": "2026-10-09T19:23:59.352815Z",
+      "distance_m": 5
+     }
+    ],
+    "flags": [],
+    "source": "live"
+   },
+   {
+    "vehicle_key": "rail:306",
+    "mode": "rail",
+    "vehicle_id": "306",
+    "label": null,
+    "route": "GOLD",
+    "continuing_as": null,
+    "line": "GOLD",
+    "direction_label": "To Doraville",
+    "confidence": 0.162,
+    "level": "low",
+    "evidence": [
+     {
+      "role": "alight",
+      "place_label": "Garnett station",
+      "at": "2026-10-09T19:24:22.639616Z",
+      "t_in": "2026-10-09T19:24:22.639616Z",
+      "t_out": "2026-10-09T19:24:33.286347Z",
+      "distance_m": 5
+     }
+    ],
+    "flags": [],
+    "source": "live"
+   },
+   {
+    "vehicle_key": "rail:302",
+    "mode": "rail",
+    "vehicle_id": "302",
+    "label": null,
+    "route": "GOLD",
+    "continuing_as": null,
+    "line": "GOLD",
+    "direction_label": "To Airport",
+    "confidence": 0.152,
+    "level": "low",
+    "evidence": [
+     {
+      "role": "alight",
+      "place_label": "Garnett station",
+      "at": "2026-10-09T19:26:31.560111Z",
+      "t_in": "2026-10-09T19:26:31.560111Z",
+      "t_out": "2026-10-09T19:26:35.479255Z",
+      "distance_m": 10
+     }
+    ],
+    "flags": [],
+    "source": "live"
+   },
+   {
+    "vehicle_key": "rail:406",
+    "mode": "rail",
+    "vehicle_id": "406",
+    "label": null,
+    "route": "RED",
+    "continuing_as": null,
+    "line": "RED",
+    "direction_label": "To North Springs",
+    "confidence": 0.141,
+    "level": "low",
+    "evidence": [
+     {
+      "role": "alight",
+      "place_label": "Garnett station",
+      "at": "2026-10-09T19:20:02.278096Z",
+      "t_in": "2026-10-09T19:20:02.278096Z",
+      "t_out": "2026-10-09T19:22:26.377954Z",
+      "distance_m": 5
+     }
+    ],
+    "flags": [],
+    "source": "live"
+   },
+   {
+    "vehicle_key": "rail:310",
+    "mode": "rail",
+    "vehicle_id": "310",
+    "label": null,
+    "route": "GOLD",
+    "continuing_as": null,
+    "line": "GOLD",
+    "direction_label": "To Airport",
+    "confidence": 0.14,
+    "level": "low",
+    "evidence": [
+     {
+      "role": "alight",
+      "place_label": "Garnett station",
+      "at": "2026-10-09T19:19:56.089632Z",
+      "t_in": "2026-10-09T19:19:56.089632Z",
+      "t_out": "2026-10-09T19:19:58.410794Z",
+      "distance_m": 5
+     }
+    ],
+    "flags": [],
+    "source": "live"
+   }
+  ],
+  "schedule_candidates": [
+   {
+    "trip_id": "11750697",
+    "route": "RED",
+    "headsign": "RED SOUTHBOUND TO AIRPORT STATION",
+    "scheduled_at": "2026-10-09T19:32:00Z",
+    "stop_label": "Garnett Station",
+    "status": "scheduled",
+    "block_vehicle_now": null
+   },
+   {
+    "trip_id": "11748275",
+    "route": "GOLD",
+    "headsign": "GOLD NORTHBOUND TO DORAVILLE STATION",
+    "scheduled_at": "2026-10-09T19:34:00Z",
+    "stop_label": "Garnett Station",
+    "status": "scheduled",
+    "block_vehicle_now": null
+   }
+  ],
+  "coverage": {
+   "unreported_share": 0.072,
+   "recorder_gap": true
+  },
+  "tie_break": null,
+  "separate_by": {
+   "question": "direction",
+   "options": [
+    {
+     "label": "To Airport",
+     "vehicle_keys": [
+      "rail:407",
+      "rail:302"
+     ]
+    },
+    {
+     "label": "To Doraville",
+     "vehicle_keys": [
+      "rail:306"
+     ]
+    }
+   ]
+  },
+  "stats": {
+   "positions_scanned": 416,
+   "vehicles_considered": 9,
+   "query_ms": 48,
+   "sql": "SELECT source, vehicle_id, label, route_short, trip_id, trip_canceled, direction, destination, anchor_idx, piece, dist_m, t_pass, t_in, t_out, gap_s FROM vehicle_passes(%(mode)s, %(lons)s, %(lats)s, %(t_from)s, %(t_to)s, 400, interval '600 seconds', interval '90 seconds', %(until)s)",
+   "engine": "sql"
+  }
+ },
+ "source": "as_of"
+}

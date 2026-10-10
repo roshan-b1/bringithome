@@ -1,0 +1,172 @@
+.card {
+  gap: var(--sp-3);
+}
+
+.compact {
+  padding: var(--sp-4);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.names {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-heavy);
+  line-height: var(--lh-snug);
+}
+
+.id {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+}
+
+.when {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  font-weight: var(--fw-bold);
+  white-space: nowrap;
+}
+
+/* a bus route as a navy plate: the number is what's painted on the front of the bus */
+.routeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  min-width: 56px;
+  height: 44px;
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  background: var(--navy);
+  color: var(--white);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-heavy);
+}
+
+.railBadge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
+  color: var(--white);
+  box-shadow: inset 0 0 0 2px rgb(20 33 61 / 0.12);
+}
+
+/* gold is light: a navy train on it, for contrast */
+.railBadgeLight {
+  color: var(--navy);
+}
+
+.direction {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: var(--fw-bold);
+}
+
+.direction svg {
+  flex: none;
+  color: var(--orange);
+}
+
+.note {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+
+.level {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-weight: var(--fw-semibold);
+}
+
+.bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 18px;
+}
+
+.bar {
+  width: 7px;
+  border-radius: 2px;
+  background: var(--navy-14);
+}
+
+.bar:nth-child(1) {
+  height: 8px;
+}
+
+.bar:nth-child(2) {
+  height: 13px;
+}
+
+.bar:nth-child(3) {
+  height: 18px;
+}
+
+.barOn {
+  background: var(--navy);
+}
+
+.evidence,
+.flags {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.evidence li,
+.flags li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  line-height: var(--lh-snug);
+}
+
+.evidence svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--navy);
+}
+
+.flags li {
+  font-size: var(--fs-sm);
+  color: var(--warn);
+}
+
+.flags svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+@media (forced-colors: active) {
+  .railBadge {
+    forced-color-adjust: none; /* the line colour is the point; the name beside it says it */
+  }
+  .barOn {
+    background: CanvasText;
+  }
+  .bar {
+    border: 1px solid CanvasText;
+  }
+}

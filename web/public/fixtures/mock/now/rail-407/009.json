@@ -1,0 +1,51 @@
+{
+ "vehicle_key": "rail:407",
+ "label": null,
+ "route": "RED",
+ "line": "RED",
+ "destination_label": "Airport",
+ "position": {
+  "lon": -84.422371,
+  "lat": 33.722866
+ },
+ "at": "2026-10-09T19:28:23.024000Z",
+ "age_s": 7,
+ "state": "live",
+ "next_stops": [
+  {
+   "place_id": "station:510029",
+   "label": "Oakland City",
+   "eta": "2026-10-09T19:28:38.024000Z",
+   "source": "live"
+  },
+  {
+   "place_id": "station:510022",
+   "label": "Lakewood-Ft McPherson",
+   "eta": "2026-10-09T19:30:51.024000Z",
+   "source": "live"
+  },
+  {
+   "place_id": "station:510013",
+   "label": "East Point",
+   "eta": "2026-10-09T19:33:39.024000Z",
+   "source": "live"
+  },
+  {
+   "place_id": "station:510008",
+   "label": "College Park",
+   "eta": "2026-10-09T19:36:27.024000Z",
+   "source": "live"
+  },
+  {
+   "place_id": "station:510037",
+   "label": "Airport",
+   "eta": "2026-10-09T19:38:34.024000Z",
+   "source": "live"
+  }
+ ],
+ "turns_around_at": "Airport",
+ "trip_status": "scheduled",
+ "meet_ok": true,
+ "meet_reason": "ok",
+ "source": "as_of"
+}

@@ -1,6 +1,6 @@
 .footer {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: var(--sp-3);
   padding: var(--sp-4);
   border-radius: var(--r-md);
@@ -10,16 +10,32 @@
   line-height: var(--lh-body);
 }
 
+.say {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+}
+
 .icon {
   flex: none;
   margin-top: 2px;
   color: var(--danger);
 }
 
-.footer a {
+.number {
   font-weight: var(--fw-bold);
   white-space: nowrap;
-  /* tel links are tap targets too: pad them without moving the text */
-  padding: 10px 2px;
-  margin: -10px -2px;
+}
+
+/* one column on a phone (each label stays on one line at 320 px), two side by side where there is room */
+.buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--sp-2);
+}
+
+.button {
+  /* tighter than a full-width BigButton, so "Text MARTA Police" stays on one line at 320 px */
+  gap: var(--sp-2);
+  padding-inline: var(--sp-3);
 }

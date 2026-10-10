@@ -6,9 +6,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SessionResponse } from '../contracts/api.ts'
-import { ApiError, runtime, syncServerClock, type ApiResult } from './api.ts'
+import type { VehicleKey } from '../contracts/api.ts'
+import { ApiError, deleteSession, runtime, syncServerClock, type ApiResult } from './api.ts'
 import * as flow from './flow.ts'
-import type { AnswerMap, Answers, FlowState, QuestionStep, Step } from './flow.ts'
+import type { AnswerMap, FlowState, QuestionStep, Step } from './flow.ts'
 import { clearNow as clearEverything, resume, saveFlow } from './session.ts'
 
 export interface FlowSession {
@@ -23,11 +24,14 @@ export interface FlowSession {
   /** the session expired (404 on resume) and the flow started over */
   expired: boolean
   progress: { n: number; m: number } | null
+  /** the vehicles the rider settled on in results (0 to 2), for the plan; memory only (the plan keeps its own tap) */
+  pick: VehicleKey[] | null
+  setPick: (keys: VehicleKey[] | null) => void
   answer: <K extends QuestionStep>(step: K, value: AnswerMap[K]) => void
   advance: () => void
   back: () => void
   goTo: (step: Step) => void
-  setExtra: (extra: Pick<Answers, 'walk' | 'places'>) => void
+  setExtra: (extra: flow.Extra) => void
   /** store the match after POST /api/sessions; the id is persisted, the body is not */
   setSession: (result: ApiResult<SessionResponse>) => void
   /** retry the resume GET after resumeError */
@@ -46,6 +50,7 @@ export function useFlowSession(): FlowSession {
   const [resumeError, setResumeError] = useState<ApiError | null>(null)
   const [expired, setExpired] = useState(false)
   const [attempt, setAttempt] = useState(0)
+  const [pick, setPick] = useState<VehicleKey[] | null>(null)
   const loaded = useRef(false)
 
   // resume once (and again on retryResume); also read the URL params and learn the server clock early
@@ -80,23 +85,48 @@ export function useFlowSession(): FlowSession {
     if (loaded.current) saveFlow(state, sessionId)
   }, [state, sessionId])
 
+  // Arriving at done means a new match is about to be POSTed for these answers: the one from before (the rider went
+  // Back and changed an answer) no longer describes them, so it is forgotten here and deleted on the server (best
+  // effort; retention covers a failure). A reload while the new POST is in flight then posts again rather than
+  // resuming a session made from the old answers.
+  const latestId = useRef<string | null>(null)
+  latestId.current = sessionId
+  useEffect(() => {
+    if (!ready || state.step !== 'done' || !latestId.current) return
+    const old = latestId.current
+    setSessionId(null)
+    setSessionResult(null)
+    setPick(null)
+    deleteSession(old).catch(() => {})
+  }, [ready, state.step])
+
   const answer = useCallback(<K extends QuestionStep>(step: K, value: AnswerMap[K]) => {
     setState((s) => flow.answer(s, step, value))
   }, [])
   const advance = useCallback(() => setState((s) => flow.advance(s)), [])
   const back = useCallback(() => setState((s) => flow.back(s)), [])
   const goTo = useCallback((step: Step) => setState((s) => flow.goTo(s, step)), [])
-  const setExtra = useCallback((extra: Pick<Answers, 'walk' | 'places'>) => setState((s) => flow.setExtra(s, extra)), [])
+  const setExtra = useCallback((extra: flow.Extra) => setState((s) => flow.setExtra(s, extra)), [])
+  // A new session replaces the one held (the results question's re-run): the first one no longer describes what
+  // the rider sees, and "Clear now" deletes only the current id, so it is deleted here (best effort; retention
+  // covers a failure). A session that arrives also ends any resume error.
   const setSession = useCallback((result: ApiResult<SessionResponse>) => {
+    const old = latestId.current
+    const id = result.data.session_id
+    if (old && old !== id) deleteSession(old).catch(() => {})
+    latestId.current = id
     setSessionResult(result)
-    setSessionId(result.data.session_id)
+    setSessionId(id)
+    setResumeError(null)
   }, [])
   const retryResume = useCallback(() => setAttempt((n) => n + 1), [])
   const restart = useCallback(() => {
     setState(flow.initialState())
     setSessionId(null)
     setSessionResult(null)
+    setResumeError(null)
     setExpired(false)
+    setPick(null)
   }, [])
   const clearNow = useCallback(async () => {
     await clearEverything(sessionId)
@@ -106,7 +136,7 @@ export function useFlowSession(): FlowSession {
   const progress = useMemo(() => flow.progress(state), [state])
 
   return {
-    state, ready, sessionId, session, resumeError, expired, progress,
+    state, ready, sessionId, session, resumeError, expired, progress, pick, setPick,
     answer, advance, back, goTo, setExtra, setSession, retryResume, clearNow, restart,
   }
 }

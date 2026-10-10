@@ -1,0 +1,203 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+/* the map: wide and short enough that the match card still peeks above the thumb zone on an SE */
+.frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3.3;
+  max-height: 46dvh;
+  min-height: 220px;
+  overflow: hidden;
+  border: 2px solid var(--navy-08);
+  border-radius: var(--r-lg);
+  background: #f7f4ef;
+  box-shadow: var(--shadow-1);
+  isolation: isolate;
+}
+
+.canvas {
+  /* MapLibre adds .maplibregl-map (position: relative) to this element; keep it filling the frame */
+  position: absolute !important;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  background: var(--navy-04);
+}
+
+.skeleton > span {
+  flex: 1;
+}
+
+.skeleton > span > span {
+  height: 100% !important;
+  border-radius: 0 !important;
+}
+
+/* the replay clock, top left, in the brand's pill; after the replay it becomes "Watch again" */
+.pill {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--white);
+  color: var(--navy);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-heavy);
+  /* no tabular figures: the brand face's tabular colon is set wide ("2 : 53"); min-width keeps the pill steady */
+  min-width: 8.5em;
+  box-shadow: var(--shadow-1);
+  pointer-events: none;
+}
+
+/* the time line under the map: the logo's orange route line filling as the window plays */
+.progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+  height: 5px;
+  background: rgb(20 33 61 / 0.12);
+  pointer-events: none;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--orange);
+}
+
+.ask {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.hint {
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+.details {
+  border-radius: var(--r-md);
+  background: var(--navy-04);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  padding: 0 var(--sp-4);
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+  list-style: none;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summaryIcon {
+  flex: none;
+  color: var(--orange);
+  transition: transform var(--dur) var(--ease);
+}
+
+.details[open] .summaryIcon {
+  transform: rotate(90deg);
+}
+
+.summary:focus-visible {
+  border-radius: var(--r-md);
+}
+
+.mirror {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0 var(--sp-4) var(--sp-4) calc(var(--sp-4) + 18px);
+  line-height: var(--lh-snug);
+}
+
+.textOnly {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4) 0;
+  border-radius: var(--r-lg);
+  background: var(--navy-04);
+}
+
+.textOnly .mirror {
+  padding-bottom: 0;
+}
+
+.unavailable {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-4);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+}
+
+.unavailable svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.failed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border-radius: var(--r-lg);
+  background: var(--navy-04);
+}
+
+/* the tiles' credit (OpenFreeMap, OpenMapTiles, OpenStreetMap), as text outside the aria-hidden map */
+.credit {
+  margin-top: calc(var(--sp-2) * -1);
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-2);
+}
+
+.credit a {
+  color: inherit;
+  white-space: nowrap; /* "©" stays with its name */
+  text-underline-offset: 0.15em;
+}
+
+@media (forced-colors: active) {
+  .frame {
+    border-color: CanvasText;
+  }
+}
+
+/* the laptop's right pane: the map takes the room beside the cards */
+.tall .frame {
+  aspect-ratio: auto;
+  height: min(52dvh, 560px);
+  max-height: none;
+}

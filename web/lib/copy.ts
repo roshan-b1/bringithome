@@ -18,7 +18,7 @@ export const COPY = {
   'home.promise': 'Find the one you were on, see where it is now, and get a calm plan.',
   'home.cta': 'I lost something',
   'home.cta_hint': 'One question at a time.',
-  'home.borrowed': 'No account, no app. Works on a borrowed phone, and nothing stays on it.',
+  'home.borrowed': 'No account, no app. Works on a borrowed phone. Nothing stays on it after you close this page.',
   'home.step_1': 'Tap what you remember',
   'home.step_2': 'We match the bus or train you were on',
   'home.step_3': 'You get a calm plan, one step at a time',
@@ -242,6 +242,8 @@ export const COPY = {
   phone_lost: 'Mark your phone as lost from this device, with its find service.',
   police_property: 'If MARTA Police picked it up, their property unit holds items {police_property_hold}. Call {police_property_unit}. Claims are {police_property_claims}.',
   safety_footer: 'In danger? Call {emergency_911}. To reach MARTA Police directly, call {police_emergency} or text {police_text}.',
+  'safety.call_police': 'Call MARTA Police',
+  'safety.text_police': 'Text MARTA Police',
 
   // card action buttons, by the API's label_id ({number} from contacts.json)
   'action.call_police': 'Call MARTA Police {number}',
@@ -255,6 +257,7 @@ export const COPY = {
   'action.customer_service': 'Call MARTA customer service {number}',
   'action.route_schedule_info': 'Call MARTA route info {number}',
   'action.call_police_property': 'Call the property unit {number}',
+  'action.directions': 'Walking directions',
   'action.copied': 'Copied',
 
   phone_borrowed: "Using a borrowed phone? That's okay. Nothing stays on this phone after you close this page.",
@@ -266,6 +269,349 @@ export const COPY = {
   'not_marta.label': 'Place name',
   'not_marta.add': 'Add another place',
   place_call: 'Call {place}. Say what you lost, about when you were there, and how they can reach you.',
+
+  // ===== Intake screens (components/intake): the four questions, TellMe, the no-stop steps and the somewhere-else path. Not in PREP section 10: for team review.
+  // shared
+  'intake.type_instead': 'Type it instead',
+  'intake.not_marta_hint': 'A store, a cafe, a rideshare or anywhere else',
+
+  // Bus or train? (the team's wording for question 2; wb_04_mode stays the long form)
+  'mode.title': 'Bus or train?',
+
+  // Where did you get off?
+  // "sent once": the results and live maps show the rider's own dot later, but on the phone only; this lookup is
+  // the one time a position leaves it (plus "Which train are you on now?" on the plan)
+  'off.locating': 'Finding stops near you. Your location is sent once for this and never stored.',
+  'off.near_heading': 'Near you now',
+  'off.recorded_heading': 'From the recorded ride',
+  'off.recorded_found': '{count} places from the recorded ride.',
+  'off.recorded_found_one': 'One place from the recorded ride.',
+  'off.near_found': '{count} places near you.',
+  'off.near_found_one': 'One place near you.',
+  'off.near_none': "We didn't find a stop near you. Search for it instead.",
+  'off.near_failed': "We couldn't load stops near you. Search for it instead.",
+  'off.location_unavailable': "We couldn't get your location. That's okay, you can search for the stop instead.",
+  'off.use_location': 'Use my location',
+  'off.away_km': '{km} km away',
+  'off.routes': 'Routes {routes}',
+  'off.routes_more': 'Routes {routes} and {more} more',
+  'off.your_answer': 'Your answer',
+  'off.search_results': '{count} matches.',
+  'off.search_result_one': 'One match.',
+  'off.searching': 'Searching',
+
+  // About when did you get off?
+  'when.use_time': 'Use {time}',
+  'when.picked_yesterday_day': 'Got off around {time} yesterday ({day})?',
+
+  // done, when there is no stop to match against: no session can be made, so the first steps come from the bundled
+  // copy and contacts, and the stop can still be added
+  'done.no_place_title': 'We need a stop to find the exact one',
+  'done.no_place_lead': "Add where you got off and we'll look again. You can start on these steps now.",
+  'done.add_stop': 'Add the stop',
+  'done.staff_title': 'Tell staff',
+  'done.staff': 'Tell any MARTA driver or station staff what you lost and about when.',
+  'done.report_title': 'Report it online',
+  'done.call_title': 'Call Lost and Found',
+
+  // TellMe
+  'tell.title': 'Tell us where and when',
+  'tell.lead_item': "You'll pick what you lost on the next screen.",
+  'tell.lead_off': 'Where you got off, and about when.',
+  'tell.example': 'Like: got off the 49 near Peachtree Center around 1:15',
+  'tell.listening': 'Listening. Say where and when.',
+  'tell.reading': 'Reading that',
+  'tell.confirm_title': 'Is this right?',
+  'tell.confirm_lead': 'Nothing is used until you tap yes.',
+  'tell.ride': 'What you rode',
+  'tell.where_off': 'Where you got off',
+  'tell.where_on': 'Where you got on',
+  'tell.when': 'When',
+  'tell.you_said': 'You said "{phrase}"',
+  'tell.pick_one': 'Tap the one you meant.',
+  'tell.none_of_these': 'None of these',
+  'tell.mode_bus': 'Bus[, route {route}]',
+  'tell.mode_rail': 'Train',
+  'tell.mode_streetcar': 'Streetcar',
+  'tell.time': 'About {time}[ {day}]',
+  'tell.yes': "Yes, that's right",
+  'tell.again': 'Type it again',
+  'tell.asked_next': "We'll ask for anything you leave out.",
+  'tell.nothing': "We couldn't pick out a stop or a time from that. Try other words, or answer by tapping.",
+  'tell.unavailable': "Typing it isn't working right now. Let's answer by tapping instead.",
+  'tell.answer_by_tapping': 'Answer by tapping',
+
+  // somewhere else
+  'elsewhere.title': 'Where were you before you noticed?',
+  'elsewhere.lead': 'Start with the most recent place. Add up to 3.',
+  'elsewhere.add': 'Add',
+  'elsewhere.quick': 'Or tap one',
+  'elsewhere.pick.store': 'the store',
+  'elsewhere.pick.restaurant': 'the restaurant or cafe',
+  'elsewhere.pick.work': 'work or school',
+  'elsewhere.pick.ride': 'the rideshare or taxi company',
+  'elsewhere.list': 'Your places, most recent first',
+  'elsewhere.most_recent': 'Most recent',
+  'elsewhere.remove': 'Remove {place}',
+  'elsewhere.full': "That's 3 places. Remove one to add another.",
+  'elsewhere.see_plan': 'See what to do',
+  'elsewhere.not_sure_place': 'the places you were before you noticed',
+  'elsewhere.plan_title': "Here's what you can try",
+  'elsewhere.plan_lead': 'Start with the most recent place.',
+  'elsewhere.freeze': 'Freeze your cards now with your bank.',
+  'elsewhere.start_over': 'Start over',
+
+  // ===== Results screens (components/results): the match, the one follow-up question, where it is now. Not in PREP section 10: for team review.
+  // ------------------------------------------------------------------------------------------- headline, context
+  'results.found': 'Likely match: {vehicle}[, vehicle {label}][, train run {train_run}]',
+  // the same headline in two parts, so the vehicle can be the big line (the h1 still reads as one sentence)
+  'results.found_lead': 'Likely match:',
+  'results.found_name': '{vehicle}[, vehicle {label}][, train run {train_run}]',
+  'results.how_sure': 'How sure: {level}',
+  'results.see_plan': 'See your plan',
+  'results.change_answers': 'Change my answers',
+  'results.looking': 'Looking for your bus or train',
+  // the second sentences of res_05_nomatch and res_notreporting, as leads under their first sentence
+  'results.nomatch_title': "We couldn't pin down the exact one yet.",
+  'results.nomatch_lead': "That's okay. Here's your plan.",
+  'results.notreporting_title': "That bus isn't sharing its location right now.",
+  'results.notreporting_title_train': "That train isn't sharing its location right now.",
+  'results.notreporting_lead': "Here's a plan based on its schedule.",
+  // decision 7's streetcar line (the streetcar has no live data and always takes the schedule path)
+  'results.streetcar_title': "The streetcar doesn't share its location.",
+  'results.streetcar_lead': "Here's a plan from its schedule.",
+  // ContextLine's second line: decision 7's "within 400 m of {place} between {T1} and {T2}", shortened
+  'context.where': 'Within {radius} m of {place}, {from} to {to}.',
+  'context.none': 'No {counted} passed within {radius} m of {place} from {from} to {to}.',
+  'context.none_window': 'No {counted} passed within {radius} m of your stop from {from} to {to}.',
+  'context.none_bare': 'No {counted} passed within {radius} m of your stop.',
+
+  // the vehicle, named the way the plan's cards name it ("Bus 49", "Red Line train")
+  'vehicle.bus': 'Bus {route}',
+  'vehicle.rail': '{line} train',
+  'vehicle.rail_unknown': 'Train',
+  'vehicle.streetcar': 'Streetcar',
+  'noun.bus': 'bus',
+  'noun.buses': 'buses',
+  'noun.train': 'train',
+  'noun.trains': 'trains',
+  'noun.either': 'bus or train',
+  'noun.both': 'buses and trains',
+  'route.badge': 'Route {route}',
+
+  // ----------------------------------------------------------------------------------- the one question (refine)
+  // ambiguous: the tie-break as one question
+  'tie.title': 'Which one were you on?',
+  'tie.lead': 'Two fit what you remembered. Tap yours.',
+  'tie.option': '{vehicle}[, {direction}]',
+  'tie.not_sure': 'Not sure, plan for both',
+  // a tie the re-run couldn't split (or "Not sure"): both shown, the plan covers both (api/README "Statuses")
+  'tie.open_title': 'Two fit what you remembered.',
+  'tie.open_lead': 'Your plan covers both.',
+  // uncertain: separate_by as one question (route and direction reuse wb_08_bus and wb_09_way)
+  'separate.lead': 'One more tap can tell them apart.',
+  'separate.board_place': 'Where did you get on?',
+  'separate.not_sure': 'Not sure, plan without it',
+  'separate.fits_heading': 'Closest fits',
+  'separate.times': 'Passed your stop at {times}',
+  'separate.or': ' or ',
+  'refine.checking': 'Checking again with your answer',
+  'refine.failed': "We couldn't check again just now. Tap your answer to try again.",
+
+  // --------------------------------------------------------------------------------------------- candidate card
+  'candidate.passed': 'Passed {distance} m from {place} at {time}',
+  'candidate.passed_near': 'Passed nearby at {time}',
+  'candidate.continuing': 'Route {route}, continuing as {continuing_as}',
+  'candidate.label_bus': 'Vehicle {label}',
+  'candidate.train_run': 'Train run {train_run}',
+  'candidate.level_aria': 'How sure: {level}',
+  'flag.route_differs': 'Showed a different route than your answer',
+  'flag.line_differs': 'A different line than your answer',
+  'flag.direction_differs': 'Going the other way from your answer',
+  'flag.off_shape': 'Was off its usual route',
+  'flag.feed_canceled_trip': "MARTA's feed listed this trip as canceled",
+  'flag.relies_on_gap': 'Its location had a gap around then',
+
+  // ------------------------------------------------------------------------------------- not_reporting schedule
+  'schedule.heading': 'From the timetable',
+  'schedule.trip': 'Route {route}[ to {headsign}]',
+  'schedule.trip_named': '{vehicle}[ to {headsign}]',
+  'schedule.at': 'Due at {stop} at {time}',
+  'schedule.block_now': 'Now: bus {label}, {note}.',
+  'schedule.same_bus': 'probably the same bus',
+  'schedule.canceled': 'MARTA marked this trip as canceled.',
+
+  // ------------------------------------------------------------------------------------------------ LiveVehicle
+  'now.title': 'Where it is now',
+  'now.title_named': 'Where {vehicle} is now',
+  'now.update_failed': "Couldn't update just now. Trying again.",
+  'now.live': 'Live location from {time}.',
+  'now.replay': 'Recorded location from {time}.',
+  'now.heading': 'Heading to {destination}',
+  'now.next_stops': 'Next stops',
+  'now.eta_live': 'Live',
+  'now.eta_schedule': 'Timetable',
+  'now.turns_around': 'It turns around at {stop}.',
+  'now.continuing': 'Then it continues as route {route}.',
+  'now.not_seen': "We can't see this {vehicle_noun} right now. Your plan works without it.",
+  'now.checking': 'Checking where it is',
+  'now.no_stops': 'No upcoming stops to show yet.',
+
+  // ------------------------------------------------------------------------------------- the rider (CHANGES 2)
+  'rider.distance': "You're about {distance} from it.",
+  'rider.distance_short': '{distance} from you',
+  'rider.show': 'Show me on the map',
+  'rider.hint': 'Your location stays on this phone.',
+  'rider.denied': 'Location is off. The map shows only the {vehicle_noun}.',
+  'rider.waiting': 'Finding you',
+  'rider.fit': 'Show both',
+  'rider.you': 'You',
+
+  // --------------------------------------------------------------------------------------------------- the map
+  'map.your_stop': 'Your stop',
+  'map.watch_again': 'Watch again',
+  'map.credit': 'Map tiles:',
+  'map.credit_ofm': 'OpenFreeMap',
+  'map.credit_omt': '© OpenMapTiles',
+  'map.credit_osm': '© OpenStreetMap contributors',
+  'map.loading': 'Loading the map',
+  'map.gesture': 'Use two fingers to move the map.',
+  'map.mirror_stop': 'Your stop: {place}. The circle shows {radius} m around it.',
+  'map.mirror_circle': 'The circle shows {radius} m around your stop.',
+  'map.mirror_window': 'The replay shows {from} to {to}.',
+  'map.mirror_vehicle': '{vehicle} passed {distance} m from it at {time}.',
+  'map.mirror_others': '{count} other {counted} moved through the replay area.',
+  'map.mirror_now': 'Now: {state}',
+  'map.mirror_next': 'Next stop: {stop} at {time}.',
+  'map.mirror_you': "You: about {distance} from it.",
+  'map.no_replay': 'There is no replay for this one, so there is no map.',
+
+  // ===== Plan screens (components/plan): the cards, the optional questions, the meet, the report and call. Not in PREP section 10: for team review.
+  // the screen
+  'plan.title': 'Your plan',
+  'plan.lead': 'One step at a time. Start at the top.',
+  'plan.loading': 'Putting your plan together',
+  'plan.updating': 'Updating your plan',
+  'plan.updated': 'Plan updated.',
+  'plan.error_title': "Your plan didn't load",
+  'plan.no_session': 'This visit has no match to plan from. Start again from the first question.',
+  'plan.start_over': 'Start over',
+  'plan.see_again': 'See the plan again',
+  'plan.steps_label': 'Your plan, step by step',
+
+  // card titles, by the API's card kind
+  'plan.card.safety': 'Safety first',
+  'plan.card.bag_staff': "Tell staff it's yours",
+  'plan.card.meet': 'Meet it',
+  'plan.card.too_far': 'No meet right now',
+  'plan.card.tell_staff': 'Tell staff now',
+  'plan.card.keep': 'The one you were on',
+  'plan.card.report': 'Fill in the lost item form',
+  'plan.card.call': 'Call Lost and Found',
+  'plan.card.freeze_cards': 'Freeze your cards',
+  'plan.card.phone_lost': 'Mark your phone as lost',
+  'plan.card.police_property': 'MARTA Police property unit',
+  'plan.card.meet_check': 'Can you meet it?',
+
+  // a bus match, live: the meet needs to know where the rider is
+  'near.offer': 'Close by? We can check if you can meet the bus.',
+  'near.use_location': 'Use my location',
+  'near.looking': 'Finding the stop nearest you',
+
+  // "Think someone took it?" answers, short enough for one row
+  'taken.no': 'No',
+  'taken.yes': 'Yes',
+
+  // where a card's facts come from (card.source); live and schedule use the chip's own words
+  'source.static': 'Published info',
+  'source.static_label': "From MARTA's published contacts, not live data",
+  'plan.evidence': 'Seen {distance} m from {place} at {time}.',
+  'plan.evidence_label': 'Evidence',
+
+  // the meet card (decision 9, CHANGES 2: the rider's walk from the live position)
+  'meet.in_minutes': 'in about {minutes} min',
+  'meet.you_walk': 'You: {minutes} min walk',
+  'meet.you_there': "You're about there",
+  'meet.edge': 'Wait back from the platform edge.',
+  'meet.miss': "If you miss it, there's still a plan.",
+  'meet.location_offer': 'Show my walk time',
+  'meet.location_hint': 'Uses your location on this phone only. It is never sent or stored.',
+  'meet.location_off': 'Location is off, so the walk time comes from your plan.',
+  'meet.checking': 'Checked every 10 seconds while this page is open.',
+  'meet.slow': 'I walk slowly or use a mobility aid',
+
+  // "Where are you now?" (train matches only)
+  'where.lead': 'So we can see if you can meet the train.',
+  'where.station': 'At a station',
+  'where.train': 'On another train',
+  'where.elsewhere': 'Somewhere else',
+  'where.change': 'Change',
+  'where.answer_station': 'You are at {station}.',
+  'where.answer_train': 'You are on the {line} train to {destination}.',
+  'where.answer_elsewhere': "You're not at a station or on a train.",
+  'where.no_location': "Without your location we can't time a meet. The rest of the plan still works.",
+  'where.station_title': 'Which station are you at?',
+  'where.station_search_label': 'Station name',
+  'where.station_search': 'Search',
+  'where.station_hint': 'Like "Five Points" or "West End"',
+  'where.station_none': 'No station matches that. Try another name.',
+  'where.location_line': 'Used once to find stations near you. Never stored.',
+  'where.near_line': 'Used once to find the stop nearest you. Never stored.',
+  'on_train.closest': 'Closest to you',
+  'on_train.location_line': 'Used once to find trains near you. Never stored.',
+  'answer.change': 'Change',
+
+  // the report card
+  'report.item_label': 'What does it look like? Optional',
+  'report.item_hint': 'Like "a black backpack with a red tag". It stays on this phone and goes only in a message you send.',
+  'report.copy_all': 'Copy all',
+  'report.note_label': 'Note',
+  'report.fields_label': 'Details for the form',
+  'report.email_title': 'Or send it by email',
+  'report.car_added': 'Rail Car Number added to the details.',
+  'report.car_save': 'Add',
+  'report.car_hint': 'The number painted inside the car, often near the end.',
+  'item.phone': 'my phone',
+  'item.wallet': 'my wallet',
+  'item.bag': 'my bag',
+  'item.keys': 'my keys',
+  'item.laptop': 'my laptop or tablet',
+  'item.other': 'an item',
+
+  // the call card
+  'call.script_title': 'What to say',
+  'call.reminder_title': 'Call MARTA Lost and Found',
+  'call.reminder_body': 'Call Lost and Found at {phone}. Have the details of your online report ready.',
+
+  // the end
+  'clear.confirm': 'Clear your answers from this phone and from our server now?',
+  'clear.yes': 'Yes, clear now',
+  'clear.cancel': 'Keep them',
+
+  // the proof footer (decision 12)
+  'proof.positions': '{count} vehicle positions recorded since {since}.',
+  'proof.build': 'App build {web_sha}, data service {api_sha}',
+  'proof.title': 'Where this comes from',
+
+  // ===== Laptop layout (components/screens/ClueAside): the right pane beside the questions. For team review.
+  'aside.label': 'Your clue so far',
+  'aside.title': 'Your clue so far',
+  'aside.lead': 'Each tap narrows it down. Your answers are deleted within 24 hours.',
+  'aside.what': 'What',
+  'aside.ride': 'Ride',
+  'aside.stop': 'Got off at',
+  'aside.when': 'When',
+  'aside.waiting': 'Not answered yet',
+  'aside.end': 'Then we find the exact one and where it is now.',
+  'aside.not_marta': 'Not on MARTA',
+  'aside.end_elsewhere': 'Then a short plan for each place you name.',
+  'aside.map_label': 'Map and live view',
+  // the installed app with no connection: the recorded ride is one tap away (home)
+  'home.offline': 'No connection right now.',
+  'home.offline_hint': 'You can still see how it works on a recorded ride.',
+  'home.recorded': 'Recorded example',
+  'home.expired': 'Your earlier visit has ended, and its answers are deleted.',
+  'home.expired_hint': 'Start again whenever you are ready.',
 } as const satisfies Record<string, string>
 
 export type CopyId = keyof typeof COPY
@@ -297,6 +643,11 @@ function render(template: string, slots: Readonly<Record<string, SlotValue | nul
 /** The string for `id`, its slots filled. Typed: a required slot can't be left out, an unknown one can't be passed. */
 export function t<K extends CopyId>(id: K, ...args: SlotArgs<K>): string {
   return render(COPY[id], (args[0] ?? {}) as Record<string, SlotValue | null | undefined>, id)
+}
+
+/** t() for an id computed at runtime (`plan.card.${kind}`), where the compiler can't see which slots it takes. */
+export function tLoose(id: CopyId, slots: Readonly<Record<string, SlotValue | null | undefined>> = {}): string {
+  return render(COPY[id], slots, id)
 }
 
 /**

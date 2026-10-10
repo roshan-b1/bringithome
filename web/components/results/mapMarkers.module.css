@@ -1,0 +1,142 @@
+/* The map's HTML markers (decision 12: labels are HTML, so the overlay style needs no glyph server). They echo the
+ * logo: the rider's stop is the navy wheel, the matched vehicle rides the orange route line, and the rider is the
+ * familiar blue location dot. Every marker is decorative; the text beside the map says the same in words. */
+
+.stop {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+}
+
+.stopRing {
+  position: absolute;
+  inset: 0;
+  border: 5px solid var(--navy);
+  border-radius: 50%;
+  background: var(--white);
+  box-shadow: 0 1px 4px rgb(20 33 61 / 0.25);
+}
+
+.stopLabel {
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--navy);
+  color: var(--white);
+  font-size: 0.8125rem;
+  font-weight: var(--fw-bold);
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgb(20 33 61 / 0.25);
+}
+
+.vehicle {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.vehicleDot {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgb(20 33 61 / 0.3);
+}
+
+.match .vehicleDot {
+  background: var(--orange);
+  border: 4px solid var(--navy);
+}
+
+.candidate .vehicleDot {
+  inset: 3px;
+  background: var(--white);
+  border: 4px solid var(--navy);
+}
+
+.vehicleChip {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  font-size: 0.8125rem;
+  font-weight: var(--fw-heavy);
+  line-height: 1.45;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgb(20 33 61 / 0.25);
+}
+
+.match .vehicleChip {
+  background: var(--orange);
+  color: var(--navy);
+}
+
+.candidate .vehicleChip {
+  background: var(--white);
+  color: var(--navy);
+  border: 2px solid var(--navy);
+}
+
+/* locked on: a soft ring that settles once (no loop, and none at all under reduced motion) */
+.locked.match .vehicleDot::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border: 3px solid var(--orange);
+  border-radius: 50%;
+  opacity: 0;
+  animation: lock 1.4s var(--ease-out) 2;
+}
+
+@keyframes lock {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+.rider {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.riderDot {
+  position: absolute;
+  inset: 0;
+  border: 3px solid var(--white);
+  border-radius: 50%;
+  background: #1a66d9;
+  box-shadow: 0 1px 5px rgb(20 33 61 / 0.35);
+}
+
+.station {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.85);
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  font-weight: var(--fw-semibold);
+  line-height: 1.35;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .locked.match .vehicleDot::after {
+    display: none;
+  }
+}

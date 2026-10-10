@@ -41,3 +41,13 @@ test('works at 320 px without sideways scroll', async ({ page }) => {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   expect(overflow).toBe(0)
 })
+
+test('mock mode reads the fixture set and says so with the Replay chip', async ({ page }) => {
+  await page.goto('/?mode=mock&set=mock')
+  await page.getByRole('button', { name: /I lost something/ }).click()
+  await expect(page.getByText('Recorded data, replayed')).toBeAttached()
+  // and a reload resumes on the same step from sessionStorage, not the home screen
+  await page.reload()
+  await expect(page.getByRole('button', { name: /I lost something/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Back', exact: true })).toBeVisible()
+})

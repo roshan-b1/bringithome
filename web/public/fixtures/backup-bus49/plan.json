@@ -1,0 +1,201 @@
+{
+ "generated_at": "2026-10-09T17:30:00Z",
+ "lost_found": {
+  "open_now": true,
+  "next_open": "2026-10-12T12:30:00Z",
+  "usually": false
+ },
+ "meet": {
+  "possible": false,
+  "reason": "no_eta",
+  "vehicle_keys": [
+   "bus:2331"
+  ]
+ },
+ "cards": [
+  {
+   "kind": "bag_staff",
+   "step": 1,
+   "facts": {
+    "police_non_emergency": "404-848-4900",
+    "tracks_01": 0
+   },
+   "fact_sources": {
+    "police_non_emergency": "contacts",
+    "tracks_01": "rules"
+   },
+   "actions": [
+    {
+     "type": "tel",
+     "label_id": "call_police",
+     "value": "tel:+14048484900"
+    }
+   ],
+   "evidence": [],
+   "source": "static"
+  },
+  {
+   "kind": "too_far",
+   "step": 2,
+   "facts": {},
+   "fact_sources": {},
+   "actions": [],
+   "evidence": [],
+   "source": "live"
+  },
+  {
+   "kind": "tell_staff",
+   "step": 3,
+   "facts": {
+    "mode": "bus",
+    "vehicle": "Bus 49",
+    "label": "1631",
+    "direction": "Toward North Ave Station"
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "label": "db",
+    "direction": "static_gtfs"
+   },
+   "actions": [],
+   "evidence": [
+    {
+     "role": "alight",
+     "place_label": "Piedmont Ave SE @ Gilmer St SE",
+     "at": "2026-10-09T17:18:52.173888Z",
+     "distance_m": 22
+    }
+   ],
+   "source": "live"
+  },
+  {
+   "kind": "keep",
+   "step": 4,
+   "facts": {
+    "mode": "bus",
+    "vehicle": "Bus 49",
+    "label": "1631",
+    "stop": "Piedmont Ave SE @ Gilmer St SE",
+    "time": "1:18 PM",
+    "role": "alight"
+   },
+   "fact_sources": {
+    "mode": "rules",
+    "vehicle": "db",
+    "label": "db",
+    "stop": "static_gtfs",
+    "time": "db",
+    "role": "rules"
+   },
+   "actions": [
+    {
+     "type": "copy",
+     "label_id": "keep_copy",
+     "value": "Bus 49, vehicle 1631, got off at Piedmont Ave SE @ Gilmer St SE around 1:18 PM on Friday, October 9."
+    }
+   ],
+   "evidence": [
+    {
+     "role": "alight",
+     "place_label": "Piedmont Ave SE @ Gilmer St SE",
+     "at": "2026-10-09T17:18:52.173888Z",
+     "distance_m": 22
+    }
+   ],
+   "source": "live"
+  },
+  {
+   "kind": "report",
+   "step": 5,
+   "facts": {
+    "route_number": "49",
+    "bus_number": "1631",
+    "direction": "Toward North Ave Station",
+    "location": "Piedmont Ave SE @ Gilmer St SE",
+    "time": "Fri Oct 9, about 1:18 PM"
+   },
+   "fact_sources": {
+    "route_number": "db",
+    "bus_number": "db",
+    "direction": "static_gtfs",
+    "location": "static_gtfs",
+    "time": "db"
+   },
+   "actions": [
+    {
+     "type": "link",
+     "label_id": "report_open_form",
+     "value": "https://itsmarta.com/tplecrmcontact-v2.aspx"
+    },
+    {
+     "type": "copy",
+     "label_id": "report_copy",
+     "value": "Route Number: 49\nBus Number: 1631\nDirection of Travel/Destination: Toward North Ave Station\nLocation: Piedmont Ave SE @ Gilmer St SE\nTime: Fri Oct 9, about 1:18 PM"
+    }
+   ],
+   "evidence": [
+    {
+     "role": "alight",
+     "place_label": "Piedmont Ave SE @ Gilmer St SE",
+     "at": "2026-10-09T17:18:52.173888Z",
+     "distance_m": 22
+    }
+   ],
+   "source": "live"
+  },
+  {
+   "kind": "call",
+   "step": 6,
+   "facts": {
+    "open_now": 1,
+    "lost_found_phone": "404-848-3208",
+    "lost_found_hours": "Mon to Fri, 8:30 AM to 5 PM",
+    "lost_found_transit_time": "up to 5 business days",
+    "lost_found_hold": "30 days",
+    "usually": 0
+   },
+   "fact_sources": {
+    "open_now": "contacts",
+    "lost_found_phone": "contacts",
+    "lost_found_hours": "contacts",
+    "lost_found_transit_time": "contacts",
+    "lost_found_hold": "contacts",
+    "usually": "contacts"
+   },
+   "actions": [
+    {
+     "type": "tel",
+     "label_id": "call_lost_found",
+     "value": "tel:+14048483208"
+    },
+    {
+     "type": "mailto",
+     "label_id": "email_lost_found",
+     "value": "mailto:lostandfound@itsmarta.com"
+    }
+   ],
+   "evidence": [],
+   "source": "static"
+  }
+ ],
+ "report": {
+  "form_fields": {
+   "route_number": "49",
+   "bus_number": "1631",
+   "direction": "Toward North Ave Station",
+   "location": "Piedmont Ave SE @ Gilmer St SE",
+   "time": "Fri Oct 9, about 1:18 PM"
+  },
+  "email": {
+   "subject": "Lost item on bus 1631, route 49, Friday, October 9",
+   "body": "Hello,\n\nI'm writing to report a lost item. I left [[ITEM]] on bus 1631, route 49, heading toward North Ave Station. I got off at Piedmont Ave SE @ Gilmer St SE on Friday, October 9, at about 1:18 PM.\n\nI have also sent these details through the online lost item form. If it turns up, please let me know how to arrange a pickup. I can describe it in more detail and bring a photo ID.\n\nThank you.",
+   "wording": "template"
+  },
+  "call_script": {
+   "text": "Hi, I'm calling to report a lost item. I left [[ITEM]] on bus 1631, route 49, heading toward North Ave Station. I got off at Piedmont Ave SE @ Gilmer St SE on Friday, October 9, at about 1:18 PM. I've also sent the online report. Has anything like that been turned in, and what should I do next?",
+   "wording": "template"
+  }
+ },
+ "source": "as_of"
+}

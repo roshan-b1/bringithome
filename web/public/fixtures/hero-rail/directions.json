@@ -1,0 +1,22 @@
+{
+ "ask": true,
+ "options": [
+  {
+   "direction_id": 0,
+   "direction": "N",
+   "label": "To North Springs",
+   "stop_ids": [
+    "908600"
+   ]
+  },
+  {
+   "direction_id": 1,
+   "direction": "S",
+   "label": "To Airport",
+   "stop_ids": [
+    "907843"
+   ]
+  }
+ ],
+ "source": "as_of"
+}

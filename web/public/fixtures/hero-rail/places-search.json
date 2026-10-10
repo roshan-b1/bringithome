@@ -1,0 +1,23 @@
+{
+ "resolved": {
+  "place_id": "alias:garnett",
+  "label": "Garnett",
+  "kind": "alias",
+  "lat": 33.748817,
+  "lon": -84.395643,
+  "stop_ids": [
+   "907843",
+   "908600"
+  ],
+  "routes": [],
+  "lines": [
+   "RED",
+   "GOLD"
+  ],
+  "needs_confirm": false
+ },
+ "choices": [],
+ "method": "alias",
+ "needs_confirm": false,
+ "source": "as_of"
+}

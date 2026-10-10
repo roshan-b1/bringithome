@@ -1,54 +1,61 @@
 {
  "places": [
   {
-   "place_id": "stop:500211",
-   "label": "Georgia State Station - Bay B",
-   "kind": "stop",
-   "lat": 33.750662,
-   "lon": -84.386144,
-   "distance_m": 51,
+   "place_id": "station:510038",
+   "label": "Garnett station",
+   "kind": "station",
+   "lat": 33.748544,
+   "lon": -84.395888,
+   "distance_m": 16,
    "stop_ids": [
-    "500211"
+    "907843",
+    "908600"
    ],
-   "routes": [
-    "49",
-    "55"
+   "routes": [],
+   "lines": [
+    "RED",
+    "GOLD"
    ],
-   "lines": [],
    "needs_confirm": false
   },
   {
-   "place_id": "stop:500210",
-   "label": "Georgia State Station - Bay A",
-   "kind": "stop",
-   "lat": 33.750374,
-   "lon": -84.386457,
-   "distance_m": 73,
+   "place_id": "station:510015",
+   "label": "Five Points station",
+   "kind": "station",
+   "lat": 33.75387,
+   "lon": -84.39157,
+   "distance_m": 680,
    "stop_ids": [
-    "500210"
+    "908976",
+    "908981",
+    "908986",
+    "908990"
    ],
-   "routes": [
-    "21",
-    "22"
+   "routes": [],
+   "lines": [
+    "RED",
+    "GOLD",
+    "BLUE",
+    "GREEN"
    ],
-   "lines": [],
    "needs_confirm": false
   },
   {
-   "place_id": "stop:500350",
-   "label": "Georgia State Station - Bay C",
-   "kind": "stop",
-   "lat": 33.749764,
-   "lon": -84.385434,
-   "distance_m": 77,
+   "place_id": "station:510039",
+   "label": "SEC District station",
+   "kind": "station",
+   "lat": 33.75618,
+   "lon": -84.39725,
+   "distance_m": 831,
    "stop_ids": [
-    "500350"
+    "908435",
+    "908694"
    ],
-   "routes": [
-    "20",
-    "55"
+   "routes": [],
+   "lines": [
+    "BLUE",
+    "GREEN"
    ],
-   "lines": [],
    "needs_confirm": false
   }
  ],

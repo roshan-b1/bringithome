@@ -11,8 +11,9 @@
   padding-right: var(--safe-right);
 }
 
-/* desktop: the phone column on a warm ground */
-@media (min-width: 600px) {
+/* desktop: the phone column on a warm ground. Not on a short window (a phone on its side is 844x390): the frame's
+   margins and corners would take room the content needs */
+@media (min-width: 600px) and (min-height: 600px) {
   .screen {
     min-height: calc(100dvh - 48px);
     margin-block: 24px;
@@ -122,6 +123,12 @@
   outline: none;
 }
 
+/* the route line is the first thing in main (inside the landmark), where the header's padding used to put it */
+.main > .progress {
+  padding: 0;
+  margin-top: calc(var(--sp-2) - var(--sp-5));
+}
+
 .titleBlock {
   display: flex;
   flex-direction: column;
@@ -171,9 +178,19 @@
   background: linear-gradient(to bottom, rgb(255 255 255 / 0), var(--white) 18px);
 }
 
-@media (min-width: 600px) {
+@media (min-width: 600px) and (min-height: 600px) {
   .actions {
     border-radius: 0 0 28px 28px;
+  }
+}
+
+/* a short viewport (a phone in landscape, or a keyboard up): a sticky thumb zone at its portrait height would take
+   up to half the screen and cover the headline, the text box or the map, so the actions sit in the flow instead,
+   after the content */
+@media (max-height: 500px) {
+  .actions {
+    position: static;
+    background: var(--white);
   }
 }
 
@@ -184,5 +201,53 @@
 @media (max-width: 359px) {
   .title {
     font-size: var(--fs-lg);
+  }
+}
+
+/* ---------------------------------------------------------------------------------------- laptop: two panes */
+
+.pane {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.side {
+  display: none;
+}
+
+/* At 900 px and up the card widens into two panes: the steps on the left at phone width (the thumb zone stays
+   under them), and the right pane sticky beside them, so the map and the live view stay in sight while the cards
+   scroll. Below 900 px nothing changes: the phone layout is the layout. */
+@media (min-width: 900px) {
+  .screen.hasSide {
+    flex-direction: row;
+    align-items: stretch;
+    width: calc(100% - 48px);
+    max-width: 1280px;
+  }
+
+  .hasSide .pane {
+    flex: 0 0 clamp(440px, 40%, 520px);
+    border-right: 1px solid var(--navy-08);
+  }
+
+  .hasSide .actions {
+    border-radius: 0 0 0 28px;
+  }
+
+  .side {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--sp-4);
+    min-width: 0;
+    align-self: flex-start;
+    height: calc(100dvh - 48px);
+    padding: var(--sp-6);
+    overflow-y: auto;
   }
 }

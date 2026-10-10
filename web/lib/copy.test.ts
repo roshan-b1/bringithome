@@ -41,7 +41,9 @@ test('tFacts takes a card\'s untyped facts and returns null rather than show a r
 })
 
 test('no phone number, hour or count is typed into copy (they come from contacts.json or the API)', () => {
+  // tell.example is the one sample sentence, showing the kind of words TellMe understands ("around 1:15")
   for (const [id, text] of Object.entries(COPY)) {
+    if (id === 'tell.example') continue
     assert.doesNotMatch(text, /\d{3}-\d{3}-\d{4}|\b911\b|\d{1,2}:\d{2}/, `copy ${id} has a literal number`)
   }
 })

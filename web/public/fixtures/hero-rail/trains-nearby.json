@@ -1,0 +1,135 @@
+{
+ "trains": [
+  {
+   "vehicle_key": "rail:408",
+   "line": "RED",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510008",
+    "label": "College Park",
+    "eta": "2026-10-09T19:27:39Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:401",
+   "line": "RED",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510030",
+    "label": "Sandy Springs",
+    "eta": "2026-10-09T19:27:40Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:411",
+   "line": "RED",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510027",
+    "label": "North Ave",
+    "eta": "2026-10-09T19:27:50Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:308",
+   "line": "GOLD",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510001",
+    "label": "Arts Center",
+    "eta": "2026-10-09T19:28:11Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:309",
+   "line": "GOLD",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510005",
+    "label": "Brookhaven-Oglethorpe",
+    "eta": "2026-10-09T19:28:23Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:409",
+   "line": "RED",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510024",
+    "label": "Lindbergh Center",
+    "eta": "2026-10-09T19:28:35Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:302",
+   "line": "GOLD",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510033",
+    "label": "West End",
+    "eta": "2026-10-09T19:29:00Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:407",
+   "line": "RED",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510029",
+    "label": "Oakland City",
+    "eta": "2026-10-09T19:29:03Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:310",
+   "line": "GOLD",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510013",
+    "label": "East Point",
+    "eta": "2026-10-09T19:29:44Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  },
+  {
+   "vehicle_key": "rail:402",
+   "line": "RED",
+   "direction": "S",
+   "destination_label": "Airport",
+   "next_station": {
+    "place_id": "station:510028",
+    "label": "North Springs",
+    "eta": "2026-10-09T19:34:04Z"
+   },
+   "distance_m": null,
+   "preselect": false
+  }
+ ],
+ "source": "as_of"
+}

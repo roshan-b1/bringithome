@@ -47,9 +47,22 @@ export function BigButton(props: BigButtonProps) {
       </a>
     )
   }
-  const { type = 'button', disabled, ...buttonRest } = rest as ButtonHTMLAttributes<HTMLButtonElement>
+  // Loading is aria-disabled, not disabled: a disabled button drops focus to <body> mid-request ("Use this", a
+  // search), and a screen reader loses its place. Taps while loading are swallowed instead.
+  const { type = 'button', disabled, onClick, ...buttonRest } = rest as ButtonHTMLAttributes<HTMLButtonElement>
   return (
-    <button {...buttonRest} type={type} className={cls} disabled={disabled || loading} aria-busy={loading || undefined}>
+    <button
+      {...buttonRest}
+      type={type}
+      className={cls}
+      disabled={disabled}
+      aria-disabled={loading || undefined}
+      aria-busy={loading || undefined}
+      onClick={(e) => {
+        if (loading) return e.preventDefault()
+        onClick?.(e)
+      }}
+    >
       {body}
     </button>
   )

@@ -1,0 +1,32 @@
+{
+ "ok": true,
+ "now": "2026-10-10T04:47:29.500789Z",
+ "git_sha": "fbbbe57",
+ "db_ok": true,
+ "recorders": {
+  "bus": {
+   "recorder": "bringithome",
+   "first_started_at": "2026-10-09T03:58:16.908000Z",
+   "last_poll_age_s": 8,
+   "data_age_s": 39,
+   "capture_pct": 99.9,
+   "poll_ok_pct": null,
+   "open_gap": false,
+   "db": "ok"
+  },
+  "rail": {
+   "recorder": "bringithome",
+   "first_started_at": "2026-10-09T03:58:16.908000Z",
+   "last_poll_age_s": 8,
+   "data_age_s": 13,
+   "capture_pct": null,
+   "poll_ok_pct": 100,
+   "open_gap": false,
+   "db": "ok"
+  }
+ },
+ "positions_logged": 229693,
+ "since": "2026-10-09T03:58:16.908000Z",
+ "compression": null,
+ "source": "live"
+}

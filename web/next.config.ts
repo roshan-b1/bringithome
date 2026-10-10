@@ -30,6 +30,9 @@ export default function config(phase: string): NextConfig {
   if (phase === PHASE_DEVELOPMENT_SERVER) {
     return {
       ...shared,
+      // the dev harnesses (app/dev/*/page.dev.tsx: the component gallery and the intake, results and plan
+      // harnesses) are routes only here; a build doesn't see them at all, so none of their code ships
+      pageExtensions: ['dev.tsx', 'tsx', 'ts'],
       // the floating dev badge sits over the bottom-left of a phone screen, right where screenshots look
       devIndicators: false,
       // with trailingSlash on, Next would 308 /api/health to /api/health/ before rewriting, and FastAPI has no
