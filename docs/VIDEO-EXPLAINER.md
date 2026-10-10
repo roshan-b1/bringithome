@@ -1,13 +1,14 @@
 # bring it home: "how it works" voiceover (Devpost video)
 
-## The short version (use this): about 30 seconds, plain words, said right after the demo
+## The short version (use this): about 32 seconds, said right after the demo
 
-> Every few seconds, we save where every MARTA bus and train is. That runs nonstop on a Vultr server and builds up in
-> a Tiger Data database, a live history of the whole system. So when you tap where and when you got off, we find the
-> exact train you were on. Gemini lets you just say what happened. To make sure the plan works, we replayed real
-> trips and checked what the train actually did. Our first pick was right about 97 times out of 100.
+> MARTA's live data tells us where every bus and train is. Our recorders run nonstop on a Vultr server and save
+> every position, every 15 seconds, into a Tiger Data database built for time and location. So when you tap where
+> and when you got off, it searches that history and finds the exact train you were on. Gemini lets you just say
+> what happened. To test the plan, we replayed real recorded trips and compared our advice with what the train
+> actually did. On trains, our first pick was right about 97% of the time.
 
-(The 97 is the train figure, from the replay test in docs/BACKTEST.md.)
+(The 97% is the train figure, from the replay test in docs/BACKTEST.md.)
 
 ## The long version (about 85 seconds), if there is room
 
