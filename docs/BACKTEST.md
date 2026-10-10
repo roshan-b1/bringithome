@@ -33,3 +33,12 @@ BUS: 1,852 calls, 0 errors. Every route 49 bus plus 8 random buses every 10 min.
   - Never came: 58 (5.6%), plus 19 seen passing on another trip id.
 - Route 49 recommended: 359 scored, 59 / 199, 10 missed, 14 never.
 - Top-ranked option was the soonest real reunion in 53.7% of calls, 86.5% within 60 s. Most of the gap is the known duplicate (wait_here at the terminal vs meet_at_end at the same stop) and the 60 s tie rule.
+
+## Mutation testing (Oct 10)
+
+To check that the tests guard the planner's safety rules, the fix step applied 14 deliberate mutations to the
+planner (among them: the bus "absorb" max, the 7 PM no-promise cut, the night short-turn check, the bus 300 s walk
+floor, the switch and end-of-line floors, and the ranking order) and ran the reunion, meet, plan and API test files
+against each. All 14 were caught (a test failed every time). The boarding rule added on Oct 10 (a calm minute to
+board your own next train, and a fix inside the station counting as at the station) was checked the same way: both
+mutations were caught.

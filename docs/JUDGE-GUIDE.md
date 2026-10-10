@@ -297,42 +297,79 @@ first, and the Tell staff and report steps are always there.
 
 ---
 
-## 7. Proof
+## 7. Proof: how we tested it
 
-**Backtest on Oct 9's recordings** (we replayed the real engine "as of" past moments, then checked what the train or
-bus actually did):
+**Say this when a judge asks "how do you know it works?"**
+> "We tested it four ways. We measured how MARTA really behaves from our own recordings. We replayed Friday's
+> recordings through the real planner and checked every answer against what the train actually did: its first
+> choice was truly the fastest way back about 97% of the time. We checked it live on a real train this morning,
+> and it was on time to the half minute. And the code has over 1,400 automated tests."
 
-- **5,137 rail planner calls.** Train options without an early timetable slot: 1,193, error median 37 s, p90 106 s,
-  **0 recommended ones missed.**
-- The backtest also found our own failure mode: when a scheduled departure falls inside the minimum turn time, trains
-  often take it and come a whole headway early. Those 143 options missed 35 of 99 recommended. **We fixed it**: those
-  are now low confidence and not recommended until the turn is seen. (Good story for "what was hardest".)
-- Hand-checked examples: Red 407 to the Airport, predicted back at Lakewood 3:53:00 PM, actual 3:52:03. Gold 302,
-  predicted Brookhaven 1:30:00 PM, actual 1:29:45. Across 21 daytime train options (12 trains): median error 42 s, 20
-  of 21 inside the window (the miss: a train held 10 min at Indian Creek, 112 s outside).
-- Evening honesty: Red 402 at 9:20 PM got no way back ("It may not come back tonight"). It left the feed at 9:31 PM
-  and never came back. Gold 310 left service too; it was only shown as "not certain".
-- Buses: route 49 bus 1829, predicted to pull out of the end of the line 7:53:30 PM, actual 7:52:45; bus 1631
-  predicted back 9:24:06, actual 9:24:35.
-- Meet cards: on Oct 9, real meet offers failed 4 of 229 times, all because the rider's own train was held.
+### Step 1: we measured how MARTA really behaves
 
-**Live check this morning (Sat Oct 10).** Rider stepped off a Red to Airport at West End at 8:35 AM. The app matched
-**Red 402 (High)** and said: board at 8:40, ride to East Point, other platform, back about **8:57 (8:52 to 9:05)**.
-Red 402 reached the Airport about 8:46, showed heading north at 8:48, and passed East Point northbound at about
-**8:57:30**. Predicted about 22 minutes ahead (asked at about 8:36) from live data, on time.
+Before writing any rule, we measured it from our own recordings, so every constant in the planner is a measured
+number, not a guess (docs/reunion-measurements.json).
+- Trains: 365 arrivals at the end of a line, 33 trains. A train at a dead-end terminus shows it is heading back
+  after about **34 s** (median) and leaves after about **7.5 min**. Before 7 PM, **0 of 136** failed to come back.
+- Buses: 1,096 recorded visits to the end of a line, and 2,794 "does it come back" cases: it came back as scheduled
+  **about 9 in 10** times. Walking ahead to catch a bus at a later stop works in only **0.8%** of moments, so the app
+  almost never suggests it.
 
-**Tests.** 1,358 API tests (pytest: 1,280 run on a laptop and pass; the other 78 need a test database and skip without one), over 120 web unit tests, plus Playwright end-to-end suites (hero path, intake, plan,
-ways back, installable app, smoke) at iPhone 14 and iPhone SE sizes. The end-to-end tests also lint the screen text:
-no dashes, no "AI", no "run", "hurry", "catch" and similar.
+### Step 2: we replayed Friday through the real planner (the backtest)
 
-**The full backtest** (docs/BACKTEST.md): the real planner run on Friday's recordings, 5,137 train calls and 1,852
-bus calls, every answer checked against what the vehicle really did.
-- Trains: recommended options had a median error of **36 s** (p90 120 s). **2.2%** would have missed, all from one
-  timetable quirk that the shipped planner now marks "not certain" and never recommends. The top-ranked option was
-  truly the soonest way back in **96.8%** of cases (826 of 853).
-- Buses: recommended options had a median error of 78 s; about **6%** would have missed, mostly from on-trip walks the
-  shipped planner no longer offers. Meeting the bus at the end of the line failed 1 of 159.
-- These were measured just before the last fixes, so the shipped planner should do at least this well.
+How it works, in plain words: the app has a time machine ("as of"). We pick a past moment, and the planner sees
+only the data that existed at that moment, never the future. We place a pretend rider (at the station they just
+left, further back, at a station ahead, or on a following train), ask the planner for its ways back, then look at
+what the train or bus **actually did** next in the recording. We did this every 5 minutes for every train, and every
+10 minutes for route 49 and 8 random buses: **5,137 train answers and 1,852 bus answers** (docs/BACKTEST.md).
+
+What came out:
+- **The 97% (exactly 96.8%).** In 853 moments where more than one way back could be checked against the recording,
+  we looked at which way **really** reunited the rider soonest. The planner's #1 choice was that way **826 times**:
+  826 / 853 = 96.8%. So its top pick was truly the fastest way back about 97% of the time.
+- **Timing.** Recommended train options were off by **36 s** at the median (p90 120 s). Live times after the
+  train turns around: 33 s median.
+- **Misses.** 2.2% of recommended train options would have missed the train, and all of them came from one
+  timetable quirk (next point). Buses: about 6% would have missed, mostly walks to stops ahead.
+- **Buses meeting at the end of the line** failed 1 of 159.
+
+### Step 3: the backtest found our mistakes, and we fixed them
+
+This is a good "what was hardest" answer. The backtest caught two real failure modes:
+- When a scheduled departure falls just inside the minimum turnaround time, trains often take it and come back a
+  whole headway early. Those cases caused every train miss. Fix: the planner now marks them "not certain" and
+  never recommends them until it sees the train turn around.
+- Walking ahead to a later stop of a bus failed far too often. Fix: buses now need a 5 minute margin and the bus
+  at most 10 minutes away, or it isn't offered.
+The numbers above were measured just before these fixes, so the shipped planner should do at least this well.
+
+### Step 4: hand-checked examples
+
+- Red 407 to the Airport: predicted back at Lakewood 3:53:00 PM, actual 3:52:03.
+- Gold 302: predicted Brookhaven 1:30:00 PM, actual 1:29:45.
+- 21 daytime train options (12 trains): median error 42 s, 20 of 21 inside the window.
+- Route 49 bus 1829: predicted to pull out of the end of the line 7:53:30 PM, actual 7:52:45.
+- Honest at night: Red 402 at 9:20 PM got no way back ("It may not come back tonight"). It left the feed at 9:31 PM
+  and never came back.
+
+### Step 5: a live test on a real train this morning (Sat Oct 10)
+
+Rider stepped off a Red to Airport at West End at 8:35 AM. The app matched **Red 402 (High)** and said: board at
+8:40, ride to East Point, other platform, back about **8:57 (8:52 to 9:05)**. Red 402 reached the Airport about
+8:46, headed back north at 8:48 and passed East Point at about **8:57:30**. Predicted about 22 minutes ahead, on time.
+
+### Step 6: automated tests on the code
+
+- **1,358 API tests** (pytest) and **128 web unit tests**, plus **Playwright end-to-end tests** that tap through the
+  real app at iPhone 14, iPhone SE and laptop sizes (the hero path, intake, plan, ways back, the installable app).
+- **Mutation testing:** we deliberately broke key safety rules (the 7 PM cutoff, the margins, the ranking order,
+  the "comes back" math) to make sure the tests catch it. All 14 broken versions were caught.
+- **Independent review passes:** separate reviewers checked each feature against the measurements, for safety and
+  privacy, and on real data; every confirmed issue was fixed with a test.
+- The tests also check the screen text: no dashes, no "AI", never "run", "hurry" or "catch".
+
+**Honest limits of the testing:** the measurements cover one weekday (Friday Oct 9, mostly afternoon and evening);
+there are no weekend or early-morning measurements yet, and the bus numbers are mostly weekday evenings.
 
 ---
 
@@ -602,13 +639,13 @@ you want, and the recorded example works offline.
 | Walking ahead to a bus works | **0.8%** of moments |
 | End-of-line bus meet failures | **1.7%** |
 | Train backtest | **5,137** calls; recommended (no early slot) **0 missed**, median error **37 s** |
-| Full planner backtest | trains: recommended median error **36 s**, top option truly soonest **96.8%** (docs/BACKTEST.md) |
+| Full planner backtest | **5,137** train + **1,852** bus answers replayed; top pick truly fastest **826 of 853 = 96.8%**; median error **36 s** |
 | Daytime hand-check | median error **42 s**, **20 of 21** inside the window |
 | Live check today | Red 402: predicted East Point **~8:57**, passed **~8:57:30**, predicted **~22 min** ahead |
 | Margins | train **2 min + 30 s** pad; bus **5 min** and bus at most **10 min** away |
 | Sessions deleted | within **24 h** |
 | Lost and Found | 404-848-3208, **Mon to Fri 8:30 AM to 5 PM**, up to **5 business days**, kept **30 days** |
-| Tests | **1,358** API, **120+** web unit, plus Playwright end-to-end |
+| Tests | **1,358** API, **128** web unit, Playwright end-to-end, **14 of 14** broken versions caught |
 
 **Three lines to never forget**
 1. "Find My shows where it was. bring it home shows where it is."
