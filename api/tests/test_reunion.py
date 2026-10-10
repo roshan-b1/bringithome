@@ -343,9 +343,10 @@ def test_switch_platform_beats_waiting_where_you_are(tmp_path, feed, index):
     assert sw["place_id"] == "station:510013" and same_instant(sw["reunion_at"], departs + 240 * S)
     assert sw["recommended"] and sw["direction"] == "N" and sw["platform_hint"] == "front"
     assert sw["walk_s"] == (at(15, 59) - T0).total_seconds()        # ride, step off (60 s), cross (120 s)
-    # the tighter leg: boarding Gold 310 leaves 270 - 90 - 30 = 150 s (the return leg leaves 410 s)
-    assert sw["margin_s"] == 150 < int((departs + 240 * S - at(15, 59)).total_seconds() - 30)
-    assert sw["leave_by"] == at(15, 52, 30) - (90 + 30 + 120) * S    # the station rule's pad and floor kept
+    # the tighter leg: the rider stepped off southbound onto the platform Gold 310 boards from, so boarding
+    # leaves all 270 s (the return leg leaves 410 s); leave_by keeps the calm minute
+    assert sw["margin_s"] == 270 < int((departs + 240 * S - at(15, 59)).total_seconds() - 30)
+    assert sw["leave_by"] == at(15, 52, 30) - 60 * S
     assert (sw["facts"]["board_at"], sw["facts"]["board_time"], sw["facts"]["get_off_at"], sw["facts"]["ride_run"]) == \
         ("West End", "3:52 PM", "East Point", "310")
     assert "change_platform" in sw["note_ids"]
@@ -386,22 +387,48 @@ def test_a_scheduled_departure_inside_the_minimum_turn_opens_the_window_for_it_a
     assert here["confidence"] == "low" and "may_come_before_you" in here["note_ids"] and not here["recommended"]
 
 
-def test_a_rider_boarding_a_train_toward_the_end_keeps_the_station_rules_margin(tmp_path, feed, index):
-    """switch_platform hangs on catching the rider's own train: it must clear ETA - now - 90 - 30 >= 120 at their
-    station (a train due in 95 s is never used), and leave_by keeps that margin."""
-    for due_s, ok in ((95, False), (239, False), (240, True)):
-        d = tmp_path / str(due_s)
-        d.mkdir()
-        gold = train("310", "GOLD", "S", "Airport", [("510033", T0 + due_s * S), ("510013", at(15, 56)),
-                                                     ("510008", at(15, 59)), ("510037", at(16, 2))])
-        rows = red_world(d, RED_405_OUT, gold)
-        body = reunion(MemoryStore(Schedule(feed), rows=rows), index, rail_session(("405", "RED", "To Airport")),
-                       ["rail:405"], {}, T0, d)
-        if not ok:
-            assert reason(body, "switch_platform") == "no_train_to_end", due_s
-            continue
-        sw = option(body, "switch_platform")
-        assert sw["leave_by"] == T0 and sw["margin_s"] == 120         # 240 - 90 - 30 = 120: leave now, no sooner
+def test_a_rider_boarding_a_train_toward_the_end_keeps_a_calm_minute(tmp_path, feed, index):
+    """switch_platform hangs on catching the rider's own train, which is not a catch-it plan (missing it costs a
+    headway, never the item): it must leave a minute after reaching the platform, ETA - now - need >= 60, and
+    leave_by keeps that minute. A rider assumed where they got off a southbound train is on the southbound
+    platform already (need 0); one who says they are at the station still has 90 s to the platform."""
+    at_station = {"place_id": "station:510033", "at_station": True}
+    for user, need in (({}, 0), (at_station, 90)):
+        for due_s, ok in ((need + 30, False), (need + 59, False), (need + 60, True)):
+            d = tmp_path / f"{need}-{due_s}"
+            d.mkdir()
+            gold = train("310", "GOLD", "S", "Airport", [("510033", T0 + due_s * S), ("510013", at(15, 56)),
+                                                         ("510008", at(15, 59)), ("510037", at(16, 2))])
+            rows = red_world(d, RED_405_OUT, gold)
+            body = reunion(MemoryStore(Schedule(feed), rows=rows), index, rail_session(("405", "RED", "To Airport")),
+                           ["rail:405"], user, T0, d)
+            if not ok:
+                assert reason(body, "switch_platform") == "no_train_to_end", (need, due_s)
+                continue
+            sw = option(body, "switch_platform")
+            assert sw["leave_by"] == T0 and sw["margin_s"] == 60, need   # set off now, at an easy pace
+
+
+def test_a_fix_inside_the_station_boards_from_the_platform(tmp_path, feed, index):
+    """With the live blue dot the rider sends a fix, not "assumed where they got off". A trusted fix 60 m from West
+    End's point is inside the station: 90 s to the platform plus the calm minute, not a walk to the point first.
+    The same fix 150 m away walks first: 1.3 x 150 + 60 + 90 s."""
+    st = index.stations["510033"]
+    for metres, need in ((60, 90), (150, 1.3 * 150 + 60 + 90)):
+        fix = {"lat": st.lat + metres / 111_195, "lon": st.lon, "accuracy_m": 10, "fix_age_s": 5}
+        for due_s, ok in ((int(need) + 59, False), (int(need) + 61, True)):
+            d = tmp_path / f"{metres}-{due_s}"
+            d.mkdir()
+            gold = train("310", "GOLD", "S", "Airport", [("510033", T0 + due_s * S), ("510013", at(15, 56)),
+                                                         ("510008", at(15, 59)), ("510037", at(16, 2))])
+            rows = red_world(d, RED_405_OUT, gold)
+            body = reunion(MemoryStore(Schedule(feed), rows=rows), index, rail_session(("405", "RED", "To Airport")),
+                           ["rail:405"], fix, T0, d)
+            assert body["rider_location"] == "gps"
+            if not ok:
+                assert reason(body, "switch_platform") == "no_train_to_end", (metres, due_s)
+                continue
+            assert option(body, "switch_platform")["facts"]["board_at"] == "West End", (metres, due_s)
 
 
 def test_switch_platform_needs_120_s_once_off_and_across(tmp_path, feed, index):

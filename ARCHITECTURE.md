@@ -895,7 +895,10 @@ Shorter runs of repeated rail coordinates are stale reports and count at their f
 - It plays the window in about 8 s, fades non-candidates, locks on (or highlights both on a tie), then moves to "now".
 - `prefers-reduced-motion` jumps to the final frame.
 
-**Live updates.** `/now` is polled every 10 s while the page is visible, and paused while hidden.
+**Live updates.** `/now` is polled every 10 s while the page is visible, and paused while hidden. On the plan screen
+`POST /api/sessions/{id}/reunion` is polled every 20 s while the screen is open and visible (paused while hidden,
+backing off 40, 80, 160 s on errors), with the rider's taps and, while they walk, the live fix in that request's
+body only (see "Reunion on the plan screen" below).
 
 **Runtime parameters** (read at runtime, never at build):
 
@@ -913,7 +916,13 @@ B develops with `next dev` on localhost:3000 against the VM API. CORS is allowed
 
 **Session.** `sessionStorage` holds the server UUID, the current flow step and the tap answers, so a reload resumes the same step. On the results or plan screen, a reload calls `GET /api/sessions/{id}` instead of re-POSTing, so the session and its `deletes_by` stay the same. A 404 (past retention) starts over.
 - It is cleared when the tab closes, and "Clear now" clears it.
-- No cookies, localStorage, service worker or manifest.
+- No cookies and no localStorage. The app is an installable PWA (as built, Oct 10): `app/manifest.ts`
+  (`/manifest.webmanifest`: "bring it home", standalone, navy theme, 192 and 512 icons plus maskable ones, a
+  "Recorded example" shortcut) and `public/sw.js`, registered in production builds only, whose precache list and
+  version `scripts/build_sw.mjs` writes into `out/sw.js` at build: the app shell, the font, icons, `geo/` and every
+  fixture set, cache first, versioned caches, a new build taking over once every tab is closed. `/api/*` is never
+  intercepted or cached, so live answers and the rider's data never touch the cache. With no connection the
+  installed app runs the recorded hero set (web/README "The installed app").
 - `contacts.json` and `copy.ts` ship in the bundle, so the report card renders with no server.
 
 **Accessibility:**
@@ -935,10 +944,25 @@ B develops with `next dev` on localhost:3000 against the VM API. CORS is allowed
 - `sessionStorage` makes "nothing stays on this phone after you close this page" literally true.
 - Resuming the step survives the iOS tab discards the ops red team flagged.
 
+**Reunion on the plan screen (as built, Oct 10).** Step 2 of the plan is "Ways to get it back", in the meet's place
+in the route whatever card the API put there (meet, wait_return, meet_end, switch_platform, too_far). The main card
+is the reunion's `recommended` option, never a `low` one: one plain sentence per kind, the time with the window for an
+estimate ("About 3:53 PM, between 3:48 PM and 4:01 PM"), a Live / Estimate / Timetable chip, "Leave by" with a calm
+countdown, the steps and the platform hint, and walking directions to the stop's own coordinates only (Apple Maps on
+iPhone, iPad and Mac Safari, Google Maps elsewhere; only where the rider walks). The other feasible options follow,
+soonest first; "Why not other ways" turns every reason id into a calm sentence; with nothing to offer it says so,
+puts the most telling reason first and points at telling staff and the report, which always stay. With a meet, the
+meet card stays the main card. The poll replaces the section in place: a changed recommendation is announced through
+the polite live region, a flicker to "nothing recommended" that still offers the same way (a bus fix just past fresh)
+is held while that way's time stands (two minutes at most), a kept answer stops offering a way whose time has gone
+by, and the page keeps the reader's place when the section changes height above them. The map pins the best way
+beside the vehicle and the rider's dot (laptop pane, or on a tap inside the step on a phone; one map either way).
+Every word is `copy.ts`; `web/README.md` "Ways to get it back" has the detail.
+
 **Rejected.**
 - Leaflet: plan B only if MapLibre fails on day one.
 - Mapbox.
-- A service worker.
+- A service worker for live data (the PWA's worker caches the app's own files and the recorded sets only).
 - SSE or websockets.
 - Build-time endpoint flags.
 - Per-frame GeoJSON `setData` for every vehicle.
@@ -956,6 +980,29 @@ B develops with `next dev` on localhost:3000 against the VM API. CORS is allowed
 | `hero-rail`, `backup-bus49`, `not-reporting` | A | Record mode or `as_of` sessions |
 
 Every set has a `meta.json` with its label, `as_of`, recording time, git sha and the exact taps.
+
+**As built (Oct 10).** Every set is recorded, none hand-made: `web/scripts/snapshot.mjs` replays each set's taps
+through the API under `as_of` (the deployed API answers as_of reads too) and writes the response bodies as they came
+back; `mock` is a copy of `hero-rail`. The sets are `hero-rail`, `backup-bus49`, `not-reporting`, `late-rail` (Red
+402 after 9 PM: no way back can be promised) and `mock`. One set's layout:
+
+```
+web/public/fixtures/<set>/
+  meta.json                         { set, label, as_of, recorded_at, git_sha, taps: [...], plan_frame }
+  health.json  places-nearby.json  places-search.json  directions.json  trains-nearby.json (rail)  parse.json
+  session.json  session-<case>.json                  ?case=<case> answers the first POST
+  replay.json
+  plan.json  plan-<variant>.json                     variant from the plan's user: on_vehicle | at_station | place
+  reunion.json  reunion-<variant>.json               POST /reunion with the same body as that plan
+  reunion/<variant>/000..017.json                    the reunion poll, as_of + 20 s per frame ("default" = plan.json's body)
+  now/<mode>-<id>/000..035.json                      /now, as_of + 10 s per frame, with the meet check when there is a meet
+```
+
+In fixture modes the plan and the reunion poll pick their variant from the `user` they send (falling back to the
+default), the reunion poll reads frame 001 on its first call (000 is what the plan carried) and one more per 20 s of
+visible time, `/now` one per 10 s, each holding its last frame. `web/contracts/fixtures.test.ts` checks every file
+against the contract and that every set has its reunion and parse answers. `web/README.md` "Fixtures" lists what
+each set shows.
 
 **`as_of`.**
 - Every API function takes `now` as a parameter.
@@ -991,7 +1038,7 @@ Every set has a `meta.json` with its label, `as_of`, recording time, git sha and
 - A non-destructive copy means a Wi-Fi drop cannot destroy the only copy of a ride that can't be redone.
 
 **Rejected.**
-- Service-worker caching.
+- Service-worker caching of API answers (as built Oct 10, the PWA's worker precaches the build and the recorded sets only; `/api/*` is never cached).
 - PMTiles or baked PNG basemaps.
 - A local Postgres copy.
 - Hand-made demo data presented as real.
@@ -1086,7 +1133,7 @@ Every set has a `meta.json` with its label, `as_of`, recording time, git sha and
 - localStorage resume.
 - Storing user location.
 - Cookies.
-- A service worker.
+- A service worker that caches API answers (the PWA's worker, Oct 10, caches only the app's own files and the recorded sets).
 
 ### Decision 17. Deployment and secrets
 
@@ -2133,7 +2180,7 @@ terminus arrivals, 33 trains; bus: 187,340 rows, 248 vehicles), named below with
 |---|---|
 | `walk_ahead` | Go to a stop or station the vehicle has not reached. Exactly decision 9's meet (`meet.plan_meet`), so the meet card and this option can never disagree |
 | `shared_track` | Decision 9's on-board rule: the bag train is behind the rider's on shared platforms |
-| `switch_platform` | Trains. The rider is on, or boards at their station, a train heading the same way as the bag train toward its terminus T. Ride to X, change to the opposite platform, wait. rider_ready(X) = ETA_R(X) + 60 + 120; feasible if ETA_back(X) − rider_ready(X) − 30 ≥ 120; the X with the earliest ETA_back wins (preferring stations where the rider is ready before the window opens). A train boarded at the rider's station must clear decision 9's station rule (ETA − now − need − 30 ≥ 120), `leave_by` keeps that margin, and `margin_s` is the tighter of boarding and the return; the same holds for the following train of a `meet_at_end` |
+| `switch_platform` | Trains. The rider is on, or boards at their station, a train heading the same way as the bag train toward its terminus T. Ride to X, change to the opposite platform, wait. rider_ready(X) = ETA_R(X) + 60 + 120; feasible if ETA_back(X) − rider_ready(X) − 30 ≥ 120; the X with the earliest ETA_back wins (preferring stations where the rider is ready before the window opens). A train boarded at the rider's station must leave a calm minute after the rider reaches the platform (ETA − now − need ≥ 60): boarding their own train is not a catch-it plan, since missing it costs one headway and the next poll plans with the next train, never the item. need is 90 s at their station (a trusted fix within 120 m of the station's point counts as at it), the walk plus 90 s near it, and 0 for a rider assumed where they stepped off a train running the same way (they stand on that platform). `leave_by` keeps that minute, and `margin_s` is the tighter of boarding and the return; the same holds for the following train of a `meet_at_end` |
 | `wait_here` | Wait where the rider is for it to come back: their own station (120 s to the opposite platform) or the nearest stop of the bus's return trip within 400 m. A stop still ahead on the bus's current trip is a wait only for a rider already at it (50 m): walking there is the bus walk-ahead, `walk_ahead` alone (7.8: n=62,772, and in the Oct 9 backtest of this planner such on-trip waits failed 25% of the time, 12.5% of the recommended ones missed, while the 6 that met 7.8's rule all worked) |
 | `wait_on_return` | The same at another station within a 15 min walk, or another stop of the return trip within 400 m |
 | `meet_at_end` | Bus: meet it at the end of the line during its layover (terminal_pullout). Train: only from a following train, only after the bag train has turned at a dead-end terminus and shows its departure row |

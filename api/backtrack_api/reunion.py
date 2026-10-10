@@ -18,8 +18,10 @@ THE KINDS (each one is either an option or, with a reason id, in not_offered):
                    toward its terminus T; ride to a station X, change to the opposite platform, and wait for
                    the bag train coming back. rider_ready(X) = ETA_R(X) + 60 + 120; feasible if
                    ETA_back(X) - rider_ready(X) - 30 >= 120; the X with the earliest ETA_back wins. A train
-                   the rider boards must clear the station rule (ETA - now - need - 30 >= 120), so leave_by
-                   is never "now, quickly", and margin_s is the tighter of boarding and the return.
+                   the rider boards must leave a calm minute after reaching the platform (ETA - now - need
+                   >= 60, BOARD_FLOOR_S: missing it costs a headway, never the item), so leave_by is never
+                   "now, quickly"; need is 0 for a rider assumed on the platform they stepped off onto.
+                   margin_s is the tighter of boarding and the return.
   wait_here        wait where the rider is for the vehicle to come back: the rider's own station (the
                    opposite platform, 120 s to change) or the nearest stop of the bus's next trip within
                    400 m. A bus stop still ahead on its current trip is a wait only for a rider already
@@ -92,6 +94,13 @@ OPPOSITE_PLATFORM_S = 120      # changing to the opposite platform at the same s
 TIE_S = 60                     # reunions less than a minute apart rank as a tie
 BUS_TERMINAL_BUFFER_S = 120    # terminal_pullout: 180 s required + 120 s buffer (recommended meets failed 1.7%)
 TURN_READY_S = OPPOSITE_PLATFORM_S + meet.STEP_OFF_S    # switch_platform: off the train, then across
+# Boarding the rider's OWN train toward the end (switch_platform, meet_at_end) is not a catch-it plan: missing it
+# costs one headway (about 6.5 min) and the next poll plans with the next train, so it never risks the item. It
+# keeps a calm minute of slack after the walk to the platform instead of the 30 s pad and 120 s floor that guard
+# the bag vehicle itself. A rider assumed where they got off a train running the same way is already on that
+# platform (they stepped off onto it): no walk at all.
+BOARD_FLOOR_S = 60
+IN_STATION_M = 120     # a trusted fix this close to a station's point is inside it (platforms run 150 to 200 m)
 # Reason precedence when two attempts at one kind fail differently: the most telling first
 REASONS = ("tie", "not_matched", "not_live", "no_trip", "not_seen", "block_ends", "interline_away",
            "may_leave_service", "night_short_turn", "no_return_stop", "ahead", "not_shared", "not_turned",
@@ -446,7 +455,7 @@ def rail_options(w: RailWorld, rider: Where, key: str, loss_dir: str | None, mis
     toward_t = back if turned else direction           # the way trains run toward T, where the bag train turns
     # where it turns: T ahead of it, or the station it just turned at (getting off there is meet_at_end's rule)
     turn_at = _parent(run.departs.place_id) if turned and run.departs is not None else terminus
-    ride, board = _rider_train(w, rider, vid, toward_t)
+    ride, board = _rider_train(w, rider, vid, toward_t, on_platform=_on_loss_platform(rider, toward_t, loss_dir))
     if ride is None:
         reason = "not_live" if rider.on_train else ("no_location" if rider.home is None else "no_train_to_end")
         misses.add("switch_platform", reason)
@@ -503,7 +512,8 @@ def rail_options(w: RailWorld, rider: Where, key: str, loss_dir: str | None, mis
     elif origin not in railturn.DEAD_END:
         misses.add("meet_at_end", "not_dead_end")
     else:
-        follower, fboard = _rider_train(w, rider, vid, railturn.OPPOSITE[direction], end=origin)
+        follower, fboard = _rider_train(w, rider, vid, railturn.OPPOSITE[direction], end=origin,
+                                        on_platform=_on_loss_platform(rider, railturn.OPPOSITE[direction], loss_dir))
         end_stop = next((s for s in follower.stops if s.place_id == f"station:{origin}"), None) if follower else None
         if end_stop is None:
             misses.add("meet_at_end", "no_train_to_end")
@@ -533,14 +543,21 @@ def rail_options(w: RailWorld, rider: Where, key: str, loss_dir: str | None, mis
     return out
 
 
-def _rider_train(w: RailWorld, rider: Where, bag_vid: str, direction: str, *,
-                 end: str | None = None) -> tuple[TrainPrediction | None, tuple[str, datetime, float, float] | None]:
+def _on_loss_platform(rider: Where, direction: str, loss_dir: str | None) -> bool:
+    """A rider assumed where they got off (no fix, no chosen place) stepped off a train running loss_dir onto
+    that platform, so a train the same way boards right there."""
+    return rider.location == "assumed_alight" and loss_dir is not None and direction == loss_dir
+
+
+def _rider_train(w: RailWorld, rider: Where, bag_vid: str, direction: str, *, end: str | None = None,
+                 on_platform: bool = False) -> tuple[TrainPrediction | None,
+                                                     tuple[str, datetime, float, float] | None]:
     """The train the rider rides toward T: the one they are on (live, heading `direction`), or for a rider
     at or near a station, the next live train there heading that way that they can reach without hurrying:
-    the station rule every rider on foot gets (meet.station_margin_s: ETA - now - need - 30 >= 120), so the
-    whole plan never hangs on a train due in seconds; missing it costs a headway (about 6.5 min) and the
-    switch or the meet at the end with it. (train, (board station label, board time, need_s, boarding margin)
-    or None). Never the bag train itself."""
+    a calm minute after reaching the platform (ETA - now - need >= BOARD_FLOOR_S), so the whole plan never
+    hangs on a train due in seconds; missing it costs a headway (about 6.5 min) and the next poll plans with
+    the next train. (train, (board station label, board time, need_s, boarding margin) or None). Never the
+    bag train itself."""
     if w.snap is None or not w.live_ok:
         return None, None
     if rider.on_train:
@@ -551,7 +568,7 @@ def _rider_train(w: RailWorld, rider: Where, bag_vid: str, direction: str, *,
     if rider.home is None:
         return None, None
     home = f"station:{rider.home}"
-    need = station_need_s(w.index, rider, rider.home, change=False)
+    need = 0.0 if on_platform else _board_need_s(w.index, rider)
     if need is None:
         return None, None
     best = None
@@ -559,7 +576,7 @@ def _rider_train(w: RailWorld, rider: Where, bag_vid: str, direction: str, *,
         if vid == bag_vid or w.direction_of(tr) != direction:
             continue
         stop = next((s for s in tr.stops if s.place_id == home), None)
-        if stop is None or meet.station_margin_s(stop.eta, w.t, need) < meet.TRAIN_FLOOR_S:
+        if stop is None or _board_margin_s(stop.eta, w.t, need) < BOARD_FLOOR_S:
             continue
         if end is not None and all(s.place_id != f"station:{end}" for s in tr.stops):
             continue
@@ -568,14 +585,30 @@ def _rider_train(w: RailWorld, rider: Where, bag_vid: str, direction: str, *,
     if best is None:
         return None, None
     return best[0], (w.index.stations[rider.home].label, best[1].eta, need,
-                     meet.station_margin_s(best[1].eta, w.t, need))
+                     _board_margin_s(best[1].eta, w.t, need))
+
+
+def _board_need_s(index, rider: Where) -> float | None:
+    """Seconds to the platform of the rider's own train at their station. A trusted fix inside the station
+    (IN_STATION_M) counts as at the station, 90 s, instead of a walk to the station's point plus 90 s: on the
+    platform the walk formula's fixed minute would push every train under about 4 min out of reach. Only for
+    boarding: the waits for the bag train keep station_need_s."""
+    fix, st = rider.spot.fix, index.stations.get(rider.home)
+    if fix is not None and st is not None and haversine_m(fix[0], fix[1], st.lon, st.lat) <= IN_STATION_M:
+        return float(meet.PLATFORM_S)
+    return station_need_s(index, rider, rider.home, change=False)
+
+
+def _board_margin_s(eta: datetime, t: datetime, need_s: float) -> float:
+    """Seconds to spare on the platform before the rider's own train comes."""
+    return (eta - t).total_seconds() - need_s
 
 
 def _leave_to_board(board: tuple[str, datetime, float, float] | None) -> datetime | None:
-    """When to set off for the boarded train so the station rule's 30 s pad and 120 s floor are kept."""
+    """When to set off for the boarded train so the calm minute (BOARD_FLOOR_S) is kept."""
     if board is None:
         return None
-    return board[1] - timedelta(seconds=board[2] + meet.TRAIN_PAD_S + meet.TRAIN_FLOOR_S)
+    return board[1] - timedelta(seconds=board[2] + BOARD_FLOOR_S)
 
 
 # ----------------------------------------------------------------------------- buses
