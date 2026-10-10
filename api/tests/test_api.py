@@ -99,6 +99,19 @@ def test_health_is_ok_the_instant_after_a_poll(tmp_path, synthetic_index):
     assert h["recorders"]["bus"]["last_poll_age_s"] == 0 and h["ok"] is True
 
 
+def test_cached_health_still_tells_the_current_time(tmp_path, synthetic_index):
+    clock = [NOW]
+    for source in ("marta-bus", "marta-rail"):
+        write_status(tmp_path, source, last_poll_at=NOW.isoformat())
+    app = create_app(settings=settings(tmp_path), index_loader=lambda: synthetic_index, now=lambda: clock[0])
+    with TestClient(app) as c:
+        first = c.get("/api/health").json()
+        clock[0] = NOW + timedelta(seconds=20)          # inside the cache window: the web sets its clock from now
+        second = c.get("/api/health").json()
+    assert datetime.fromisoformat(second["now"]) - datetime.fromisoformat(first["now"]) == timedelta(seconds=20)
+    assert second["recorders"] == first["recorders"]
+
+
 # places --------------------------------------------------------------------------------
 
 

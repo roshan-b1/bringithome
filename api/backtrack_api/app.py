@@ -386,7 +386,7 @@ def create_app(*, settings: Settings | None = None, index_loader: Callable[[], P
     def get_health(response: Response):
         response.headers["X-Backtrack-Source"] = "live"
         if state["health"] is not None and time.monotonic() - state["health_at"] < HEALTH_CACHE_S:
-            return state["health"]
+            return state["health"].model_copy(update={"now": now()})   # the web sets its clock from now: never stale
         current = now()
         statuses, db_ok, logged = None, False, None
         if db is not None:
