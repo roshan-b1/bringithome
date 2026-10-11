@@ -13,6 +13,10 @@
 
 > *Find My shows where it was. bring it home shows where it is.*
 
+> **Live data is paused.** After the hackathon we shut down the recorders and the API to stop server costs, so
+> www.bringit.casa now opens the **recorded example**: the full app on a real MARTA ride we recorded. To run it live,
+> follow "Run it locally" below.
+
 Built at **Hacklanta '26** (Social Good track).
 
 <p align="center">

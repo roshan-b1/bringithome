@@ -3,7 +3,7 @@
 // the same build, so the offline demo is the same mechanism B develops against.
 //
 // Runtime parameters, read in the browser at runtime and never at build time:
-//   ?mode=live|mock|offline   where data comes from (default live)
+//   ?mode=live|mock|offline   where data comes from (default live, or NEXT_PUBLIC_DEFAULT_MODE)
 //   ?set=<name>               fixture set (default "mock"); in live mode, a set whose meta.json has `as_of` makes
 //                             every read replay that moment through the real engine (decision 13)
 //   ?case=<variant>           session-<case>.json in a set (not_reporting, ambiguous, uncertain)
@@ -61,6 +61,11 @@ export interface RuntimeParams {
   start: 'match' | 'report' | null
 }
 
+// The mode a visit gets when the URL doesn't say. Live by default; a build with NEXT_PUBLIC_DEFAULT_MODE=offline
+// (web/.env.production, set when the recorders and API were shut down after the hackathon) opens the recorded
+// example instead, so the site never greets a visitor with a failed search. ?mode=live still asks for live data.
+const DEFAULT_MODE: DataMode = process.env.NEXT_PUBLIC_DEFAULT_MODE === 'offline' ? 'offline' : 'live'
+
 const SAFE_NAME = /^[a-z0-9][a-z0-9_-]{0,40}$/i // set, case and alias names end up in URLs
 
 /** Parse runtime parameters from a query string (pure; the default reads the address bar). */
@@ -70,11 +75,12 @@ export function readParams(search: string = typeof window === 'undefined' ? '' :
     const v = q.get(k)
     return v && SAFE_NAME.test(v) ? v : null
   }
-  const mode = q.get('mode')
+  const asked = q.get('mode')
+  const mode: DataMode = asked === 'live' || asked === 'mock' || asked === 'offline' ? asked : DEFAULT_MODE
   const start = q.get('start')
   return {
-    mode: mode === 'mock' || mode === 'offline' ? mode : 'live',
-    set: name('set') ?? (q.get('stage') === '1' ? 'hero-rail' : 'mock'),
+    mode,
+    set: name('set') ?? (q.get('stage') === '1' || (asked === null && DEFAULT_MODE === 'offline') ? 'hero-rail' : 'mock'),
     setGiven: name('set') !== null,
     caseId: name('case'),
     near: name('near'),
