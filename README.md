@@ -2,6 +2,8 @@
   <img src="brand/bring-it-home-logo.png" alt="bring it home" width="320">
 </p>
 
+<p align="center">🏆 <b>Best Use of Tiger Data · Hacklanta '26</b></p>
+
 <p align="center"><b>Left something on a MARTA bus or train? Find the exact one, see where it is right now, and get the fastest way back to it.</b></p>
 
 <p align="center">
@@ -17,7 +19,7 @@
 > www.bringit.casa now opens the **recorded example**: the full app on a real MARTA ride we recorded. To run it live,
 > follow "Run it locally" below.
 
-Built at **Hacklanta '26** (Social Good track).
+🏆 **Winner: Best Use of Tiger Data, Hacklanta '26.** Built in the Social Good track.
 
 <p align="center">
   <img src="docs/devpost/screenshots/03-where.png" width="200">
