@@ -1,3 +1,11 @@
+> [!NOTE]
+> **The live version is offline.** After the hackathon we cancelled our Vultr server, which ran the recorders and
+> the API, to stop the monthly cost. Without it, the app can't track MARTA vehicles live.
+> **Watch it working:** [demo video (67 s, live trains)](docs/download/bring-it-home-north-ave.mp4) ·
+> [10 second cut](docs/download/bring-it-home-10s.mp4).
+> www.bringit.casa still runs the **recorded example**, the full app on a real MARTA ride we recorded, and
+> "Run it locally" below brings the live version back.
+
 <p align="center">
   <img src="brand/bring-it-home-logo.png" alt="bring it home" width="320">
 </p>
@@ -14,10 +22,6 @@
 </p>
 
 > *Find My shows where it was. bring it home shows where it is.*
-
-> **Live data is paused.** After the hackathon we shut down the recorders and the API to stop server costs, so
-> www.bringit.casa now opens the **recorded example**: the full app on a real MARTA ride we recorded. To run it live,
-> follow "Run it locally" below.
 
 🏆 **Winner: Best Use of Tiger Data, Hacklanta '26.** Built in the Social Good track.
 
