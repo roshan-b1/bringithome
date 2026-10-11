@@ -14,6 +14,9 @@ lives, and what is left to do. Hacklanta '26, main track Social Good (Cox Automo
 | Demo shooting script | docs/DEMO-SCRIPT.md |
 | Video voiceover (30 s) | docs/VIDEO-EXPLAINER.md |
 | Test results and measurements | docs/BACKTEST.md |
+| Devpost gallery images and thumbnail | docs/devpost/ (00-thumbnail.jpg for the thumbnail) |
+| Phone walkthrough videos | docs/download/bring-it-home-north-ave.mp4 (67 s) and bring-it-home-10s.mp4 |
+| Everything as PDFs (one zip) | docs/download/bring-it-home-docs.zip |
 
 ## What it is, in one breath
 
@@ -23,6 +26,12 @@ which train to take, where to wait, and when it arrives. If you can't get it bac
 for you. No account, no app download, works on a borrowed phone.
 
 "Find My shows where it was. bring it home shows where it is."
+
+**Our story (the Devpost "Inspiration"):** at the Atlanta airport station, two of our teammates, Roshan and Aadi,
+jumped from a Red Line train to a Gold one, and Roshan's backpack (laptop, iPad, passport) stayed on the Red. Find My
+was frozen on "Airport" while the bag moved down the line. While Roshan panicked, Aadi pulled up MARTA's routes and
+worked out a plan: the Red train was right behind them on the same track, so they got off at the next station, waited,
+and the bag came to them. Most riders won't have an Aadi. bring it home is that calm friend for everyone.
 
 ## How to demo it (trains work best)
 
@@ -89,6 +98,8 @@ The app (Next.js, installable, on Vercel at www.bringit.casa) with a live MapLib
 - **Live test on a real train:** the app predicted Red 402 back at East Point about 8:57; it passed at about 8:57:30.
 - **Tests:** 1,399 API tests, 174 web unit tests, plus end-to-end tests that tap through the real app on phone and
   laptop sizes.
+- **Data:** over 580,000 vehicle positions saved; Tiger compression makes older data about 9.6 times smaller, with
+  identical search results.
 
 ## Privacy, safety and trust (Zero Data challenge fits)
 
@@ -106,11 +117,12 @@ The app (Next.js, installable, on Vercel at www.bringit.casa) with a live MapLib
 | App | Next.js (static export), installable web app, MapLibre map, on **Vercel** | Works on any phone with no download |
 | API | Python FastAPI | Fast, simple, same language as the data code |
 | Recorders and API host | **Vultr** server (Ubuntu), systemd services, Caddy for HTTPS | Runs around the clock |
-| Database | **Tiger Data** (TimescaleDB + PostGIS) | Time history plus distance queries in one SQL query |
+| Database | **Tiger Data** (TimescaleDB + PostGIS) | Time history plus distance in one SQL query; compression makes older data about 9.6 times smaller |
 | Smart text | **Gemini** (gemini-3.5-flash-lite) | Understands a spoken sentence in under a second |
 | Data | MARTA's public real-time feeds and timetable (GTFS) | Free and public |
 
-MLH challenges to enter: **Gemini API, Tiger Data, Vultr**. Also check: **Zero Data** (see above).
+MLH challenges to enter: **Gemini API, Tiger Data, Vultr, GoDaddy Registry** (bringit.casa: .casa is a GoDaddy Registry
+domain, registered during the hackathon). Also check: **Zero Data** (see above).
 
 ## Where everything lives (for the team)
 

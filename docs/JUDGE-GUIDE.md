@@ -34,10 +34,11 @@ Ground rules for answering:
 
 ### 2 minutes
 
-1. **The story (20 s).** At the Atlanta airport we got on a Red Line train, thought it was the wrong line, jumped to
-   a Gold train and left a backpack on the Red one. Find My kept saying "Airport". A friend worked out the Red train
-   was behind us on the same track, we got off and met it. We got the bag back only because one of us stayed calm
-   enough to do transit math under stress. bring it home is that calm friend.
+1. **The story (20 s).** At the Atlanta airport station, two of our teammates, Roshan and Aadi, jumped from a Red
+   Line train to a Gold one, and Roshan's backpack (laptop, iPad, passport) stayed on the Red. Find My was frozen on
+   "Airport" while the bag moved down the line. While Roshan panicked, Aadi pulled up MARTA's routes and worked out a
+   plan: the Red train was right behind them on the same track, so they got off at the next station and waited, and
+   the bag came to them. Most riders won't have an Aadi. bring it home is that calm friend for everyone.
 2. **The problem (20 s).** The official path is slow: an online form, phone hours Monday to Friday 8:30 AM to 5 PM,
    up to 5 business days for the item to reach the office, kept 30 days. The form asks for the vehicle number, which
    almost nobody knows. Most riders have no tracker, and trackers go stale in tunnels.
@@ -473,7 +474,7 @@ left out.
 | API | FastAPI (Python), one process | Same language as the recorders and timetable loader; fast to build and test |
 | Server | Vultr (Ubuntu), Caddy in front | Recorders must run nonstop, which serverless can't do; Caddy gives automatic HTTPS |
 | Recorders | Python under systemd, one service per source | Restart themselves; one crashing never stops the other |
-| Database | Tiger Data: TimescaleDB + PostGIS | Built for time series (positions every 15 to 20 s), PostGIS for "within a quarter mile", and retention that auto-deletes sessions |
+| Database | Tiger Data: TimescaleDB + PostGIS | Built for time series (positions every 15 to 20 s), PostGIS for "within a quarter mile", compression (older data about 9.6 times smaller, results identical), and a retention policy as the 24 h backstop for searches |
 | AI | Gemini 3.5 Flash-Lite over REST | Fast (under 1 s on our calls), free tier, structured JSON output; REST lets us enforce our own hard deadline |
 | Data | MARTA's public bus feed, rail API, static timetable | Real, public, free. Plain text "data from MARTA's public feeds", no logo |
 
@@ -764,12 +765,62 @@ you want, and the recorded example works offline.
 
 ---
 
+## 12b. Tech drill: practice out loud
+
+Have a teammate read these and answer in one or two breaths each.
+
+1. **"Walk me through the architecture."** MARTA's live bus and train feeds, recorders on a Vultr server saving every
+   update (buses every 15 s, trains every 20 s), Tiger Data (TimescaleDB + PostGIS), a FastAPI API that matches,
+   tracks and plans, and a Next.js web app on Vercel.
+2. **"Why record the data instead of asking MARTA's API?"** MARTA only says where vehicles are now. To know which bus
+   passed your stop 8 minutes ago you need history, so we record every vehicle nonstop.
+3. **"Why TimescaleDB and PostGIS?"** The core question is time plus place: which vehicles passed within a quarter
+   mile of this stop between 2:40 and 2:50. Timescale stores the history in time chunks, PostGIS does the distance
+   math, so it is one SQL query. Compression makes older data about 9.6 times smaller with identical results.
+4. **"How do you find the exact vehicle?"** Every recorded vehicle that came near your stop in your window, scored on
+   closeness, time and the line or route you gave. One stands out: that is your answer. If not, we show the most
+   likely one and ask a single question.
+5. **"Trains and buses report differently. How do you handle that?"** Buses send GPS with a vehicle ID. The rail API
+   sends arrival predictions per train run number, so we place trains by their next station and follow the run
+   number through the turnaround.
+6. **"What if a bus isn't sending its location?"** About half of Saturday morning's scheduled trips weren't in the
+   feed. We use the timetable: where that trip should be now and when it comes back, labeled as an estimate. Live
+   takes over if it reappears.
+7. **"How do you predict when a train comes back?"** Measured from our recordings: at a dead-end station it shows it is
+   heading back after about 34 s and leaves after about 7.5 min. Before it turns we use the timetable's next departure,
+   corrected for live ETAs running about 5.5% short; after it turns, its live predictions.
+8. **"How do you know it picks the fastest way?"** We replayed recordings: at thousands of past moments we asked the
+   planner, then checked what the train actually did. Its first choice was the real fastest about 96% of the time, and
+   the replay caught our own bugs (missed trains 8.2% down to 1.4%).
+9. **"How does it stay real-time?"** The phone checks the vehicle every 10 s and re-asks the planner every 20 s with
+   your live location; a planner call takes about 60 ms.
+10. **"Where's the AI, and why not an LLM for everything?"** Gemini does two jobs: a spoken sentence into a stop, line
+    and time, and wording the report email. Deciding is deterministic code on real data, because a model can invent a
+    train.
+11. **"What if Gemini is wrong or down?"** It may only return our fields and the rider's own words; our code checks the
+    place against real stops and reads the time itself. 4 s deadline, a circuit breaker, a daily cap, rule-based
+    fallback, and the tap questions never need it.
+12. **"How did you test it?"** 1,399 API tests, 174 web unit tests, end-to-end tests that tap through the real app,
+    deliberately broken rules to prove the tests catch them, the replay on real data, and a live train.
+13. **"What happens when data has gaps?"** Recorders save each update to disk first, then the database, and log any
+    gap; the matcher lowers its confidence across a gap instead of guessing.
+14. **"How do you handle privacy?"** No accounts; your location is used in memory for your plan only and never stored;
+    no request logs; your search deletes itself 2 hours after you stop; what you lost never leaves your phone.
+15. **"How is it deployed?"** Static Next.js on Vercel (installable), API and recorders as always-on services on a
+    Vultr Ubuntu server behind Caddy for HTTPS, database on Tiger Cloud.
+16. **"Could this work in other cities?"** Yes: bus positions use GTFS-realtime, a standard most agencies publish, so a
+    city is one new connector. Cost grows per city, not per rider.
+
+---
+
 ## 13. Cheat sheet (memorize)
 
 | What | Number |
 |---|---|
 | Taps before the match | **3** (bus or train, where you got off, about when). Or one sentence and "Yes, that's right" |
 | "Just now" | the last **10 min**, searched **5 min** either side of 5 min ago |
+| Vehicle positions saved | over **580,000** (live total at www.bringit.casa/api/health) |
+| Tiger compression | older data about **9.6 times smaller** (30 MB to 3.3 MB); matcher results identical |
 | Bus feed polled | every **15 s** (feed updates every 30 s) |
 | Rail API polled | every **20 s** |
 | Recording since | **Thu Oct 8, 11:58 PM ET**; on Vultr since Fri Oct 9 |
